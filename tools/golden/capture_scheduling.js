@@ -12,7 +12,7 @@
 const { loadJsx } = require('./load_jsx');
 const { py } = require('./py_literal');
 
-const { js, sha256 } = loadJsx('({ mealsForDate, dishIndexForDate, dayTotals, addDays, toISO })');
+const { js, sha256 } = loadJsx('({ mealsForDate, dishIndexForDate, dayTotals, addDays, toISO, isoWeekday })');
 
 // Как в MealPlanApp: anchor = new Date(settings.mealAnchorDate + 'T00:00:00') (стр. 540).
 function parseISO(iso) {
@@ -27,6 +27,10 @@ function cookWeekdaysOf(s) {
 function isDayZero(date, anchor) {
   // стр. 542 (dayZero = anchor - 1) и стр. 708 (diffDays(dayZero, date) === 0)
   return js.toISO(date) === js.toISO(js.addDays(anchor, -1));
+}
+function isCookDay(date, anchor, cookWeekdays) {
+  // стр. 709: isCook = isZero || cookWeekdays.includes(isoWeekday(date))
+  return isDayZero(date, anchor) || cookWeekdays.includes(js.isoWeekday(date));
 }
 
 function rangeISO(fromISO, days) {
@@ -140,6 +144,7 @@ function capture(scenario) {
       lunch: meals.lunch,
       dinner: meals.dinner,
       is_day_zero: isDayZero(d, anchor),
+      is_cook_day: isCookDay(d, anchor, cookWeekdays),
       kcal_total: totals.kcal,
       protein_total: totals.protein,
     };
@@ -163,7 +168,8 @@ out.push(`Источник: meal-plan.jsx, sha256 ${sha256}`);
 out.push('');
 out.push('Поля случая: cycle_index — meals.k после сортировки по fishPriority;');
 out.push('natural_cycle_index — dishIndexForDate (до сортировки); is_day_zero — anchor - 1,');
-out.push('UI не показывает меню, но mealsForDate для этой даты всё равно считается.');
+out.push('UI не показывает меню, но mealsForDate для этой даты всё равно считается;');
+out.push('is_cook_day — день 0 или день недели готовки (значок огня в UI).');
 out.push('"""');
 out.push('');
 out.push('# fmt: off');

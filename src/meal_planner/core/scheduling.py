@@ -2,7 +2,7 @@
 
 from datetime import date, timedelta
 
-from meal_planner.core.models import Settings
+from meal_planner.core.models import DayMeals, Recipe, Settings
 from meal_planner.core.recipes_data import ALL_RECIPES
 
 # Порядок 5-дневной ротации: позиция k (1..5) → обед/ужин LUNCH_IDS[k-1]/DINNER_IDS[k-1].
@@ -14,6 +14,9 @@ def cook_weekdays(settings: Settings) -> tuple[int, ...]:
     # JS: cookWeekdays в MealPlanApp — при cook_count=1 второй день игнорируется.
     if settings.cook_count == 1:
         return (settings.cook_weekday1,)
+    if settings.cook_weekday2 is None:
+        # В JS дало бы [wd1, undefined] и «готовку» каждый день; из UI недостижимо.
+        raise ValueError("cook_weekday2 обязателен при cook_count=2")
     return (settings.cook_weekday1, settings.cook_weekday2)
 
 
@@ -56,9 +59,61 @@ def next_date_for_weekday(weekday: int, from_date: date) -> date:
 
 
 def nearest_cook_date(cook_weekdays: tuple[int, ...], from_date: date) -> date:
-    best = None
-    for wd in cook_weekdays:
-        d = next_date_for_weekday(wd, from_date)
-        if best is None or d < best:
-            best = d
-    return best
+    # JS: цикл с `d < best` — при равенстве остаётся первый, как и у min().
+    return min(next_date_for_weekday(wd, from_date) for wd in cook_weekdays)
+
+
+def day_totals(breakfast: Recipe, lunch: Recipe, dinner: Recipe) -> tuple[int, int]:
+    parts = (breakfast, lunch, dinner)
+    return sum(r.kcal for r in parts), sum(r.protein for r in parts)
+
+
+def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> DayMeals:
+    # Какие блюда попадают в партию, решает обычная 5-дневная ротация, поэтому
+    # состав закупки не меняется. Меняется только порядок внутри партии: рыбные
+    # блюда — на самые свежие дни, мясные — в конец (дольше хранятся).
+    window_end = nearest_cook_date(cook_weekdays, d)
+    window_start = previous_cook_date(cook_weekdays, window_end) + timedelta(days=1)
+    win_len = (window_end - window_start).days + 1
+    natural_ks = [
+        dish_index_for_date(window_start + timedelta(days=i), anchor)
+        for i in range(win_len)
+    ]
+    # JS: sort((a, b) => fishPriority(b) - fishPriority(a) || a - b)
+    order = sorted(
+        range(len(natural_ks)), key=lambda i: (-fish_priority(natural_ks[i]), i)
+    )
+    sorted_ks = [natural_ks[i] for i in order]
+    pos = (d - window_start).days
+    k = sorted_ks[max(0, min(pos, len(sorted_ks) - 1))]
+
+    breakfast = ALL_RECIPES[breakfast_for_date(d, anchor)]
+    lunch = ALL_RECIPES[LUNCH_IDS[k - 1]]
+    dinner = ALL_RECIPES[DINNER_IDS[k - 1]]
+    kcal, protein = day_totals(breakfast, lunch, dinner)
+    # JS MealPlanApp: dayZero = anchor - 1; isCook = isZero || cookWeekdays.includes(...)
+    is_day_zero = d == anchor - timedelta(days=1)
+    return DayMeals(
+        date=d,
+        cycle_index=k,
+        breakfast=breakfast,
+        lunch=lunch,
+        dinner=dinner,
+        kcal_total=kcal,
+        protein_total=protein,
+        is_day_zero=is_day_zero,
+        is_cook_day=is_day_zero or d.isoweekday() in cook_weekdays,
+    )
+
+
+def build_schedule(
+    settings: Settings, date_from: date, date_to: date
+) -> tuple[DayMeals, ...]:
+    """Расписание на date_from..date_to включительно."""
+    anchor = settings.meal_anchor_date
+    weekdays = cook_weekdays(settings)
+    days = (date_to - date_from).days + 1
+    return tuple(
+        meals_for_date(date_from + timedelta(days=i), anchor, weekdays)
+        for i in range(max(days, 0))
+    )

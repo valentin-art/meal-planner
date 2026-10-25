@@ -1,10 +1,11 @@
+import dataclasses
 from datetime import date
 
 import pytest
 from golden_dates import COOK_DATE_CASES, FISH_PRIORITY
 from golden_scheduling import SCENARIOS
+from scenario_settings import settings_of
 
-from meal_planner.core.models import Settings
 from meal_planner.core.scheduling import (
     breakfast_for_date,
     cook_weekdays,
@@ -14,13 +15,6 @@ from meal_planner.core.scheduling import (
     next_date_for_weekday,
     previous_cook_date,
 )
-
-
-def settings_of(scenario) -> Settings:
-    raw = scenario["settings"]
-    return Settings(
-        **{**raw, "meal_anchor_date": date.fromisoformat(raw["meal_anchor_date"])}
-    )
 
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda s: s["name"])
@@ -53,3 +47,11 @@ def test_cook_weekdays_ignores_second_day_for_single_cook():
     by_name = {s["name"]: settings_of(s) for s in SCENARIOS}
     assert cook_weekdays(by_name["single_1x_sunday"]) == (7,)
     assert cook_weekdays(by_name["default_2x"]) == (3, 6)
+
+
+def test_cook_weekdays_requires_second_day_for_double_cook():
+    settings = dataclasses.replace(
+        settings_of(SCENARIOS[0]), cook_count=2, cook_weekday2=None
+    )
+    with pytest.raises(ValueError):
+        cook_weekdays(settings)

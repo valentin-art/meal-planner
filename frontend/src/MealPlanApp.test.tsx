@@ -51,11 +51,31 @@ it('грузит state один раз и берёт «сегодня» с се�
   ui.unmount();
 });
 
+it('все настройки — на своей вкладке, в «Блюдах» весь справочник', async () => {
+  const ui = await render(<MealPlanApp />);
+  expect(ui.container.querySelectorAll('input[type=date]')).toHaveLength(1); // «Перейти к дате»
+
+  await click(buttons(ui.container, 'Закупки')[0]);
+  expect(ui.container.querySelectorAll('select, input')).toHaveLength(0);
+  expect(buttons(ui.container, 'За день до')).toHaveLength(0);
+  expect(ui.text()).toContain('Ближайшая закупка');
+
+  await click(buttons(ui.container, 'Настройки')[0]);
+  expect(ui.container.querySelector<HTMLInputElement>('input[type=date]')!.value).toBe('2026-11-05');
+  expect(ui.container.querySelectorAll('select')).toHaveLength(2);
+  expect(buttons(ui.container, 'За день до')).toHaveLength(1);
+  const dishes = [...ui.container.querySelectorAll('section')].at(-1)!;
+  expect([...dishes.querySelectorAll('li')].map((li) => li.firstChild?.textContent?.trim()).sort()).toEqual(
+    Object.values(BASE.recipes).map((r) => r.name).sort(),
+  );
+  ui.unmount();
+});
+
 describe('настройки уходят в action-эндпоинты, ответ заменяет state', () => {
   it('«1 раз» — без второго дня, сервер оставит сохранённый', async () => {
     handler = (url) => (url.startsWith('api/actions') ? jsonResponse(withSettings({ cook_count: 1 })) : jsonResponse(BASE));
     const ui = await render(<MealPlanApp />);
-    await click(buttons(ui.container, 'Закупки')[0]);
+    await click(buttons(ui.container, 'Настройки')[0]);
     expect(ui.container.querySelectorAll('select')).toHaveLength(2);
 
     await click(buttons(ui.container, '1 раз')[0]);
@@ -70,7 +90,7 @@ describe('настройки уходят в action-эндпоинты, отве
 
   it('дни готовки — полный набор', async () => {
     const ui = await render(<MealPlanApp />);
-    await click(buttons(ui.container, 'Закупки')[0]);
+    await click(buttons(ui.container, 'Настройки')[0]);
     const [day1, day2] = ui.container.querySelectorAll('select');
 
     await change(day1, '5');
@@ -87,7 +107,7 @@ describe('настройки уходят в action-эндпоинты, отве
     handler = (url) =>
       url.startsWith('api/actions') ? jsonResponse(withSettings({ shopping_timing: 'before' })) : jsonResponse(BASE);
     const ui = await render(<MealPlanApp />);
-    await click(buttons(ui.container, 'Закупки')[0]);
+    await click(buttons(ui.container, 'Настройки')[0]);
     await click(buttons(ui.container, 'За день до')[0]);
     expect(calls.at(-1)).toEqual({
       url: 'api/actions/set-shopping-timing',
@@ -101,6 +121,7 @@ describe('настройки уходят в action-эндпоинты, отве
     handler = (url) =>
       url.startsWith('api/actions') ? jsonResponse(withSettings({ meal_anchor_date: '2026-11-20' })) : jsonResponse(BASE);
     const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
     const anchor = ui.container.querySelector<HTMLInputElement>('input[type=date]')!;
     expect(anchor.value).toBe('2026-11-05');
 
@@ -119,7 +140,7 @@ describe('настройки уходят в action-эндпоинты, отве
     await click(buttons(ui.container, 'Показать ещё')[0]);
     expect(calls.at(-1)?.url).toBe('api/state?from=2026-11-11&to=2026-12-08');
 
-    await click(buttons(ui.container, 'Закупки')[0]);
+    await click(buttons(ui.container, 'Настройки')[0]);
     await click(buttons(ui.container, 'За день до')[0]);
     expect(calls.at(-1)?.url).toBe('api/actions/set-shopping-timing?from=2026-11-11&to=2026-12-08');
     ui.unmount();
@@ -131,10 +152,17 @@ describe('ошибки', () => {
     const detail = [{ type: 'value_error', loc: ['body', 'cook_weekday2'], msg: 'При двух готовках в неделю нужен второй день готовки' }];
     handler = (url) => (url.startsWith('api/actions') ? jsonResponse({ detail }, 422) : jsonResponse(BASE));
     const ui = await render(<MealPlanApp />);
-    await click(buttons(ui.container, 'Закупки')[0]);
+    await click(buttons(ui.container, 'Настройки')[0]);
     await click(buttons(ui.container, '2 раза')[0]);
 
-    expect(ui.text()).toContain('Не удалось сохранить: При двух готовках в неделю нужен второй день готовки');
+    // у контролов готовки, а не у закупки
+    const cook = ui.container.querySelector('select')!.closest('section')!;
+    const shopping = buttons(ui.container, 'За день до')[0].closest('section')!;
+    expect(cook.querySelector('[role=alert]')?.textContent).toBe(
+      'Не удалось сохранить: При двух готовках в неделю нужен второй день готовки',
+    );
+    expect(shopping.querySelector('[role=alert]')).toBeNull();
+    expect(ui.container.querySelectorAll('[role=alert]')).toHaveLength(1);
     expect(ui.container.querySelectorAll('select')).toHaveLength(2); // по-прежнему 2 раза
     ui.unmount();
   });
@@ -143,10 +171,13 @@ describe('ошибки', () => {
     const detail = [{ type: 'date_from_datetime_parsing', loc: ['body', 'meal_anchor_date'], msg: 'Input should be a valid date' }];
     handler = (url) => (url.startsWith('api/actions') ? jsonResponse({ detail }, 422) : jsonResponse(BASE));
     const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
     const anchor = ui.container.querySelector<HTMLInputElement>('input[type=date]')!;
     await change(anchor, '');
     expect(calls.at(-1)?.body).toEqual({ meal_anchor_date: '' });
-    expect(ui.text()).toContain('Не удалось сохранить: Input should be a valid date');
+    expect(anchor.closest('section')!.querySelector('[role=alert]')?.textContent).toBe(
+      'Не удалось сохранить: Input should be a valid date',
+    );
     expect(anchor.value).toBe('2026-11-05');
     ui.unmount();
   });
@@ -166,7 +197,7 @@ describe('ошибки', () => {
 describe('даты', () => {
   it('дата вне загруженного диапазона — новый диапазон с неё', async () => {
     const ui = await render(<MealPlanApp />);
-    const goTo = ui.container.querySelectorAll<HTMLInputElement>('input[type=date]')[1];
+    const goTo = ui.container.querySelectorAll<HTMLInputElement>('input[type=date]')[0];
     await change(goTo, '2027-01-15');
     expect(calls.at(-1)).toEqual({ url: 'api/state?from=2027-01-15&to=2027-01-28', method: 'GET', body: undefined });
     ui.unmount();
@@ -174,7 +205,7 @@ describe('даты', () => {
 
   it('дата внутри диапазона — без запроса', async () => {
     const ui = await render(<MealPlanApp />);
-    const goTo = ui.container.querySelectorAll<HTMLInputElement>('input[type=date]')[1];
+    const goTo = ui.container.querySelectorAll<HTMLInputElement>('input[type=date]')[0];
     await change(goTo, '2026-11-14');
     expect(calls).toHaveLength(1);
     expect(buttons(ui.container, 'ВЫБРАНО')[0].textContent).toContain('14 нояб.');
@@ -194,10 +225,10 @@ it('медленный GET не затирает более свежий отв�
   };
   const ui = await render(<MealPlanApp />);
   await click(buttons(ui.container, 'Показать ещё')[0]);
-  await click(buttons(ui.container, 'Закупки')[0]);
+  await click(buttons(ui.container, 'Настройки')[0]);
   await click(buttons(ui.container, 'За день до')[0]);
   releaseGet();
-  await click(buttons(ui.container, 'Закупки')[0]); // перерисовать после ответа GET
+  await click(buttons(ui.container, 'Настройки')[0]); // перерисовать после ответа GET
 
   const before = buttons(ui.container, 'За день до')[0];
   expect(before.style.color).toBe('rgb(255, 255, 255)'); // выбрано — значит, ответ действия

@@ -1,9 +1,20 @@
 import { type CSSProperties, useCallback, useState } from 'react';
-import { Calendar, UtensilsCrossed, ShoppingCart, Snowflake, ChefHat, ChevronDown, ChevronRight, Flame, Plus } from 'lucide-react';
+import {
+  Calendar,
+  UtensilsCrossed,
+  ShoppingCart,
+  Snowflake,
+  ChefHat,
+  ChevronDown,
+  ChevronRight,
+  Flame,
+  Plus,
+  Settings as SettingsIcon,
+} from 'lucide-react';
 
 import type { ActionName, ActionPayloads, AppState, Recipe } from './api-client';
 import { WEEKDAY_FULL, fmtDate, weekdayFull, weekdayShort } from './format';
-import { useAppState } from './useAppState';
+import { type SaveError, useAppState } from './useAppState';
 
 // Презентационный слой: всё, что показано, — поля AppState от сервера.
 // Расписание, дни готовки, суммы ккал/белка, поездка в магазин и количества
@@ -33,7 +44,7 @@ type Settings = AppState['settings'];
 type Trip = AppState['next_shopping_trip'];
 type Recipes = AppState['recipes'];
 type RunAction = <N extends ActionName>(name: N, payload: ActionPayloads[N]) => Promise<void>;
-type Tab = 'schedule' | 'menu' | 'shopping';
+type Tab = 'schedule' | 'menu' | 'shopping' | 'settings';
 
 export default function MealPlanApp() {
   const { state, range, loadError, saveError, showRange, runAction, retry } = useAppState();
@@ -93,6 +104,7 @@ export default function MealPlanApp() {
             { id: 'schedule', label: 'Расписание', Icon: Calendar },
             { id: 'menu', label: 'Меню', Icon: UtensilsCrossed },
             { id: 'shopping', label: 'Закупки', Icon: ShoppingCart },
+            { id: 'settings', label: 'Настройки', Icon: SettingsIcon },
           ] as const
         ).map(({ id, label, Icon }) => (
           <button
@@ -132,7 +144,6 @@ export default function MealPlanApp() {
         ) : tab === 'schedule' ? (
           <ScheduleTab
             state={state}
-            runAction={runAction}
             selectedDateStr={selected}
             goToDate={goToDate}
             goToToday={goToToday}
@@ -151,13 +162,10 @@ export default function MealPlanApp() {
             setOpenRecipe={setOpenRecipe}
             loadMore={loadMore}
           />
+        ) : tab === 'shopping' ? (
+          <ShoppingTab trip={state.next_shopping_trip} recipes={state.recipes} />
         ) : (
-          <ShoppingTab settings={state.settings} trip={state.next_shopping_trip} recipes={state.recipes} runAction={runAction} />
-        )}
-        {saveError && (
-          <p style={{ color: '#8a3b2b', fontSize: 12, textAlign: 'center', marginTop: 12 }}>
-            Не удалось сохранить: {saveError}
-          </p>
+          <SettingsTab settings={state.settings} recipes={state.recipes} saveError={saveError} runAction={runAction} />
         )}
         {state && loadError && (
           <p style={{ color: '#8a3b2b', fontSize: 12, textAlign: 'center', marginTop: 12 }}>
@@ -173,7 +181,6 @@ export default function MealPlanApp() {
 // ---------- Schedule Tab ----------
 type ScheduleTabProps = {
   state: AppState;
-  runAction: RunAction;
   selectedDateStr: string;
   goToDate: (iso: string) => void;
   goToToday: () => void;
@@ -181,25 +188,12 @@ type ScheduleTabProps = {
   onOpenDay: (iso: string) => void;
 };
 
-function ScheduleTab({ state, runAction, selectedDateStr, goToDate, goToToday, loadMore, onOpenDay }: ScheduleTabProps) {
-  const { settings, schedule, recipes, today } = state;
+function ScheduleTab({ state, selectedDateStr, goToDate, goToToday, loadMore, onOpenDay }: ScheduleTabProps) {
+  const { schedule, recipes, today } = state;
   const isToday = selectedDateStr === today;
   return (
     <div>
-      <section style={cardStyle}>
-        <label style={labelStyle}>Первый день цикла блюд (блюдо №1)</label>
-        <input
-          type="date"
-          value={settings.meal_anchor_date}
-          onChange={(e) => runAction('set-anchor-date', { meal_anchor_date: e.target.value })}
-          style={inputStyle}
-        />
-        <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '8px 0 0' }}>
-          От этой даты отсчитывается цикл из 5 блюд на обед и ужин (блюдо 1 → блюдо 5 → снова блюдо 1…).
-        </p>
-      </section>
-
-      <section style={{ ...cardStyle, marginTop: 10, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
+      <section style={{ ...cardStyle, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
         <div style={{ flex: 1 }}>
           <label style={labelStyle}>Перейти к дате</label>
           <input type="date" value={selectedDateStr} onChange={(e) => goToDate(e.target.value)} style={inputStyle} />
@@ -310,7 +304,7 @@ function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, 
   const { schedule, recipes, today } = state;
   const day: Day | undefined = schedule.find((d) => d.date === selectedDateStr);
   const inRange = day !== undefined;
-  const byKind = (kind: Recipe['kind']) => Object.values(recipes).filter((r) => r.kind === kind);
+  const byKind = (kind: Recipe['kind']) => recipesOfKind(recipes, kind);
 
   return (
     <div>
@@ -453,6 +447,10 @@ function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, 
   );
 }
 
+function recipesOfKind(recipes: Recipes, kind: Recipe['kind']): Recipe[] {
+  return Object.values(recipes).filter((r) => r.kind === kind);
+}
+
 type RecipeToggleProps = {
   recipe: Recipe;
   openRecipe: string | null;
@@ -537,14 +535,69 @@ function RecipeDetails({ recipe }: { recipe: Recipe }) {
 
 // ---------- Shopping Tab ----------
 type ShoppingTabProps = {
-  settings: Settings;
   trip: Trip;
   recipes: Recipes;
+};
+
+function ShoppingTab({ trip, recipes }: ShoppingTabProps) {
+  // Окно, что готовить и что купить — целиком из next_shopping_trip.
+  return (
+    <div>
+      <section style={{ ...cardStyle, borderLeft: `4px solid ${COLORS.accent}` }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <span style={{ fontFamily: 'ui-serif, Georgia, serif', fontWeight: 700, fontSize: 16 }}>Ближайшая закупка</span>
+          <span style={{ fontSize: 12, color: COLORS.inkSoft }}>{fmtDate(trip.shopping_date)}</span>
+        </div>
+        <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>
+          Готовка — {weekdayShort(trip.cook_date)} {fmtDate(trip.cook_date)}. Едим с {weekdayShort(trip.window_start)} {fmtDate(trip.window_start)} по {weekdayShort(trip.window_end)} {fmtDate(trip.window_end)} включительно ({trip.window_days} {trip.window_days === 1 ? 'день' : 'дня/дней'}).
+        </p>
+
+        <h3 style={{ fontSize: 13, color: COLORS.flame, margin: '12px 0 6px' }}>
+          <ChefHat size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+          Что готовить
+        </h3>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+          {trip.cook_items.map((it, i) => (
+            <li key={i} style={{ marginBottom: 2 }}>
+              {`${recipes[it.lunch_id].name} + ${recipes[it.dinner_id].name}`} <span style={{ color: COLORS.inkSoft }}>— x{it.portions}</span>
+            </li>
+          ))}
+        </ul>
+
+        <h3 style={{ fontSize: 13, color: COLORS.flame, margin: '14px 0 6px' }}>
+          <ShoppingCart size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+          Что купить
+        </h3>
+        {trip.shopping_groups.map(({ category, items }) => (
+          <div key={category} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 2 }}>{category}</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+              {items.map((it) => (
+                // у цукини есть и «г», и «шт» — ключ по имени и единице
+                <li key={`${it.name}|${it.unit}`}>
+                  {it.name} — {it.qty_display} {it.unit}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+        <p style={{ fontSize: 11, color: COLORS.inkSoft, marginTop: 6, marginBottom: 0 }}>
+          <Snowflake size={11} style={{ verticalAlign: '-1px' }} /> Если блюдо нужно &gt;1 раза за период — сразу разложите по порциям (часть в холодильник, часть в морозилку).
+        </p>
+      </section>
+    </div>
+  );
+}
+
+// ---------- Settings Tab ----------
+type SettingsTabProps = {
+  settings: Settings;
+  recipes: Recipes;
+  saveError: SaveError | null;
   runAction: RunAction;
 };
 
-function ShoppingTab({ settings, trip, recipes, runAction }: ShoppingTabProps) {
-  // Окно, что готовить и что купить — целиком из next_shopping_trip.
+function SettingsTab({ settings, recipes, saveError, runAction }: SettingsTabProps) {
   const setCookSchedule = (change: Partial<ActionPayloads['set-cook-schedule']>) =>
     runAction('set-cook-schedule', {
       cook_count: settings.cook_count === 1 ? 1 : 2,
@@ -554,7 +607,21 @@ function ShoppingTab({ settings, trip, recipes, runAction }: ShoppingTabProps) {
     });
 
   return (
-    <div>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <section style={cardStyle}>
+        <label style={labelStyle}>Первый день цикла блюд (блюдо №1)</label>
+        <input
+          type="date"
+          value={settings.meal_anchor_date}
+          onChange={(e) => runAction('set-anchor-date', { meal_anchor_date: e.target.value })}
+          style={inputStyle}
+        />
+        <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '8px 0 0' }}>
+          От этой даты отсчитывается цикл из 5 блюд на обед и ужин (блюдо 1 → блюдо 5 → снова блюдо 1…).
+        </p>
+        <FieldError error={saveError} action="set-anchor-date" />
+      </section>
+
       <section style={cardStyle}>
         <label style={labelStyle}>Готовок в неделю</label>
         <div style={{ display: 'flex', gap: 8, marginBottom: 10 }}>
@@ -605,7 +672,11 @@ function ShoppingTab({ settings, trip, recipes, runAction }: ShoppingTabProps) {
           </>
         )}
 
-        <label style={{ ...labelStyle, marginTop: 10 }}>Закупка</label>
+        <FieldError error={saveError} action="set-cook-schedule" />
+      </section>
+
+      <section style={cardStyle}>
+        <label style={labelStyle}>Закупка</label>
         <div style={{ display: 'flex', gap: 8 }}>
           {(
             [
@@ -632,51 +703,42 @@ function ShoppingTab({ settings, trip, recipes, runAction }: ShoppingTabProps) {
             </button>
           ))}
         </div>
+        <FieldError error={saveError} action="set-shopping-timing" />
       </section>
 
-      <section style={{ ...cardStyle, marginTop: 14, borderLeft: `4px solid ${COLORS.accent}` }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <span style={{ fontFamily: 'ui-serif, Georgia, serif', fontWeight: 700, fontSize: 16 }}>Ближайшая закупка</span>
-          <span style={{ fontSize: 12, color: COLORS.inkSoft }}>{fmtDate(trip.shopping_date)}</span>
-        </div>
-        <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>
-          Готовка — {weekdayShort(trip.cook_date)} {fmtDate(trip.cook_date)}. Едим с {weekdayShort(trip.window_start)} {fmtDate(trip.window_start)} по {weekdayShort(trip.window_end)} {fmtDate(trip.window_end)} включительно ({trip.window_days} {trip.window_days === 1 ? 'день' : 'дня/дней'}).
-        </p>
-
-        <h3 style={{ fontSize: 13, color: COLORS.flame, margin: '12px 0 6px' }}>
-          <ChefHat size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-          Что готовить
-        </h3>
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
-          {trip.cook_items.map((it, i) => (
-            <li key={i} style={{ marginBottom: 2 }}>
-              {`${recipes[it.lunch_id].name} + ${recipes[it.dinner_id].name}`} <span style={{ color: COLORS.inkSoft }}>— x{it.portions}</span>
-            </li>
-          ))}
-        </ul>
-
-        <h3 style={{ fontSize: 13, color: COLORS.flame, margin: '14px 0 6px' }}>
-          <ShoppingCart size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-          Что купить
-        </h3>
-        {trip.shopping_groups.map(({ category, items }) => (
-          <div key={category} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 2 }}>{category}</div>
+      <section style={cardStyle}>
+        {/* Заготовка под фазу 5: пока только список, без редактирования. */}
+        <h2 style={{ ...sectionHeading, marginTop: 0 }}>Блюда</h2>
+        {(
+          [
+            { kind: 'lunch', title: 'Обеды' },
+            { kind: 'dinner', title: 'Ужины' },
+            { kind: 'breakfast', title: 'Завтраки' },
+          ] as const
+        ).map(({ kind, title }) => (
+          <div key={kind} style={{ marginBottom: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 2 }}>{title}</div>
             <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
-              {items.map((it) => (
-                // у цукини есть и «г», и «шт» — ключ по имени и единице
-                <li key={`${it.name}|${it.unit}`}>
-                  {it.name} — {it.qty_display} {it.unit}
+              {recipesOfKind(recipes, kind).map((r) => (
+                <li key={r.id}>
+                  {r.name} <span style={{ fontSize: 12, color: COLORS.inkSoft }}>≈{r.kcal} ккал · {r.protein}г белка</span>
                 </li>
               ))}
             </ul>
           </div>
         ))}
-        <p style={{ fontSize: 11, color: COLORS.inkSoft, marginTop: 6, marginBottom: 0 }}>
-          <Snowflake size={11} style={{ verticalAlign: '-1px' }} /> Если блюдо нужно &gt;1 раза за период — сразу разложите по порциям (часть в холодильник, часть в морозилку).
-        </p>
       </section>
     </div>
+  );
+}
+
+/** Ошибка сохранения — в секции того действия, которое её вызвало. */
+function FieldError({ error, action }: { error: SaveError | null; action: ActionName }) {
+  if (error?.action !== action) return null;
+  return (
+    <p role="alert" style={{ color: '#8a3b2b', fontSize: 12, margin: '8px 0 0' }}>
+      Не удалось сохранить: {error.message}
+    </p>
   );
 }
 

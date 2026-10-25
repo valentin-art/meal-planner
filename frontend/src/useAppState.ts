@@ -21,6 +21,9 @@ function toQuery(range: ViewRange): DateRange | undefined {
   return range ? { from: range.from, to: addDaysISO(range.from, range.days - 1) } : undefined;
 }
 
+/** Ошибка последнего действия — UI показывает её у контролов этого действия. */
+export type SaveError = { action: ActionName; message: string };
+
 function message(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
@@ -29,7 +32,7 @@ export function useAppState() {
   const [state, setState] = useState<AppState | null>(null);
   const [range, setRange] = useState<ViewRange>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<SaveError | null>(null);
   // Номер последнего запроса: ответ на устаревший запрос отбрасывается,
   // чтобы медленный GET не затёр более свежий результат действия.
   const latest = useRef(0);
@@ -61,7 +64,7 @@ export function useAppState() {
         setState(fresh);
         setSaveError(null);
       } catch (e) {
-        if (id === latest.current) setSaveError(message(e));
+        if (id === latest.current) setSaveError({ action: name, message: message(e) });
       }
     },
     [range],

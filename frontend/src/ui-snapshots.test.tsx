@@ -43,6 +43,9 @@ describe.each(SCENARIOS)('$name (сегодня $today)', (scenario) => {
 
     await click(buttons(ui.container, 'Закупки')[0]);
     steps['закупки'] = ui.lines();
+
+    await click(buttons(ui.container, 'Настройки')[0]);
+    steps['настройки'] = ui.lines();
     ui.unmount();
 
     expect(steps).toMatchSnapshot();

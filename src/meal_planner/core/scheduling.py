@@ -1,4 +1,7 @@
-"""Ротация блюд и даты готовки. Порт 1:1 функций из meal-plan.jsx."""
+"""Ротация блюд и даты готовки. Порт 1:1 функций из meal-plan.jsx.
+
+Отличие с 6.5: до якоря блюд нет, первая готовка — день 0 (якорь − 1).
+"""
 
 from datetime import date, timedelta
 
@@ -68,12 +71,44 @@ def day_totals(breakfast: Recipe, lunch: Recipe, dinner: Recipe) -> tuple[int, i
     return sum(r.kcal for r in parts), sum(r.protein for r in parts)
 
 
+def day_zero(anchor: date) -> date:
+    return anchor - timedelta(days=1)
+
+
+def cook_date_for_trip(
+    anchor: date, cook_weekdays: tuple[int, ...], today: date
+) -> date:
+    # До старта первая готовка — день 0, даже если это не день недели готовки (6.5).
+    if today <= day_zero(anchor):
+        return day_zero(anchor)
+    return nearest_cook_date(cook_weekdays, today)
+
+
 def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> DayMeals:
+    if d < anchor:
+        # Цикл ещё не начался (6.5): до дня 0 ничего не готовим и не едим,
+        # в день 0 — первая готовка.
+        is_day_zero = d == day_zero(anchor)
+        return DayMeals(
+            date=d,
+            cycle_index=None,
+            breakfast=None,
+            lunch=None,
+            dinner=None,
+            kcal_total=0,
+            protein_total=0,
+            is_day_zero=is_day_zero,
+            is_cook_day=is_day_zero,
+            is_before_start=not is_day_zero,
+        )
     # Какие блюда попадают в партию, решает обычная 5-дневная ротация, поэтому
     # состав закупки не меняется. Меняется только порядок внутри партии: рыбные
     # блюда — на самые свежие дни, мясные — в конец (дольше хранятся).
     window_end = nearest_cook_date(cook_weekdays, d)
-    window_start = previous_cook_date(cook_weekdays, window_end) + timedelta(days=1)
+    # Первое окно — партия дня 0: начинается с якоря, а не с дней до старта.
+    window_start = max(
+        previous_cook_date(cook_weekdays, window_end) + timedelta(days=1), anchor
+    )
     win_len = (window_end - window_start).days + 1
     natural_ks = [
         dish_index_for_date(window_start + timedelta(days=i), anchor)
@@ -91,8 +126,6 @@ def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> Day
     lunch = ALL_RECIPES[LUNCH_IDS[k - 1]]
     dinner = ALL_RECIPES[DINNER_IDS[k - 1]]
     kcal, protein = day_totals(breakfast, lunch, dinner)
-    # JS MealPlanApp: dayZero = anchor - 1; isCook = isZero || cookWeekdays.includes(...)
-    is_day_zero = d == anchor - timedelta(days=1)
     return DayMeals(
         date=d,
         cycle_index=k,
@@ -101,8 +134,9 @@ def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> Day
         dinner=dinner,
         kcal_total=kcal,
         protein_total=protein,
-        is_day_zero=is_day_zero,
-        is_cook_day=is_day_zero or d.isoweekday() in cook_weekdays,
+        is_day_zero=False,
+        is_cook_day=d.isoweekday() in cook_weekdays,
+        is_before_start=False,
     )
 
 

@@ -43,6 +43,7 @@ type Day = AppState['schedule'][number];
 type Settings = AppState['settings'];
 type Trip = AppState['next_shopping_trip'];
 type Recipes = AppState['recipes'];
+type MealDay = Day & { cycle_index: number; breakfast_id: string; lunch_id: string; dinner_id: string };
 type RunAction = <N extends ActionName>(name: N, payload: ActionPayloads[N]) => Promise<void>;
 type Tab = 'schedule' | 'menu' | 'shopping' | 'settings';
 
@@ -178,6 +179,19 @@ export default function MealPlanApp() {
   );
 }
 
+/** До якоря (день 0 и раньше) блюд нет — сервер присылает null. */
+function hasMeals(day: Day): day is MealDay {
+  return day.cycle_index !== null && day.breakfast_id !== null && day.lunch_id !== null && day.dinner_id !== null;
+}
+
+function CycleStartsNote({ anchor, style }: { anchor: string; style: CSSProperties }) {
+  return (
+    <p style={{ color: COLORS.inkSoft, ...style }}>
+      Цикл начнётся {weekdayShort(anchor)} {fmtDate(anchor)}
+    </p>
+  );
+}
+
 // ---------- Schedule Tab ----------
 type ScheduleTabProps = {
   state: AppState;
@@ -189,7 +203,7 @@ type ScheduleTabProps = {
 };
 
 function ScheduleTab({ state, selectedDateStr, goToDate, goToToday, loadMore, onOpenDay }: ScheduleTabProps) {
-  const { schedule, recipes, today } = state;
+  const { schedule, recipes, today, settings } = state;
   const isToday = selectedDateStr === today;
   return (
     <div>
@@ -227,7 +241,7 @@ function ScheduleTab({ state, selectedDateStr, goToDate, goToToday, loadMore, on
                   {weekdayShort(dateStr)}
                   {day.is_cook_day && <Flame size={13} style={{ marginLeft: 6, verticalAlign: '-2px', color: COLORS.accent }} />}
                 </span>
-                <span style={{ fontSize: 12, color: COLORS.inkSoft }}>{fmtDate(dateStr)}{!isZero && ` · блюдо ${day.cycle_index}`}</span>
+                <span style={{ fontSize: 12, color: COLORS.inkSoft }}>{fmtDate(dateStr)}{day.cycle_index !== null && ` · блюдо ${day.cycle_index}`}</span>
               </div>
               {isToday && (
                 <span
@@ -265,6 +279,8 @@ function ScheduleTab({ state, selectedDateStr, goToDate, goToToday, loadMore, on
                 <p style={{ fontSize: 13, color: COLORS.flame, fontWeight: 600, margin: '6px 0 0' }}>
                   День 0 · готовка — меню начнётся завтра
                 </p>
+              ) : !hasMeals(day) ? (
+                <CycleStartsNote anchor={settings.meal_anchor_date} style={{ fontSize: 13, margin: '6px 0 0' }} />
               ) : (
                 <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.7 }}>
                   <div><b>Завтрак:</b> {recipes[day.breakfast_id].name}</div>
@@ -363,7 +379,7 @@ function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, 
           const dateStr = d.date;
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDateStr;
-          const isZero = d.is_day_zero;
+          const noMenu = d.is_day_zero || d.is_before_start;
           return (
             <button
               key={dateStr}
@@ -372,9 +388,9 @@ function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, 
                 flexShrink: 0,
                 padding: '6px 12px',
                 borderRadius: 20,
-                border: isSelected ? `1px solid ${COLORS.primary}` : isZero ? `1px dashed ${COLORS.inkSoft}` : `1px solid ${COLORS.line}`,
+                border: isSelected ? `1px solid ${COLORS.primary}` : noMenu ? `1px dashed ${COLORS.inkSoft}` : `1px solid ${COLORS.line}`,
                 background: isSelected ? COLORS.primary : COLORS.panel,
-                color: isSelected ? '#fff' : isZero ? COLORS.inkSoft : COLORS.ink,
+                color: isSelected ? '#fff' : noMenu ? COLORS.inkSoft : COLORS.ink,
                 fontSize: 12,
                 fontWeight: isToday ? 700 : 500,
                 cursor: 'pointer',
@@ -404,7 +420,7 @@ function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, 
 
       <section style={{ ...cardStyle, marginTop: 12 }}>
         <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '0 0 8px' }}>
-          {weekdayShort(selectedDateStr)}, {fmtDate(selectedDateStr)}{day && !day.is_day_zero && ` · блюдо №${day.cycle_index}`}
+          {weekdayShort(selectedDateStr)}, {fmtDate(selectedDateStr)}{day && day.cycle_index !== null && ` · блюдо №${day.cycle_index}`}
         </p>
         {!day ? (
           <p style={{ fontSize: 13, color: COLORS.inkSoft, margin: 0 }}>Загрузка…</p>
@@ -412,6 +428,8 @@ function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, 
           <p style={{ fontSize: 14, color: COLORS.flame, fontWeight: 600, margin: 0 }}>
             День 0 · готовка — меню начнётся завтра
           </p>
+        ) : !hasMeals(day) ? (
+          <CycleStartsNote anchor={state.settings.meal_anchor_date} style={{ fontSize: 14, margin: 0 }} />
         ) : (
           <>
             <p style={{ fontSize: 13, margin: '0 0 10px' }}>

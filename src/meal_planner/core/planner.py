@@ -8,6 +8,7 @@ from meal_planner.core.scheduling import (
     DINNER_IDS,
     LUNCH_IDS,
     build_schedule,
+    cook_date_for_trip,
     cook_weekdays,
     nearest_cook_date,
 )
@@ -21,7 +22,7 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
     # включительно. Окно может закончиться через 13 дней после today, поэтому
     # дни строим здесь, а не берём из запрошенного расписания.
     weekdays = cook_weekdays(settings)
-    cook_date = nearest_cook_date(weekdays, today)
+    cook_date = cook_date_for_trip(settings.meal_anchor_date, weekdays, today)
     window_start = cook_date + timedelta(days=1)
     window_end = nearest_cook_date(weekdays, window_start)
     days = build_schedule(settings, window_start, window_end)

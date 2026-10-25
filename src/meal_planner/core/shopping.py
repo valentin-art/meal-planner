@@ -13,11 +13,15 @@ from meal_planner.core.models import DayMeals, Recipe, ShoppingGroup, ShoppingIt
 CATEGORY_ORDER = ("Белок", "Крупы", "Овощи", "Яйца и молочное", "Прочее")
 
 
-def count_portions(recipes: Iterable[Recipe]) -> dict[Recipe, int]:
-    """Сколько раз встречается каждый рецепт, в порядке первого появления."""
+def count_portions(recipes: Iterable[Recipe | None]) -> dict[Recipe, int]:
+    """Сколько раз встречается каждый рецепт, в порядке первого появления.
+
+    None — день без блюд (до старта цикла и день 0, 6.5) — пропускается.
+    """
     counts: dict[Recipe, int] = {}
     for recipe in recipes:
-        counts[recipe] = counts.get(recipe, 0) + 1
+        if recipe is not None:
+            counts[recipe] = counts.get(recipe, 0) + 1
     return counts
 
 
@@ -54,6 +58,7 @@ def group_by_category(items: Iterable[ShoppingItem]) -> tuple[ShoppingGroup, ...
 
 def extract_shopping_list(days: Sequence[DayMeals]) -> tuple[ShoppingGroup, ...]:
     # JS ShoppingTab: сначала все обеды, потом ужины, потом завтраки.
+    # Дни без блюд (до старта цикла, 6.5) count_portions пропускает.
     entries = [
         *count_portions(d.lunch for d in days).items(),
         *count_portions(d.dinner for d in days).items(),

@@ -70,14 +70,17 @@ def default_settings(today: date) -> Settings:
 @dataclass(frozen=True, slots=True)
 class DayMeals:
     date: date
-    cycle_index: int  # 1..5, meals.k после сортировки по fishPriority (JS mealsForDate)
-    breakfast: Recipe
-    lunch: Recipe
-    dinner: Recipe
+    # 1..5, meals.k после сортировки по fishPriority (JS mealsForDate).
+    # До якоря (до старта и день 0) блюд нет: cycle_index и блюда — None (6.5).
+    cycle_index: int | None
+    breakfast: Recipe | None
+    lunch: Recipe | None
+    dinner: Recipe | None
     kcal_total: int
     protein_total: int
-    is_day_zero: bool  # anchor - 1: готовка, меню не показывается (JS dayZero)
-    is_cook_day: bool  # is_day_zero или день недели из cookWeekdays (JS isCook)
+    is_day_zero: bool  # anchor - 1: первая готовка, блюд ещё нет
+    is_cook_day: bool  # is_day_zero или день недели готовки после старта
+    is_before_start: bool  # раньше дня 0: цикл ещё не начался
 
 
 @dataclass(frozen=True, slots=True)

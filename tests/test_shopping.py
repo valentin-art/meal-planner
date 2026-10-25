@@ -25,6 +25,13 @@ def window_days(case):
     )
 
 
+# Агрегация не менялась, но окна, начинавшиеся до якоря, теперь без блюд
+# (6.5): с JSX сверяются только окна от якоря — 31 из 35.
+AGGREGATION_CASES = [
+    c for c in SHOPPING_CASES if c["window_start"] >= c["settings"]["meal_anchor_date"]
+]
+
+
 def case_id(case):
     return f"{case['config']}-{case['today']}"
 
@@ -33,7 +40,7 @@ def item_qty(items, name, unit="шт"):
     return next(i.qty for i in items if i.name == name and i.unit == unit)
 
 
-@pytest.mark.parametrize("case", SHOPPING_CASES, ids=case_id)
+@pytest.mark.parametrize("case", AGGREGATION_CASES, ids=case_id)
 def test_extract_shopping_list_matches_golden(case):
     groups = extract_shopping_list(window_days(case))
     assert [g.category for g in groups] == [g["category"] for g in case["groups"]]
@@ -49,7 +56,7 @@ def test_extract_shopping_list_matches_golden(case):
             assert item.qty - 0.1 < e["raw_qty"] - 1e-9, item
 
 
-@pytest.mark.parametrize("case", SHOPPING_CASES, ids=case_id)
+@pytest.mark.parametrize("case", AGGREGATION_CASES, ids=case_id)
 def test_entries_order_matches_golden(case):
     days = window_days(case)
     entries = [

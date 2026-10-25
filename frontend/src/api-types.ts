@@ -128,13 +128,13 @@ export interface components {
              */
             date: string;
             /** Cycle Index */
-            cycle_index: number;
+            cycle_index: number | null;
             /** Breakfast Id */
-            breakfast_id: string;
+            breakfast_id: string | null;
             /** Lunch Id */
-            lunch_id: string;
+            lunch_id: string | null;
             /** Dinner Id */
-            dinner_id: string;
+            dinner_id: string | null;
             /** Kcal Total */
             kcal_total: number;
             /** Protein Total */
@@ -143,6 +143,8 @@ export interface components {
             is_day_zero: boolean;
             /** Is Cook Day */
             is_cook_day: boolean;
+            /** Is Before Start */
+            is_before_start: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {

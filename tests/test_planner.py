@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 import pytest
+from cycle_start import TRIPS_BEFORE_START
 from golden_scheduling import SCENARIOS
 from golden_shopping import SHOPPING_CASES
 from scenario_settings import settings_of
@@ -19,6 +20,8 @@ BY_NAME = {s["name"]: settings_of(s) for s in SCENARIOS}
 def test_next_shopping_trip_matches_golden(case):
     settings = settings_of(case)
     trip = next_shopping_trip(settings, date.fromisoformat(case["today"]))
+    # Поездки до старта цикла меняет правило 6.5 — ожидания в cycle_start.py.
+    case = {**case, **TRIPS_BEFORE_START.get((case["config"], case["today"]), {})}
     assert trip.cook_date.isoformat() == case["cook_date"]
     assert trip.window_start.isoformat() == case["window_start"]
     assert trip.window_end.isoformat() == case["window_end"] == case["next_cook_date"]

@@ -62,14 +62,16 @@ class RecipeOut(BaseModel):
 
 class DayOut(BaseModel):
     date: date
-    cycle_index: int
-    breakfast_id: str
-    lunch_id: str
-    dinner_id: str
+    # До якоря (до старта и день 0) блюд нет — null.
+    cycle_index: int | None
+    breakfast_id: str | None
+    lunch_id: str | None
+    dinner_id: str | None
     kcal_total: int
     protein_total: int
     is_day_zero: bool
     is_cook_day: bool
+    is_before_start: bool
 
 
 class ShoppingItemOut(BaseModel):
@@ -173,13 +175,14 @@ def to_day_out(d: DayMeals) -> DayOut:
     return DayOut(
         date=d.date,
         cycle_index=d.cycle_index,
-        breakfast_id=d.breakfast.id,
-        lunch_id=d.lunch.id,
-        dinner_id=d.dinner.id,
+        breakfast_id=d.breakfast.id if d.breakfast else None,
+        lunch_id=d.lunch.id if d.lunch else None,
+        dinner_id=d.dinner.id if d.dinner else None,
         kcal_total=d.kcal_total,
         protein_total=d.protein_total,
         is_day_zero=d.is_day_zero,
         is_cook_day=d.is_cook_day,
+        is_before_start=d.is_before_start,
     )
 
 

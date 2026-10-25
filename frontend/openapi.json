@@ -390,19 +390,47 @@
             "title": "Date"
           },
           "cycle_index": {
-            "type": "integer",
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Cycle Index"
           },
           "breakfast_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Breakfast Id"
           },
           "lunch_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Lunch Id"
           },
           "dinner_id": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Dinner Id"
           },
           "kcal_total": {
@@ -420,6 +448,10 @@
           "is_cook_day": {
             "type": "boolean",
             "title": "Is Cook Day"
+          },
+          "is_before_start": {
+            "type": "boolean",
+            "title": "Is Before Start"
           }
         },
         "type": "object",
@@ -432,7 +464,8 @@
           "kcal_total",
           "protein_total",
           "is_day_zero",
-          "is_cook_day"
+          "is_cook_day",
+          "is_before_start"
         ],
         "title": "DayOut"
       },

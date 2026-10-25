@@ -65,5 +65,6 @@ WORKDIR /app
 VOLUME /data
 EXPOSE 8000
 
-# exec — чтобы uvicorn был PID 1 и получал SIGTERM от docker stop.
-CMD ["sh", "-c", "exec uvicorn meal_planner.api.main:app --host 0.0.0.0 --port \"$MEALPLAN_PORT\""]
+# Exec-форма: entry point пакета — PID 1 и получает SIGTERM от docker stop;
+# порт он берёт из MEALPLAN_PORT сам.
+CMD ["meal-planner"]

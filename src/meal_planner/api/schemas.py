@@ -81,6 +81,7 @@ class ShoppingItemOut(BaseModel):
     qty_display: str
     unit: str
     category: str
+    pieces: int | None  # «≈ N шт» для продаваемого поштучно, иначе null
 
 
 class ShoppingGroupOut(BaseModel):
@@ -213,6 +214,7 @@ def to_shopping_item_out(i: ShoppingItem) -> ShoppingItemOut:
         qty_display=format_qty(i.qty),
         unit=i.unit,
         category=i.category,
+        pieces=i.pieces,
     )
 
 

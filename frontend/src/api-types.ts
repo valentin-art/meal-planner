@@ -298,6 +298,8 @@ export interface components {
             unit: string;
             /** Category */
             category: string;
+            /** Pieces */
+            pieces: number | null;
         };
         /** ShoppingTripOut */
         ShoppingTripOut: {

@@ -89,6 +89,7 @@ class ShoppingItem:
     qty: float
     unit: str
     category: str
+    pieces: int | None  # «≈ N шт» для продаваемого поштучно (6.7), иначе None
 
 
 @dataclass(frozen=True, slots=True)

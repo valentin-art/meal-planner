@@ -600,6 +600,7 @@ function ShoppingTab({ trip, recipes }: ShoppingTabProps) {
                 // у цукини есть и «г», и «шт» — ключ по имени и единице
                 <li key={`${it.name}|${it.unit}`}>
                   {it.name} — {it.qty_display} {it.unit}
+                  {it.pieces !== null && <span style={{ color: COLORS.inkSoft }}> (≈ {it.pieces} шт)</span>}
                 </li>
               ))}
             </ul>

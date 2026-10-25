@@ -3,6 +3,7 @@ from decimal import Decimal
 
 import pytest
 from golden_shopping import FMT_QTY_CASES, NAME_ORDER, SHOPPING_CASES
+from jsx_recipes import JSX_RECIPES, as_jsx
 from scenario_settings import settings_of
 
 from meal_planner.core.recipes_data import ALL_RECIPES
@@ -14,15 +15,18 @@ from meal_planner.core.shopping import (
     format_qty,
 )
 
-R = ALL_RECIPES
+# Алгоритм сверяется с JS на рецептах из JSX (6.7: данные теперь другие).
+R = JSX_RECIPES
 
 
 def window_days(case):
-    return build_schedule(
+    """Дни окна golden-случая с JSX-рецептами."""
+    days = build_schedule(
         settings_of(case),
         date.fromisoformat(case["window_start"]),
         date.fromisoformat(case["window_end"]),
     )
+    return [as_jsx(d) for d in days]
 
 
 # Агрегация не менялась, но окна, начинавшиеся до якоря, теперь без блюд
@@ -102,3 +106,35 @@ def test_same_name_different_units_stay_separate():
         (0.5, "шт"),
         (80, "г"),
     ]
+
+
+# --- Текущие данные (6.7): граммы и мл вместо долей штуки ---
+
+
+def test_zucchini_is_one_line_in_grams():
+    items = aggregate(
+        [(ALL_RECIPES["l1"], 1), (ALL_RECIPES["l4"], 1), (ALL_RECIPES["d3"], 1)]
+    )
+    zucchini = [(i.qty, i.unit) for i in items if i.name == "цукини"]
+    assert zucchini == [(300, "г")]  # 80 + 80 + 140
+
+
+def test_lemon_is_juice_in_ml():
+    items = aggregate([(ALL_RECIPES["b2"], 1), (ALL_RECIPES["l5"], 1)])
+    assert [(i.qty, i.unit) for i in items if i.name == "сок лимона"] == [(20, "мл")]
+
+
+def test_store_pieces_round_up():
+    items = aggregate(
+        [(ALL_RECIPES["l4"], 1), (ALL_RECIPES["d1"], 1), (ALL_RECIPES["d3"], 1)]
+    )
+    pepper = next(i for i in items if i.name == "болгарский перец")
+    assert (pepper.qty, pepper.pieces) == (255, 2)  # 115 + 70 + 70 г, штука ≈ 230 г
+    oil = next(i for i in items if i.name == "оливковое масло")
+    assert oil.pieces is None  # не продаётся поштучно
+
+
+def test_only_eggs_are_counted_in_pieces():
+    units = {(i.name, i.unit) for r in ALL_RECIPES.values() for i in r.ingredients}
+    assert {name for name, unit in units if unit == "шт"} == {"яйца"}
+    assert {unit for _, unit in units} == {"г", "мл", "шт", "ст.л.", "зубчик"}

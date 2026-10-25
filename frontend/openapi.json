@@ -906,6 +906,17 @@
           "category": {
             "type": "string",
             "title": "Category"
+          },
+          "pieces": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pieces"
           }
         },
         "type": "object",
@@ -914,7 +925,8 @@
           "qty",
           "qty_display",
           "unit",
-          "category"
+          "category",
+          "pieces"
         ],
         "title": "ShoppingItemOut"
       },

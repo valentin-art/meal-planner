@@ -9,6 +9,7 @@ from collections.abc import Iterable, Sequence
 from decimal import ROUND_CEILING, Decimal
 
 from meal_planner.core.models import DayMeals, Recipe, ShoppingGroup, ShoppingItem
+from meal_planner.core.recipes_data import STORE_PIECES
 
 CATEGORY_ORDER = ("Белок", "Крупы", "Овощи", "Яйца и молочное", "Прочее")
 
@@ -38,11 +39,20 @@ def aggregate(entries: Iterable[tuple[Recipe, int]]) -> list[ShoppingItem]:
             qty=float(total.quantize(Decimal("0.1"), rounding=ROUND_CEILING)),
             unit=unit,
             category=category,
+            pieces=store_pieces(name, unit, total),
         )
         for (name, unit, category), total in totals.items()
     ]
     # Для текущих имён совпадает с JS localeCompare(…, 'ru') — см. test_shopping.
     return sorted(items, key=lambda item: item.name)
+
+
+def store_pieces(name: str, unit: str, total: Decimal) -> int | None:
+    # Сколько штук купить (6.7): вверх — часть штуки в магазине не купишь.
+    per_piece = STORE_PIECES.get((name, unit))
+    if per_piece is None:
+        return None
+    return int((total / Decimal(str(per_piece))).to_integral_value(ROUND_CEILING))
 
 
 def group_by_category(items: Iterable[ShoppingItem]) -> tuple[ShoppingGroup, ...]:

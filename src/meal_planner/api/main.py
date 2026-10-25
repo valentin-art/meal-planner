@@ -4,6 +4,7 @@
 """
 
 import os
+from collections.abc import Callable
 from datetime import date
 from functools import lru_cache
 from pathlib import Path
@@ -15,10 +16,13 @@ from fastapi.staticfiles import StaticFiles
 from meal_planner.api.schemas import (
     AppStateOut,
     RecipeOut,
+    SetCookScheduleIn,
+    SetShoppingTimingIn,
     to_app_state_out,
     to_recipes_out,
 )
-from meal_planner.core.models import default_settings
+from meal_planner.core import actions
+from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.db.repository import SettingsRepository, db_path_from_env
@@ -37,6 +41,42 @@ def get_today() -> date:
 
 Repo = Annotated[SettingsRepository, Depends(get_repository)]
 Today = Annotated[date, Depends(get_today)]
+DateFrom = Annotated[date | None, Query(alias="from")]
+DateTo = Annotated[date | None, Query(alias="to")]
+
+
+def current_settings(repo: SettingsRepository, today: date) -> tuple[Settings, int]:
+    stored = repo.get_settings()
+    if stored is None:
+        # Как в JS: пока ничего не сохранено — дефолты, в БД не пишем.
+        return default_settings(today), 0
+    return stored.settings, stored.version
+
+
+def state_response(
+    settings: Settings,
+    version: int,
+    today: date,
+    date_from: date | None,
+    date_to: date | None,
+) -> AppStateOut:
+    return to_app_state_out(recompute(settings, today, date_from, date_to, version))
+
+
+def apply_action(
+    repo: SettingsRepository,
+    today: date,
+    date_from: date | None,
+    date_to: date | None,
+    change: Callable[[Settings], Settings],
+) -> AppStateOut:
+    # Чтение и запись не в одной транзакции — для одного пользователя гонки
+    # не важны. Первое действие сохраняет дефолты + изменение, как первый
+    # persist({...DEFAULT_SETTINGS, поле}) в JS.
+    settings, _ = current_settings(repo, today)
+    settings = change(settings)
+    version = repo.save_settings(settings)
+    return state_response(settings, version, today, date_from, date_to)
 
 
 def create_app() -> FastAPI:
@@ -44,23 +84,49 @@ def create_app() -> FastAPI:
 
     @app.get("/api/state", response_model=AppStateOut)
     def get_state(
-        repo: Repo,
-        today: Today,
-        date_from: Annotated[date | None, Query(alias="from")] = None,
-        date_to: Annotated[date | None, Query(alias="to")] = None,
+        repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
     ) -> AppStateOut:
-        stored = repo.get_settings()
-        if stored is None:
-            # Как в JS: пока ничего не сохранено — дефолты, в БД не пишем.
-            settings, version = default_settings(today), 0
-        else:
-            settings, version = stored.settings, stored.version
-        return to_app_state_out(recompute(settings, today, date_from, date_to, version))
+        settings, version = current_settings(repo, today)
+        return state_response(settings, version, today, date_from, date_to)
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
     def get_recipes() -> dict[str, RecipeOut]:
         # Справочник статичен: ни настройки, ни БД не нужны.
         return to_recipes_out(ALL_RECIPES)
+
+    @app.post("/api/actions/set-cook-schedule", response_model=AppStateOut)
+    def set_cook_schedule(
+        body: SetCookScheduleIn,
+        repo: Repo,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.set_cook_schedule(
+                s, body.cook_count, body.cook_weekday1, body.cook_weekday2
+            ),
+        )
+
+    @app.post("/api/actions/set-shopping-timing", response_model=AppStateOut)
+    def set_shopping_timing(
+        body: SetShoppingTimingIn,
+        repo: Repo,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.set_shopping_timing(s, body.shopping_timing),
+        )
 
     # Монтируется последним, чтобы не перекрывать /api.
     static_dir = Path(os.environ.get("MEALPLAN_STATIC_DIR", DEFAULT_STATIC_DIR))

@@ -6,6 +6,7 @@
 
 from collections.abc import Mapping
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -98,6 +99,17 @@ class ShoppingTripOut(BaseModel):
     window_days: int  # JS windowLen — «N дней» в UI
     cook_items: list[CookItemOut]
     shopping_groups: list[ShoppingGroupOut]
+
+
+class SetCookScheduleIn(BaseModel):
+    # Пока только типы; диапазон 1–7 и обязательность второго дня — тикет 2.6.
+    cook_count: Literal[1, 2]
+    cook_weekday1: int
+    cook_weekday2: int | None = None  # None — оставить сохранённый
+
+
+class SetShoppingTimingIn(BaseModel):
+    shopping_timing: ShoppingTiming
 
 
 class AppStateOut(BaseModel):

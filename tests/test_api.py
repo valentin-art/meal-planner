@@ -133,3 +133,76 @@ def test_recipes_endpoint_does_not_touch_db(tmp_path, monkeypatch):
     monkeypatch.setenv("MEALPLAN_STATIC_DIR", str(tmp_path / "no-static"))
     client = make_client(ExplodingRepository())
     assert client.get("/api/recipes").status_code == 200
+
+
+def post(client, action, body, **params):
+    return client.post(f"/api/actions/{action}", json=body, params=params)
+
+
+def test_changing_cook_weekday_shifts_cook_date(client, repo):
+    # 2.7: today — Пн 2026-11-09; Ср/Сб → ближайшая готовка Ср 11-11,
+    # после переноса первого дня на Пн — сегодня.
+    repo.save_settings(DEFAULT_2X)
+    before = client.get("/api/state").json()["next_shopping_trip"]["cook_date"]
+    body = post(
+        client, "set-cook-schedule", {"cook_count": 2, "cook_weekday1": 1}
+    ).json()
+    assert (before, body["next_shopping_trip"]["cook_date"]) == (
+        "2026-11-11",
+        "2026-11-09",
+    )
+    assert body["settings"]["cook_weekday2"] == 6  # второй день не тронут
+
+
+def test_action_response_matches_state_and_bumps_version(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    first = post(client, "set-shopping-timing", {"shopping_timing": "before"}).json()
+    assert first["version"] == 2
+    assert first == client.get("/api/state").json()
+    second = post(
+        client, "set-cook-schedule", {"cook_count": 1, "cook_weekday1": 7}
+    ).json()
+    assert second["version"] == 3
+    assert second == client.get("/api/state").json()
+
+
+def test_first_action_persists_defaults_plus_change(client, repo):
+    body = post(client, "set-shopping-timing", {"shopping_timing": "before"}).json()
+    assert body["version"] == 1
+    stored = repo.get_settings()
+    assert stored.settings.meal_anchor_date == date(2026, 11, 10)  # дефолт: завтра
+    assert stored.settings.shopping_timing == "before"
+
+
+def test_shopping_before_is_day_before_cook(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    trip = post(client, "set-shopping-timing", {"shopping_timing": "before"}).json()[
+        "next_shopping_trip"
+    ]
+    assert (trip["cook_date"], trip["shopping_date"]) == ("2026-11-11", "2026-11-10")
+
+
+def test_action_respects_range(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(
+        client,
+        "set-shopping-timing",
+        {"shopping_timing": "same"},
+        **{"from": "2026-12-01", "to": "2026-12-02"},
+    ).json()
+    assert [d["date"] for d in body["schedule"]] == ["2026-12-01", "2026-12-02"]
+
+
+@pytest.mark.parametrize(
+    ("action", "body"),
+    [
+        ("set-cook-schedule", {"cook_count": 3, "cook_weekday1": 1}),
+        ("set-cook-schedule", {"cook_count": 2, "cook_weekday1": "x"}),
+        ("set-cook-schedule", {}),
+        ("set-shopping-timing", {"shopping_timing": "later"}),
+        ("set-shopping-timing", {}),
+    ],
+)
+def test_action_type_errors_are_422_and_not_saved(client, repo, action, body):
+    assert post(client, action, body).status_code == 422
+    assert repo.get_settings() is None

@@ -6,8 +6,8 @@ from golden_scheduling import SCENARIOS
 from golden_shopping import SHOPPING_CASES
 from scenario_settings import settings_of
 
+from meal_planner.core.models import Settings
 from meal_planner.core.planner import next_shopping_trip, recompute
-from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.scheduling import build_schedule
 from meal_planner.core.shopping import extract_shopping_list
 
@@ -59,7 +59,6 @@ def test_recompute():
     ]
     assert state.schedule == build_schedule(settings, today, today + timedelta(days=13))
     assert state.next_shopping_trip == next_shopping_trip(settings, today)
-    assert state.recipes is ALL_RECIPES
     assert state.settings is settings
     assert state.today == today
     assert state.version == 7
@@ -81,3 +80,23 @@ def test_recompute_from_only_gives_14_days():
     state = recompute(BY_NAME["default_2x"], date(2026, 11, 9), date(2026, 12, 1))
     assert len(state.schedule) == 14
     assert state.schedule[0].date == date(2026, 12, 1)
+
+
+def test_shopping_before_on_cook_day_shows_next_trip():
+    # 6.8: готовка сегодня, закупка «за день до» — она была вчера; в JS
+    # показывалась вчерашняя дата, теперь — поездка к следующей готовке.
+    settings = Settings(date(2026, 11, 5), 2, 3, 6, "before")  # Ср/Сб
+    trip = next_shopping_trip(settings, date(2026, 11, 11))  # Ср — готовка
+    assert (trip.cook_date, trip.shopping_date) == (
+        date(2026, 11, 14),
+        date(2026, 11, 13),
+    )
+
+
+@pytest.mark.parametrize("timing", ["same", "before"])
+def test_shopping_date_is_never_in_the_past(timing):
+    for wd1, wd2 in [(3, 6), (1, 2), (7, 1)]:
+        settings = Settings(date(2026, 11, 5), 2, wd1, wd2, timing)
+        for i in range(-7, 21):
+            today = date(2026, 11, 5) + timedelta(days=i)
+            assert next_shopping_trip(settings, today).shopping_date >= today

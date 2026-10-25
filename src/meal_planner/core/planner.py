@@ -24,6 +24,10 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
     # дни строим здесь, а не берём из запрошенного расписания.
     weekdays = cook_weekdays(settings)
     cook_date = cook_date_for_trip(settings.meal_anchor_date, weekdays, today)
+    if settings.shopping_timing == "before" and cook_date == today:
+        # Закупка для сегодняшней готовки была вчера (в JS показывалась
+        # вчерашняя дата) — ближайшая поездка уже к следующей готовке (6.8).
+        cook_date = nearest_cook_date(weekdays, today + timedelta(days=1))
     window_start = cook_date + timedelta(days=1)
     window_end = nearest_cook_date(weekdays, window_start)
     days = build_schedule(settings, window_start, window_end)
@@ -67,7 +71,6 @@ def recompute(
         settings=settings,
         schedule=build_schedule(settings, date_from, date_to),
         next_shopping_trip=next_shopping_trip(settings, today),
-        recipes=ALL_RECIPES,
         version=version,
         today_position=today_position(
             today, settings.meal_anchor_date, cook_weekdays(settings)

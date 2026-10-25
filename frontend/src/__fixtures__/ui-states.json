@@ -5677,12 +5677,32 @@
       }
      ],
      "next_shopping_trip": {
-      "shopping_date": "2027-03-28",
-      "cook_date": "2027-03-29",
-      "window_start": "2027-03-30",
-      "window_end": "2027-03-30",
-      "window_days": 1,
+      "shopping_date": "2027-03-29",
+      "cook_date": "2027-03-30",
+      "window_start": "2027-03-31",
+      "window_end": "2027-04-05",
+      "window_days": 6,
       "cook_items": [
+       {
+        "lunch_id": "l3",
+        "dinner_id": "d3",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l2",
+        "dinner_id": "d2",
+        "portions": 2
+       },
+       {
+        "lunch_id": "l5",
+        "dinner_id": "d5",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l4",
+        "dinner_id": "d4",
+        "portions": 1
+       },
        {
         "lunch_id": "l1",
         "dinner_id": "d1",
@@ -5694,9 +5714,41 @@
         "category": "Белок",
         "items": [
          {
-          "name": "куриное филе",
+          "name": "говядина",
           "qty": 360.0,
           "qty_display": "360",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "креветки варёные очищенные (размороженные или замороженные)",
+          "qty": 180.0,
+          "qty_display": "180",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "куриное филе",
+          "qty": 840.0,
+          "qty_display": "840",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "лосось",
+          "qty": 510.0,
+          "qty_display": "510",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "тунец консервированный или креветки варёные очищенные",
+          "qty": 130.0,
+          "qty_display": "130",
           "unit": "г",
           "category": "Белок",
           "pieces": null
@@ -5707,9 +5759,49 @@
         "category": "Крупы",
         "items": [
          {
+          "name": "булгур",
+          "qty": 120.0,
+          "qty_display": "120",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "гречка",
+          "qty": 160.0,
+          "qty_display": "160",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
           "name": "киноа",
           "qty": 70.0,
           "qty_display": "70",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "нут консервированный",
+          "qty": 80.0,
+          "qty_display": "80",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "паста цельнозерновая",
+          "qty": 90.0,
+          "qty_display": "90",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "рис басмати",
+          "qty": 80.0,
+          "qty_display": "80",
           "unit": "г",
           "category": "Крупы",
           "pieces": null
@@ -5721,6 +5813,14 @@
         "items": [
          {
           "name": "авокадо",
+          "qty": 430.0,
+          "qty_display": "430",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 4
+         },
+         {
+          "name": "баклажан",
           "qty": 100.0,
           "qty_display": "100",
           "unit": "г",
@@ -5729,59 +5829,107 @@
          },
          {
           "name": "болгарский перец",
-          "qty": 70.0,
-          "qty_display": "70",
+          "qty": 255.0,
+          "qty_display": "255",
           "unit": "г",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
          },
          {
           "name": "брокколи",
-          "qty": 100.0,
-          "qty_display": "100",
+          "qty": 200.0,
+          "qty_display": "200",
           "unit": "г",
           "category": "Овощи",
           "pieces": null
          },
          {
           "name": "листовой салат/шпинат/руккола",
-          "qty": 60.0,
-          "qty_display": "60",
+          "qty": 240.0,
+          "qty_display": "240",
           "unit": "г",
           "category": "Овощи",
           "pieces": null
          },
          {
+          "name": "лук репчатый",
+          "qty": 100.0,
+          "qty_display": "100",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "маслины",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "морковь",
+          "qty": 160.0,
+          "qty_display": "160",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
           "name": "огурец",
-          "qty": 150.0,
-          "qty_display": "150",
+          "qty": 300.0,
+          "qty_display": "300",
           "unit": "г",
           "category": "Овощи",
           "pieces": 1
          },
          {
           "name": "помидор",
-          "qty": 80.0,
-          "qty_display": "80",
+          "qty": 240.0,
+          "qty_display": "240",
           "unit": "г",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
          },
          {
           "name": "сок лимона",
-          "qty": 20.0,
-          "qty_display": "20",
+          "qty": 90.0,
+          "qty_display": "90",
           "unit": "мл",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
          },
          {
           "name": "цукини",
-          "qty": 80.0,
-          "qty_display": "80",
+          "qty": 300.0,
+          "qty_display": "300",
           "unit": "г",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
+         },
+         {
+          "name": "черри-томаты",
+          "qty": 140.0,
+          "qty_display": "140",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "чеснок",
+          "qty": 1.0,
+          "qty_display": "1",
+          "unit": "зубчик",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "шпинат",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
          }
         ]
        },
@@ -5790,9 +5938,33 @@
         "items": [
          {
           "name": "греческий йогурт",
-          "qty": 250.0,
-          "qty_display": "250",
+          "qty": 750.0,
+          "qty_display": "750",
           "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "пармезан",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "фета",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "яйца",
+          "qty": 14.0,
+          "qty_display": "14",
+          "unit": "шт",
           "category": "Яйца и молочное",
           "pieces": null
          }
@@ -5803,8 +5975,8 @@
         "items": [
          {
           "name": "гранола или орехи",
-          "qty": 30.0,
-          "qty_display": "30",
+          "qty": 90.0,
+          "qty_display": "90",
           "unit": "г",
           "category": "Прочее",
           "pieces": null
@@ -5818,7 +5990,7 @@
           "pieces": null
          },
          {
-          "name": "оливковое масло",
+          "name": "масло растительное",
           "qty": 3.0,
           "qty_display": "3",
           "unit": "ст.л.",
@@ -5826,9 +5998,33 @@
           "pieces": null
          },
          {
+          "name": "масло сливочное",
+          "qty": 3.0,
+          "qty_display": "3",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "оливковое масло",
+          "qty": 13.5,
+          "qty_display": "13.5",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "семечки подсолнечные",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
           "name": "хлеб цельнозерновой",
-          "qty": 60.0,
-          "qty_display": "60",
+          "qty": 360.0,
+          "qty_display": "360",
           "unit": "г",
           "category": "Прочее",
           "pieces": null
@@ -6210,12 +6406,32 @@
       }
      ],
      "next_shopping_trip": {
-      "shopping_date": "2027-03-28",
-      "cook_date": "2027-03-29",
-      "window_start": "2027-03-30",
-      "window_end": "2027-03-30",
-      "window_days": 1,
+      "shopping_date": "2027-03-29",
+      "cook_date": "2027-03-30",
+      "window_start": "2027-03-31",
+      "window_end": "2027-04-05",
+      "window_days": 6,
       "cook_items": [
+       {
+        "lunch_id": "l3",
+        "dinner_id": "d3",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l2",
+        "dinner_id": "d2",
+        "portions": 2
+       },
+       {
+        "lunch_id": "l5",
+        "dinner_id": "d5",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l4",
+        "dinner_id": "d4",
+        "portions": 1
+       },
        {
         "lunch_id": "l1",
         "dinner_id": "d1",
@@ -6227,9 +6443,41 @@
         "category": "Белок",
         "items": [
          {
-          "name": "куриное филе",
+          "name": "говядина",
           "qty": 360.0,
           "qty_display": "360",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "креветки варёные очищенные (размороженные или замороженные)",
+          "qty": 180.0,
+          "qty_display": "180",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "куриное филе",
+          "qty": 840.0,
+          "qty_display": "840",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "лосось",
+          "qty": 510.0,
+          "qty_display": "510",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "тунец консервированный или креветки варёные очищенные",
+          "qty": 130.0,
+          "qty_display": "130",
           "unit": "г",
           "category": "Белок",
           "pieces": null
@@ -6240,9 +6488,49 @@
         "category": "Крупы",
         "items": [
          {
+          "name": "булгур",
+          "qty": 120.0,
+          "qty_display": "120",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "гречка",
+          "qty": 160.0,
+          "qty_display": "160",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
           "name": "киноа",
           "qty": 70.0,
           "qty_display": "70",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "нут консервированный",
+          "qty": 80.0,
+          "qty_display": "80",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "паста цельнозерновая",
+          "qty": 90.0,
+          "qty_display": "90",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "рис басмати",
+          "qty": 80.0,
+          "qty_display": "80",
           "unit": "г",
           "category": "Крупы",
           "pieces": null
@@ -6254,6 +6542,14 @@
         "items": [
          {
           "name": "авокадо",
+          "qty": 430.0,
+          "qty_display": "430",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 4
+         },
+         {
+          "name": "баклажан",
           "qty": 100.0,
           "qty_display": "100",
           "unit": "г",
@@ -6262,59 +6558,107 @@
          },
          {
           "name": "болгарский перец",
-          "qty": 70.0,
-          "qty_display": "70",
+          "qty": 255.0,
+          "qty_display": "255",
           "unit": "г",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
          },
          {
           "name": "брокколи",
-          "qty": 100.0,
-          "qty_display": "100",
+          "qty": 200.0,
+          "qty_display": "200",
           "unit": "г",
           "category": "Овощи",
           "pieces": null
          },
          {
           "name": "листовой салат/шпинат/руккола",
-          "qty": 60.0,
-          "qty_display": "60",
+          "qty": 240.0,
+          "qty_display": "240",
           "unit": "г",
           "category": "Овощи",
           "pieces": null
          },
          {
+          "name": "лук репчатый",
+          "qty": 100.0,
+          "qty_display": "100",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "маслины",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "морковь",
+          "qty": 160.0,
+          "qty_display": "160",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
           "name": "огурец",
-          "qty": 150.0,
-          "qty_display": "150",
+          "qty": 300.0,
+          "qty_display": "300",
           "unit": "г",
           "category": "Овощи",
           "pieces": 1
          },
          {
           "name": "помидор",
-          "qty": 80.0,
-          "qty_display": "80",
+          "qty": 240.0,
+          "qty_display": "240",
           "unit": "г",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
          },
          {
           "name": "сок лимона",
-          "qty": 20.0,
-          "qty_display": "20",
+          "qty": 90.0,
+          "qty_display": "90",
           "unit": "мл",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
          },
          {
           "name": "цукини",
-          "qty": 80.0,
-          "qty_display": "80",
+          "qty": 300.0,
+          "qty_display": "300",
           "unit": "г",
           "category": "Овощи",
-          "pieces": 1
+          "pieces": 2
+         },
+         {
+          "name": "черри-томаты",
+          "qty": 140.0,
+          "qty_display": "140",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "чеснок",
+          "qty": 1.0,
+          "qty_display": "1",
+          "unit": "зубчик",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "шпинат",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
          }
         ]
        },
@@ -6323,9 +6667,33 @@
         "items": [
          {
           "name": "греческий йогурт",
-          "qty": 250.0,
-          "qty_display": "250",
+          "qty": 750.0,
+          "qty_display": "750",
           "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "пармезан",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "фета",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "яйца",
+          "qty": 14.0,
+          "qty_display": "14",
+          "unit": "шт",
           "category": "Яйца и молочное",
           "pieces": null
          }
@@ -6336,8 +6704,8 @@
         "items": [
          {
           "name": "гранола или орехи",
-          "qty": 30.0,
-          "qty_display": "30",
+          "qty": 90.0,
+          "qty_display": "90",
           "unit": "г",
           "category": "Прочее",
           "pieces": null
@@ -6351,7 +6719,7 @@
           "pieces": null
          },
          {
-          "name": "оливковое масло",
+          "name": "масло растительное",
           "qty": 3.0,
           "qty_display": "3",
           "unit": "ст.л.",
@@ -6359,9 +6727,33 @@
           "pieces": null
          },
          {
+          "name": "масло сливочное",
+          "qty": 3.0,
+          "qty_display": "3",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "оливковое масло",
+          "qty": 13.5,
+          "qty_display": "13.5",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "семечки подсолнечные",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
           "name": "хлеб цельнозерновой",
-          "qty": 60.0,
-          "qty_display": "60",
+          "qty": 360.0,
+          "qty_display": "360",
           "unit": "г",
           "category": "Прочее",
           "pieces": null

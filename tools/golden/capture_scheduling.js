@@ -9,24 +9,9 @@
 // Вывод не должен зависеть от TZ — проверяется повторным запуском с TZ=Europe/Berlin.
 'use strict';
 
-const fs = require('fs');
-const path = require('path');
-const crypto = require('crypto');
-const vm = require('vm');
+const { loadJsx } = require('./load_jsx');
 
-const SOURCE_PATH = path.join(__dirname, '..', '..', 'meal-plan.jsx');
-const START_MARKER = 'const RECIPES = {';
-const END_MARKER = 'const DEFAULT_SETTINGS';
-
-const source = fs.readFileSync(SOURCE_PATH, 'utf8');
-const start = source.indexOf(START_MARKER);
-const end = source.indexOf(END_MARKER);
-if (start < 0 || end < 0 || end <= start) {
-  throw new Error(`meal-plan.jsx: не найдены маркеры "${START_MARKER}" / "${END_MARKER}"`);
-}
-const ctx = vm.createContext({});
-vm.runInContext(source.slice(start, end), ctx);
-const js = vm.runInContext('({ mealsForDate, dishIndexForDate, dayTotals, addDays, toISO })', ctx);
+const { js, sha256 } = loadJsx('({ mealsForDate, dishIndexForDate, dayTotals, addDays, toISO })');
 
 // Как в MealPlanApp: anchor = new Date(settings.mealAnchorDate + 'T00:00:00') (стр. 540).
 function parseISO(iso) {
@@ -176,7 +161,6 @@ function py(value) {
   return '{' + Object.keys(value).map((k) => `${JSON.stringify(k)}: ${py(value[k])}`).join(', ') + '}';
 }
 
-const sha256 = crypto.createHash('sha256').update(source).digest('hex');
 const out = [];
 out.push('"""Golden-фикстуры расписания, снятые с meal-plan.jsx (тикет 1.1).');
 out.push('');

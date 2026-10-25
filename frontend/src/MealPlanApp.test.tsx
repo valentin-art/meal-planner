@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppState } from './api-client';
 import MealPlanApp from './MealPlanApp';
-import { SCENARIOS, buttons, change, click, fullState, jsonResponse, render } from './__fixtures__/harness';
+import { RECIPES, SCENARIOS, buttons, change, click, flush, fullState, jsonResponse, render } from './__fixtures__/harness';
 
 const scenario = SCENARIOS.find((s) => s.name === 'default_2x')!; // сегодня Ср 2026-11-11
 const BASE = fullState(scenario);
@@ -14,6 +14,7 @@ const BASE = fullState(scenario);
 type Call = { url: string; method: string; body: unknown };
 let calls: Call[];
 let handler: (url: string, init?: RequestInit) => Promise<Response> | Response;
+let recipesResponse: () => Response;
 
 /** Выпадающие списки дней готовки — в секции «Готовок в неделю». */
 function cookSelects(container: HTMLElement): HTMLSelectElement[] {
@@ -31,6 +32,7 @@ beforeEach(() => {
   vi.setSystemTime(new Date('2031-01-01T12:00:00'));
   calls = [];
   handler = () => jsonResponse(BASE);
+  recipesResponse = () => jsonResponse(RECIPES);
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string, init?: RequestInit) => {
@@ -39,7 +41,7 @@ beforeEach(() => {
         method: init?.method ?? 'GET',
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       });
-      return handler(url, init);
+      return url === 'api/recipes' ? recipesResponse() : handler(url, init);
     }),
   );
 });
@@ -49,9 +51,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-it('грузит state один раз и берёт «сегодня» с сервера', async () => {
+it('грузит state и справочник рецептов по разу, «сегодня» — с сервера', async () => {
   const ui = await render(<MealPlanApp />);
-  expect(calls).toEqual([{ url: 'api/state', method: 'GET', body: undefined }]);
+  expect(calls).toEqual([
+    { url: 'api/state', method: 'GET', body: undefined },
+    { url: 'api/recipes', method: 'GET', body: undefined },
+  ]);
   expect(ui.text()).toContain('сегодня — Среда');
   expect(buttons(ui.container, 'СЕГОДНЯ')[0].textContent).toContain('11 нояб.');
   ui.unmount();
@@ -72,7 +77,7 @@ it('все настройки — на своей вкладке, в «Блюд�
   expect(buttons(ui.container, 'За день до')).toHaveLength(1);
   const dishes = [...ui.container.querySelectorAll('section')].at(-1)!;
   expect([...dishes.querySelectorAll('li')].map((li) => li.firstChild?.textContent?.trim()).sort()).toEqual(
-    Object.values(BASE.recipes).map((r) => r.name).sort(),
+    Object.values(RECIPES).map((r) => r.name).sort(),
   );
   ui.unmount();
 });
@@ -223,6 +228,25 @@ describe('ошибки', () => {
   });
 });
 
+it('справочник не загрузился — ошибка видна, «Повторить» догружает его', async () => {
+  // state отвечает позже справочника: его успех не должен скрыть ошибку
+  recipesResponse = () => new Response('Bad Gateway', { status: 502 });
+  handler = async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return jsonResponse(BASE);
+  };
+  const ui = await render(<MealPlanApp />);
+  await flush();
+  expect(ui.text()).toContain('Не удалось загрузить план: HTTP 502');
+
+  recipesResponse = () => jsonResponse(RECIPES);
+  await click(buttons(ui.container, 'Повторить')[0]);
+  await flush();
+  expect(calls.filter((c) => c.url === 'api/recipes')).toHaveLength(2);
+  expect(ui.text()).toContain('сегодня — Среда');
+  ui.unmount();
+});
+
 describe('даты', () => {
   it('дата вне загруженного диапазона — новый диапазон с неё', async () => {
     const ui = await render(<MealPlanApp />);
@@ -236,7 +260,7 @@ describe('даты', () => {
     const ui = await render(<MealPlanApp />);
     const goTo = ui.container.querySelectorAll<HTMLInputElement>('input[type=date]')[0];
     await change(goTo, '2026-11-14');
-    expect(calls).toHaveLength(1);
+    expect(calls.map((c) => c.url)).toEqual(['api/state', 'api/recipes']);
     expect(buttons(ui.container, 'ВЫБРАНО')[0].textContent).toContain('14 нояб.');
     ui.unmount();
   });

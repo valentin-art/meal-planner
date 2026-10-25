@@ -1,7 +1,7 @@
 """DTO для JSON-ответов API: Pydantic-модели поверх доменных dataclass'ов.
 
 Только перекладка полей. Дни и cook items ссылаются на рецепты по id —
-полный справочник отдаётся один раз в AppStateOut.recipes.
+справочник — отдельно, GET /api/recipes (клиент берёт его один раз).
 """
 
 from collections.abc import Mapping
@@ -144,7 +144,6 @@ class AppStateOut(BaseModel):
     settings: SettingsOut
     schedule: list[DayOut]
     next_shopping_trip: ShoppingTripOut
-    recipes: dict[str, RecipeOut]
     version: int
     today_position: TodayPositionOut
 
@@ -261,7 +260,6 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         settings=to_settings_out(s.settings),
         schedule=[to_day_out(d) for d in s.schedule],
         next_shopping_trip=to_shopping_trip_out(s.next_shopping_trip),
-        recipes=to_recipes_out(s.recipes),
         version=s.version,
         today_position=to_today_position_out(s.today_position),
     )

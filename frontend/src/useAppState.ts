@@ -1,6 +1,7 @@
 // Состояние приложения — это AppState от сервера целиком. Хук только
 // загружает его для видимого диапазона дат и отправляет действия; ответ
 // действия заменяет state полностью, локально ничего не пересчитывается.
+// Справочник рецептов статичен и грузится один раз (GET api/recipes).
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -9,7 +10,9 @@ import {
   type ActionPayloads,
   type AppState,
   type DateRange,
+  type Recipes,
   callAction,
+  getRecipes,
   getState,
 } from './api-client';
 import { addDaysISO } from './format';
@@ -30,6 +33,9 @@ function message(e: unknown): string {
 
 export function useAppState() {
   const [state, setState] = useState<AppState | null>(null);
+  const [recipes, setRecipes] = useState<Recipes | null>(null);
+  // Отдельно от loadError: успешный GET state не должен скрыть ошибку справочника.
+  const [recipesError, setRecipesError] = useState<string | null>(null);
   const [range, setRange] = useState<ViewRange>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
@@ -49,9 +55,22 @@ export function useAppState() {
     }
   }, []);
 
+  const loadRecipes = useCallback(async () => {
+    try {
+      setRecipes(await getRecipes());
+      setRecipesError(null);
+    } catch (e) {
+      setRecipesError(message(e));
+    }
+  }, []);
+
   useEffect(() => {
     load(range);
   }, [load, range]);
+
+  useEffect(() => {
+    loadRecipes();
+  }, [loadRecipes]);
 
   const showRange = useCallback((from: string, days: number) => setRange({ from, days }), []);
 
@@ -72,11 +91,15 @@ export function useAppState() {
 
   return {
     state,
+    recipes,
     range,
-    loadError,
+    loadError: loadError ?? recipesError,
     saveError,
     showRange,
     runAction,
-    retry: () => load(range),
+    retry: () => {
+      if (!recipes) loadRecipes();
+      load(range);
+    },
   };
 }

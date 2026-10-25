@@ -5,7 +5,7 @@ import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { vi } from 'vitest';
 
-import type { AppState } from '../api-client';
+import type { AppState, Recipes } from '../api-client';
 import fixtures from './ui-states.json';
 
 declare global {
@@ -16,13 +16,13 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 export type Scenario = (typeof fixtures.scenarios)[number];
 export const SCENARIOS: Scenario[] = fixtures.scenarios;
-export const RECIPES = fixtures.recipes as unknown as AppState['recipes'];
+export const RECIPES = fixtures.recipes as unknown as Recipes;
 
-/** Полный AppState: в фикстурах справочник рецептов хранится один раз. */
+/** AppState из фикстуры сценария для запроса url. */
 export function fullState(scenario: Scenario, url = 'api/state'): AppState {
   const response = (scenario.responses as Record<string, unknown>)[url];
   if (!response) throw new Error(`Нет ответа в фикстуре ${scenario.name} для ${url}`);
-  return { ...(response as Omit<AppState, 'recipes'>), recipes: RECIPES };
+  return response as AppState;
 }
 
 export function jsonResponse(body: unknown, status = 200): Response {
@@ -34,7 +34,9 @@ export function jsonResponse(body: unknown, status = 200): Response {
 
 /** fetch, который отвечает только на URL из фикстуры сценария. */
 export function mockFetchFromScenario(scenario: Scenario) {
-  const fetchMock = vi.fn(async (url: string) => jsonResponse(fullState(scenario, url)));
+  const fetchMock = vi.fn(async (url: string) =>
+    jsonResponse(url === 'api/recipes' ? RECIPES : fullState(scenario, url)),
+  );
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
 }

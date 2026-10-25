@@ -1,6 +1,5 @@
 """Доменные структуры данных. Поля повторяют meal-plan.jsx 1:1."""
 
-from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
@@ -137,6 +136,5 @@ class AppState:
     settings: Settings
     schedule: tuple[DayMeals, ...]
     next_shopping_trip: ShoppingTrip
-    recipes: Mapping[str, Recipe]
     version: int
     today_position: TodayPosition

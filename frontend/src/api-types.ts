@@ -121,10 +121,6 @@ export interface components {
             /** Schedule */
             schedule: components["schemas"]["DayOut"][];
             next_shopping_trip: components["schemas"]["ShoppingTripOut"];
-            /** Recipes */
-            recipes: {
-                [key: string]: components["schemas"]["RecipeOut"];
-            };
             /** Version */
             version: number;
             today_position: components["schemas"]["TodayPositionOut"];

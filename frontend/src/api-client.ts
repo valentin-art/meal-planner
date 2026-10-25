@@ -10,6 +10,8 @@ type Schemas = components['schemas'];
 
 export type AppState = Schemas['AppStateOut'];
 export type Recipe = Schemas['RecipeOut'];
+/** Справочник рецептов по id — GET api/recipes, отдельно от AppState. */
+export type Recipes = Record<string, Recipe>;
 export type ValidationError = Schemas['ValidationError'];
 
 export type ActionPayloads = {
@@ -69,7 +71,7 @@ export function getState(range?: DateRange): Promise<AppState> {
   return request(withRange('api/state', range));
 }
 
-export function getRecipes(): Promise<Record<string, Recipe>> {
+export function getRecipes(): Promise<Recipes> {
   return request('api/recipes');
 }
 

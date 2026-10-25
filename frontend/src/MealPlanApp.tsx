@@ -12,7 +12,7 @@ import {
   Settings as SettingsIcon,
 } from 'lucide-react';
 
-import type { ActionName, ActionPayloads, AppState, Recipe } from './api-client';
+import type { ActionName, ActionPayloads, AppState, Recipe, Recipes } from './api-client';
 import { WEEKDAY_FULL, fmtDate, weekdayFull, weekdayShort } from './format';
 import { type SaveError, useAppState } from './useAppState';
 
@@ -42,13 +42,12 @@ const LOAD_STEP = 14;
 type Day = AppState['schedule'][number];
 type Settings = AppState['settings'];
 type Trip = AppState['next_shopping_trip'];
-type Recipes = AppState['recipes'];
 type MealDay = Day & { cycle_index: number; breakfast_id: string; lunch_id: string; dinner_id: string };
 type RunAction = <N extends ActionName>(name: N, payload: ActionPayloads[N]) => Promise<void>;
 type Tab = 'schedule' | 'menu' | 'shopping' | 'settings';
 
 export default function MealPlanApp() {
-  const { state, range, loadError, saveError, showRange, runAction, retry } = useAppState();
+  const { state, recipes, range, loadError, saveError, showRange, runAction, retry } = useAppState();
   const [tab, setTab] = useState<Tab>('schedule');
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [openRecipe, setOpenRecipe] = useState<string | null>(null);
@@ -133,7 +132,7 @@ export default function MealPlanApp() {
       </nav>
 
       <main style={{ padding: '16px 12px 40px' }}>
-        {!state || !selected ? (
+        {!state || !recipes || !selected ? (
           loadError ? (
             <div style={{ textAlign: 'center', marginTop: 40 }}>
               <p style={{ color: '#8a3b2b' }}>Не удалось загрузить план: {loadError}</p>
@@ -145,6 +144,7 @@ export default function MealPlanApp() {
         ) : tab === 'schedule' ? (
           <ScheduleTab
             state={state}
+            recipes={recipes}
             selectedDateStr={selected}
             goToDate={goToDate}
             goToToday={goToToday}
@@ -157,6 +157,7 @@ export default function MealPlanApp() {
         ) : tab === 'menu' ? (
           <MenuTab
             state={state}
+            recipes={recipes}
             selectedDateStr={selected}
             goToDate={goToDate}
             openRecipe={openRecipe}
@@ -164,12 +165,12 @@ export default function MealPlanApp() {
             loadMore={loadMore}
           />
         ) : tab === 'shopping' ? (
-          <ShoppingTab trip={state.next_shopping_trip} recipes={state.recipes} />
+          <ShoppingTab trip={state.next_shopping_trip} recipes={recipes} />
         ) : (
           <SettingsTab
             settings={state.settings}
             position={state.today_position}
-            recipes={state.recipes}
+            recipes={recipes}
             saveError={saveError}
             runAction={runAction}
           />
@@ -201,6 +202,7 @@ function CycleStartsNote({ anchor, style }: { anchor: string; style: CSSProperti
 // ---------- Schedule Tab ----------
 type ScheduleTabProps = {
   state: AppState;
+  recipes: Recipes;
   selectedDateStr: string;
   goToDate: (iso: string) => void;
   goToToday: () => void;
@@ -208,8 +210,8 @@ type ScheduleTabProps = {
   onOpenDay: (iso: string) => void;
 };
 
-function ScheduleTab({ state, selectedDateStr, goToDate, goToToday, loadMore, onOpenDay }: ScheduleTabProps) {
-  const { schedule, recipes, today, settings } = state;
+function ScheduleTab({ state, recipes, selectedDateStr, goToDate, goToToday, loadMore, onOpenDay }: ScheduleTabProps) {
+  const { schedule, today, settings } = state;
   const isToday = selectedDateStr === today;
   return (
     <div>
@@ -313,6 +315,7 @@ const LOAD_STEP_LABEL = '14 дней';
 // ---------- Menu Tab ----------
 type MenuTabProps = {
   state: AppState;
+  recipes: Recipes;
   selectedDateStr: string;
   goToDate: (iso: string) => void;
   openRecipe: string | null;
@@ -320,10 +323,10 @@ type MenuTabProps = {
   loadMore: () => void;
 };
 
-function MenuTab({ state, selectedDateStr, goToDate, openRecipe, setOpenRecipe, loadMore }: MenuTabProps) {
+function MenuTab({ state, recipes, selectedDateStr, goToDate, openRecipe, setOpenRecipe, loadMore }: MenuTabProps) {
   const [showStoveInfo, setShowStoveInfo] = useState(false);
   const [showStorageInfo, setShowStorageInfo] = useState(false);
-  const { schedule, recipes, today } = state;
+  const { schedule, today } = state;
   const day: Day | undefined = schedule.find((d) => d.date === selectedDateStr);
   const inRange = day !== undefined;
   const byKind = (kind: Recipe['kind']) => recipesOfKind(recipes, kind);

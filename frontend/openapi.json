@@ -410,13 +410,6 @@
           "next_shopping_trip": {
             "$ref": "#/components/schemas/ShoppingTripOut"
           },
-          "recipes": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/RecipeOut"
-            },
-            "type": "object",
-            "title": "Recipes"
-          },
           "version": {
             "type": "integer",
             "title": "Version"
@@ -431,7 +424,6 @@
           "settings",
           "schedule",
           "next_shopping_trip",
-          "recipes",
           "version",
           "today_position"
         ],

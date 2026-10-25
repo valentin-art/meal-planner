@@ -1,7 +1,7 @@
-"""Ответы /api/state для снапшотов UI (frontend/src/ui-snapshots.test.tsx).
+"""Ответы API для снапшотов UI (frontend/src/ui-snapshots.test.tsx).
 
 То, что вернул бы сервер на запросы клиента при данных настройках и «сегодня»:
-начальный getState() и «Показать ещё» (28 дней).
+начальный getState(), «Показать ещё» (28 дней) и getRecipes().
 
 Запуск: cd frontend && npm run gen:fixtures. Сервер не нужен.
 """
@@ -9,9 +9,10 @@
 import json
 from datetime import date, timedelta
 
-from meal_planner.api.schemas import to_app_state_out
+from meal_planner.api.schemas import to_app_state_out, to_recipes_out
 from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
+from meal_planner.core.recipes_data import ALL_RECIPES
 
 PAGE_SIZE = 14  # как PAGE_SIZE/LOAD_STEP во фронтенде
 
@@ -52,7 +53,6 @@ def state_json(
 
 
 def build() -> dict:
-    recipes = None
     scenarios = []
     for name, today, saved in SCENARIOS:
         settings = saved or default_settings(today)
@@ -63,8 +63,6 @@ def build() -> dict:
                 settings, today, 1, today, more_to
             ),
         }
-        for state in responses.values():
-            recipes = state.pop("recipes")  # один справочник на все ответы
         scenarios.append(
             {
                 "name": name,
@@ -72,6 +70,10 @@ def build() -> dict:
                 "responses": responses,
             }
         )
+    # Ответ GET /api/recipes — один на все сценарии.
+    recipes = {
+        rid: r.model_dump(mode="json") for rid, r in to_recipes_out(ALL_RECIPES).items()
+    }
     return {"recipes": recipes, "scenarios": scenarios}
 
 

@@ -7,8 +7,9 @@
     "dev": "vite",
     "gen:api": "uv run --project .. python ../tools/dump_openapi.py > openapi.json && npm run gen:types",
     "gen:types": "openapi-typescript openapi.json -o src/api-types.ts",
+    "gen:fixtures": "uv run --project .. python ../tools/dump_ui_fixtures.py > src/__fixtures__/ui-states.json",
     "typecheck": "tsc --noEmit",
-    "build": "npm run gen:types && tsc --noEmit && vite build",
+    "build": "npm run gen:types && tsc -p tsconfig.build.json && vite build",
     "test": "vitest run"
   },
   "dependencies": {

@@ -1,6 +1,6 @@
 // Поведение нового MealPlanApp на замоканном fetch: какие запросы уходят на
 // действия пользователя и что делается с ответом. Что именно показывается —
-// см. legacy-parity.test.tsx.
+// см. ui-snapshots.test.tsx.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 

@@ -16,7 +16,7 @@ def load_generator():
 
 
 def test_ui_fixtures_are_current():
-    # На этих ответах держится parity-тест фронтенда с замороженным meal-plan.jsx.
+    # На этих ответах держатся снапшоты UI (frontend/src/ui-snapshots.test.tsx).
     fixtures = json.loads(FIXTURES.read_text("utf-8"))
     assert load_generator().build() == fixtures, (
         "Ответы API изменились: cd frontend && npm run gen:fixtures"

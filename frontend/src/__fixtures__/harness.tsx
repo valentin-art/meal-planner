@@ -46,6 +46,30 @@ export async function flush() {
   });
 }
 
+// Элементы, после которых в снапшоте начинается новая строка (вёрстки в jsdom нет).
+const BLOCK_TAGS = new Set(['DIV', 'SECTION', 'HEADER', 'NAV', 'P', 'H1', 'H2', 'H3', 'UL', 'OL', 'LI', 'LABEL', 'BUTTON', 'OPTION', 'BR']);
+
+/** Текст элемента построчно, по блочным элементам: для снапшотов с читаемым diff. */
+export function lines(element: Element): string {
+  let out = '';
+  const visit = (node: Node) => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      out += node.textContent;
+      return;
+    }
+    const block = node instanceof Element && BLOCK_TAGS.has(node.tagName);
+    if (block) out += '\n';
+    node.childNodes.forEach(visit);
+    if (block) out += '\n';
+  };
+  visit(element);
+  return out
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
+}
+
 export async function render(element: ReactElement) {
   const container = document.createElement('div');
   document.body.append(container);
@@ -55,6 +79,7 @@ export async function render(element: ReactElement) {
   return {
     container,
     text: () => container.textContent ?? '',
+    lines: () => lines(container),
     unmount: () => {
       act(() => root.unmount());
       container.remove();

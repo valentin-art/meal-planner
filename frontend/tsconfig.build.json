@@ -1,6 +1,6 @@
 {
-  // Для npm run build (и Docker): без тестов и их помощников — parity-тест
-  // импортирует ../meal-plan.jsx, которого нет в контексте сборки образа.
+  // Для npm run build (и Docker): без тестов и их помощников — в образ они
+  // не попадают, а фикстуры и снапшоты сборке не нужны.
   "extends": "./tsconfig.json",
   "include": ["src"],
   "exclude": ["src/**/*.test.ts", "src/**/*.test.tsx", "src/__fixtures__"]

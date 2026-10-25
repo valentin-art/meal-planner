@@ -1,8 +1,7 @@
-"""Ответы /api/state для parity-теста фронтенда (frontend/src/legacy-parity.test.tsx).
+"""Ответы /api/state для снапшотов UI (frontend/src/ui-snapshots.test.tsx).
 
-Тест рендерит замороженный meal-plan.jsx и новый MealPlanApp на одних и тех же
-настройках и «сегодня» и сравнивает текст. Здесь — то, что вернул бы сервер
-на запросы нового клиента: начальный getState() и «Показать ещё» (28 дней).
+То, что вернул бы сервер на запросы клиента при данных настройках и «сегодня»:
+начальный getState() и «Показать ещё» (28 дней).
 
 Запуск: cd frontend && npm run gen:fixtures. Сервер не нужен.
 """
@@ -44,17 +43,6 @@ SCENARIOS = [
 ]
 
 
-def legacy_settings(s: Settings) -> dict:
-    """Настройки в формате window.storage артефакта."""
-    return {
-        "mealAnchorDate": s.meal_anchor_date.isoformat(),
-        "cookCount": s.cook_count,
-        "cookWeekday1": s.cook_weekday1,
-        "cookWeekday2": s.cook_weekday2,
-        "shoppingTiming": s.shopping_timing,
-    }
-
-
 def state_json(
     settings: Settings, today: date, version: int, date_from=None, date_to=None
 ) -> dict:
@@ -81,7 +69,6 @@ def build() -> dict:
             {
                 "name": name,
                 "today": today.isoformat(),
-                "legacy_settings": None if saved is None else legacy_settings(saved),
                 "responses": responses,
             }
         )

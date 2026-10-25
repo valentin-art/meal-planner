@@ -798,7 +798,6 @@
   {
    "name": "defaults",
    "today": "2026-11-09",
-   "legacy_settings": null,
    "responses": {
     "api/state": {
      "today": "2026-11-09",
@@ -1815,13 +1814,6 @@
   {
    "name": "default_2x",
    "today": "2026-11-11",
-   "legacy_settings": {
-    "mealAnchorDate": "2026-11-05",
-    "cookCount": 2,
-    "cookWeekday1": 3,
-    "cookWeekday2": 6,
-    "shoppingTiming": "same"
-   },
    "responses": {
     "api/state": {
      "today": "2026-11-11",
@@ -2838,13 +2830,6 @@
   {
    "name": "default_2x_before",
    "today": "2026-11-10",
-   "legacy_settings": {
-    "mealAnchorDate": "2026-11-05",
-    "cookCount": 2,
-    "cookWeekday1": 3,
-    "cookWeekday2": 6,
-    "shoppingTiming": "before"
-   },
    "responses": {
     "api/state": {
      "today": "2026-11-10",
@@ -3861,13 +3846,6 @@
   {
    "name": "single_1x_sunday",
    "today": "2026-11-04",
-   "legacy_settings": {
-    "mealAnchorDate": "2026-11-02",
-    "cookCount": 1,
-    "cookWeekday1": 7,
-    "cookWeekday2": 6,
-    "shoppingTiming": "same"
-   },
    "responses": {
     "api/state": {
      "today": "2026-11-04",
@@ -5016,13 +4994,6 @@
   {
    "name": "adjacent_2x",
    "today": "2027-03-29",
-   "legacy_settings": {
-    "mealAnchorDate": "2027-03-25",
-    "cookCount": 2,
-    "cookWeekday1": 1,
-    "cookWeekday2": 2,
-    "shoppingTiming": "before"
-   },
    "responses": {
     "api/state": {
      "today": "2027-03-29",
@@ -5809,13 +5780,6 @@
   {
    "name": "anchor_mid_window",
    "today": "2026-11-06",
-   "legacy_settings": {
-    "mealAnchorDate": "2026-11-09",
-    "cookCount": 2,
-    "cookWeekday1": 3,
-    "cookWeekday2": 6,
-    "shoppingTiming": "same"
-   },
    "responses": {
     "api/state": {
      "today": "2026-11-06",

@@ -18,10 +18,11 @@ npm run build      # frontend/dist — его раздаёт FastAPI (MEALPLAN_S
 изменения схем в `api/schemas.py` — `npm run gen:api` (обновляет
 `frontend/openapi.json` и типы); `uv run pytest` падает, пока снапшот устарел.
 
-`src/legacy-parity.test.tsx` сверяет новый UI с замороженным артефактом
-`meal-plan.jsx` на ответах backend из `src/__fixtures__/ui-states.json`. Если
-меняется то, что отдаёт `/api/state`, — `npm run gen:fixtures` (pytest
-подскажет).
+`src/ui-snapshots.test.tsx` снимает текст всех вкладок на ответах backend из
+`src/__fixtures__/ui-states.json` в `src/__snapshots__/` (построчно, файл в
+git). Если меняется то, что отдаёт `/api/state`, — `npm run gen:fixtures`
+(pytest подскажет). Сознательное изменение UI — `npx vitest run -u` в том же
+коммите; diff `.snap` показывает, что поменялось на экране.
 
 ## Docker
 

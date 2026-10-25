@@ -2,7 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 from enum import StrEnum
 from typing import Literal
 
@@ -52,6 +52,18 @@ class Settings:
     cook_weekday1: int  # 1..7, пн=1
     cook_weekday2: int | None  # при cook_count=1 игнорируется (JS cookWeekdays)
     shopping_timing: ShoppingTiming
+
+
+def default_settings(today: date) -> Settings:
+    # JS DEFAULT_SETTINGS: якорь — завтра, готовка Ср/Сб, закупка в день готовки.
+    # Пока ничего не сохранено, якорь каждый день снова «завтра» — как в JS.
+    return Settings(
+        meal_anchor_date=today + timedelta(days=1),
+        cook_count=2,
+        cook_weekday1=3,
+        cook_weekday2=6,
+        shopping_timing="same",
+    )
 
 
 @dataclass(frozen=True, slots=True)

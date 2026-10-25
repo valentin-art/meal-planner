@@ -4,7 +4,13 @@ from datetime import date
 import pytest
 from golden_scheduling import SCENARIOS
 
-from meal_planner.core.models import Ingredient, MealKind, Recipe, Settings
+from meal_planner.core.models import (
+    Ingredient,
+    MealKind,
+    Recipe,
+    Settings,
+    default_settings,
+)
 
 
 def make_recipe() -> Recipe:
@@ -44,3 +50,10 @@ def test_recipe_defaults_and_hashable():
     assert recipe.storage is None
     assert recipe.is_fish is False
     assert {recipe: 1}[make_recipe()] == 1
+
+
+def test_default_settings_match_js():
+    # JS DEFAULT_SETTINGS: якорь — завтра, 2 готовки Ср/Сб, закупка в день готовки
+    assert default_settings(date(2026, 11, 9)) == Settings(
+        date(2026, 11, 10), 2, 3, 6, "same"
+    )

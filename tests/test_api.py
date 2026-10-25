@@ -6,8 +6,9 @@ from golden_scheduling import SCENARIOS
 from scenario_settings import settings_of
 
 from meal_planner.api.main import create_app, get_repository, get_today
-from meal_planner.api.schemas import to_app_state_out
+from meal_planner.api.schemas import to_app_state_out, to_recipes_out
 from meal_planner.core.planner import recompute
+from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.shopping import format_qty
 from meal_planner.db.repository import SettingsRepository
 
@@ -109,3 +110,26 @@ def test_static_dir_is_served(repo, monkeypatch, tmp_path):
 
 def test_no_static_dir_gives_404_at_root(client):
     assert client.get("/").status_code == 404
+
+
+def test_recipes_endpoint(client):
+    r = client.get("/api/recipes")
+    assert r.status_code == 200
+    body = r.json()
+    assert list(body) == list(ALL_RECIPES)
+    assert body == {
+        rid: out.model_dump(mode="json")
+        for rid, out in to_recipes_out(ALL_RECIPES).items()
+    }
+    assert body == client.get("/api/state").json()["recipes"]
+
+
+class ExplodingRepository:
+    def get_settings(self):
+        raise AssertionError("/api/recipes не должен читать настройки")
+
+
+def test_recipes_endpoint_does_not_touch_db(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEALPLAN_STATIC_DIR", str(tmp_path / "no-static"))
+    client = make_client(ExplodingRepository())
+    assert client.get("/api/recipes").status_code == 200

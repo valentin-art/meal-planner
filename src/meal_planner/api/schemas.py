@@ -4,6 +4,7 @@
 полный справочник отдаётся один раз в AppStateOut.recipes.
 """
 
+from collections.abc import Mapping
 from datetime import date
 
 from pydantic import BaseModel
@@ -147,6 +148,10 @@ def to_recipe_out(r: Recipe) -> RecipeOut:
     )
 
 
+def to_recipes_out(recipes: Mapping[str, Recipe]) -> dict[str, RecipeOut]:
+    return {rid: to_recipe_out(r) for rid, r in recipes.items()}
+
+
 def to_day_out(d: DayMeals) -> DayOut:
     return DayOut(
         date=d.date,
@@ -199,6 +204,6 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         settings=to_settings_out(s.settings),
         schedule=[to_day_out(d) for d in s.schedule],
         next_shopping_trip=to_shopping_trip_out(s.next_shopping_trip),
-        recipes={rid: to_recipe_out(r) for rid, r in s.recipes.items()},
+        recipes=to_recipes_out(s.recipes),
         version=s.version,
     )

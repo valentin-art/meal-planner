@@ -12,9 +12,15 @@ from typing import Annotated
 from fastapi import Depends, FastAPI, Query
 from fastapi.staticfiles import StaticFiles
 
-from meal_planner.api.schemas import AppStateOut, to_app_state_out
+from meal_planner.api.schemas import (
+    AppStateOut,
+    RecipeOut,
+    to_app_state_out,
+    to_recipes_out,
+)
 from meal_planner.core.models import default_settings
 from meal_planner.core.planner import recompute
+from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.db.repository import SettingsRepository, db_path_from_env
 
 DEFAULT_STATIC_DIR = Path("frontend/dist")
@@ -50,6 +56,11 @@ def create_app() -> FastAPI:
         else:
             settings, version = stored.settings, stored.version
         return to_app_state_out(recompute(settings, today, date_from, date_to, version))
+
+    @app.get("/api/recipes", response_model=dict[str, RecipeOut])
+    def get_recipes() -> dict[str, RecipeOut]:
+        # Справочник статичен: ни настройки, ни БД не нужны.
+        return to_recipes_out(ALL_RECIPES)
 
     # Монтируется последним, чтобы не перекрывать /api.
     static_dir = Path(os.environ.get("MEALPLAN_STATIC_DIR", DEFAULT_STATIC_DIR))

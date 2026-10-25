@@ -15,6 +15,12 @@ type Call = { url: string; method: string; body: unknown };
 let calls: Call[];
 let handler: (url: string, init?: RequestInit) => Promise<Response> | Response;
 
+/** Выпадающие списки дней готовки — в секции «Готовок в неделю». */
+function cookSelects(container: HTMLElement): HTMLSelectElement[] {
+  const section = buttons(container, '1 раз')[0].closest('section')!;
+  return [...section.querySelectorAll('select')];
+}
+
 function withSettings(patch: Partial<AppState['settings']>): AppState {
   return { ...BASE, settings: { ...BASE.settings, ...patch }, version: BASE.version + 1 };
 }
@@ -62,7 +68,7 @@ it('все настройки — на своей вкладке, в «Блюд�
 
   await click(buttons(ui.container, 'Настройки')[0]);
   expect(ui.container.querySelector<HTMLInputElement>('input[type=date]')!.value).toBe('2026-11-05');
-  expect(ui.container.querySelectorAll('select')).toHaveLength(2);
+  expect(cookSelects(ui.container)).toHaveLength(2);
   expect(buttons(ui.container, 'За день до')).toHaveLength(1);
   const dishes = [...ui.container.querySelectorAll('section')].at(-1)!;
   expect([...dishes.querySelectorAll('li')].map((li) => li.firstChild?.textContent?.trim()).sort()).toEqual(
@@ -76,7 +82,7 @@ describe('настройки уходят в action-эндпоинты, отве
     handler = (url) => (url.startsWith('api/actions') ? jsonResponse(withSettings({ cook_count: 1 })) : jsonResponse(BASE));
     const ui = await render(<MealPlanApp />);
     await click(buttons(ui.container, 'Настройки')[0]);
-    expect(ui.container.querySelectorAll('select')).toHaveLength(2);
+    expect(cookSelects(ui.container)).toHaveLength(2);
 
     await click(buttons(ui.container, '1 раз')[0]);
     expect(calls.at(-1)).toEqual({
@@ -84,14 +90,14 @@ describe('настройки уходят в action-эндпоинты, отве
       method: 'POST',
       body: { cook_count: 1, cook_weekday1: 3 },
     });
-    expect(ui.container.querySelectorAll('select')).toHaveLength(1);
+    expect(cookSelects(ui.container)).toHaveLength(1);
     ui.unmount();
   });
 
   it('дни готовки — полный набор', async () => {
     const ui = await render(<MealPlanApp />);
     await click(buttons(ui.container, 'Настройки')[0]);
-    const [day1, day2] = ui.container.querySelectorAll('select');
+    const [day1, day2] = cookSelects(ui.container);
 
     await change(day1, '5');
     expect(calls.at(-1)?.body).toEqual({ cook_count: 2, cook_weekday1: 5, cook_weekday2: 6 });
@@ -135,6 +141,29 @@ describe('настройки уходят в action-эндпоинты, отве
     ui.unmount();
   });
 
+  it('«Сегодня» — варианты с сервера, выбор уходит в set-cycle-position', async () => {
+    const { options, current } = BASE.today_position;
+    const moved = { ...withSettings({ meal_anchor_date: options[1].anchor }), today_position: { options, current: options[1].dish } };
+    handler = (url) => (url.startsWith('api/actions') ? jsonResponse(moved) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    const today = ui.container.querySelector('section')!.querySelector('select')!;
+    expect([...today.options].map((o) => Number(o.value))).toEqual(options.map((o) => o.dish));
+    expect(today.value).toBe(String(current));
+    expect(today.options[0].textContent).toBe('день 0 · готовка, цикл с завтра');
+
+    await change(today, String(options[1].dish));
+    expect(calls.at(-1)).toEqual({
+      url: 'api/actions/set-cycle-position',
+      method: 'POST',
+      body: { dish: options[1].dish },
+    });
+    // оба поля показывают одно состояние
+    expect(today.value).toBe(String(options[1].dish));
+    expect(ui.container.querySelector<HTMLInputElement>('input[type=date]')!.value).toBe(options[1].anchor);
+    ui.unmount();
+  });
+
   it('после «Показать ещё» действие просит тот же диапазон', async () => {
     const ui = await render(<MealPlanApp />);
     await click(buttons(ui.container, 'Показать ещё')[0]);
@@ -156,14 +185,14 @@ describe('ошибки', () => {
     await click(buttons(ui.container, '2 раза')[0]);
 
     // у контролов готовки, а не у закупки
-    const cook = ui.container.querySelector('select')!.closest('section')!;
+    const cook = cookSelects(ui.container)[0].closest('section')!;
     const shopping = buttons(ui.container, 'За день до')[0].closest('section')!;
     expect(cook.querySelector('[role=alert]')?.textContent).toBe(
       'Не удалось сохранить: При двух готовках в неделю нужен второй день готовки',
     );
     expect(shopping.querySelector('[role=alert]')).toBeNull();
     expect(ui.container.querySelectorAll('[role=alert]')).toHaveLength(1);
-    expect(ui.container.querySelectorAll('select')).toHaveLength(2); // по-прежнему 2 раза
+    expect(cookSelects(ui.container)).toHaveLength(2); // по-прежнему 2 раза
     ui.unmount();
   });
 

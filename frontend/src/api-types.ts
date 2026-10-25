@@ -89,6 +89,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/set-cycle-position": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Cycle Position */
+        post: operations["set_cycle_position_api_actions_set_cycle_position_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -110,6 +127,7 @@ export interface components {
             };
             /** Version */
             version: number;
+            today_position: components["schemas"]["TodayPositionOut"];
         };
         /** CookItemOut */
         CookItemOut: {
@@ -119,6 +137,20 @@ export interface components {
             dinner_id: string;
             /** Portions */
             portions: number;
+        };
+        /** CyclePositionOut */
+        CyclePositionOut: {
+            /** Dish */
+            dish: number;
+            /**
+             * Anchor
+             * Format: date
+             */
+            anchor: string;
+            /** Lunch Id */
+            lunch_id: string | null;
+            /** Dinner Id */
+            dinner_id: string | null;
         };
         /** DayOut */
         DayOut: {
@@ -215,6 +247,11 @@ export interface components {
             /** Cook Weekday2 */
             cook_weekday2?: number | null;
         };
+        /** SetCyclePositionIn */
+        SetCyclePositionIn: {
+            /** Dish */
+            dish: number;
+        };
         /** SetShoppingTimingIn */
         SetShoppingTimingIn: {
             /**
@@ -290,6 +327,13 @@ export interface components {
             cook_items: components["schemas"]["CookItemOut"][];
             /** Shopping Groups */
             shopping_groups: components["schemas"]["ShoppingGroupOut"][];
+        };
+        /** TodayPositionOut */
+        TodayPositionOut: {
+            /** Current */
+            current: number | null;
+            /** Options */
+            options: components["schemas"]["CyclePositionOut"][];
         };
         /** ValidationError */
         ValidationError: {
@@ -452,6 +496,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SetAnchorDateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_cycle_position_api_actions_set_cycle_position_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCyclePositionIn"];
             };
         };
         responses: {

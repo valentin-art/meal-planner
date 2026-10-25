@@ -16,6 +16,7 @@ export type ActionPayloads = {
   'set-cook-schedule': Schemas['SetCookScheduleIn'];
   'set-shopping-timing': Schemas['SetShoppingTimingIn'];
   'set-anchor-date': Schemas['SetAnchorDateIn'];
+  'set-cycle-position': Schemas['SetCyclePositionIn'];
 };
 export type ActionName = keyof ActionPayloads;
 

@@ -1192,7 +1192,36 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 0,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-10",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-08",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 3,
+        "anchor": "2026-11-09",
+        "lunch_id": "l3",
+        "dinner_id": "d3"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-06",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     },
     "api/state?from=2026-11-09&to=2026-12-06": {
      "today": "2026-11-09",
@@ -1755,7 +1784,36 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 0,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-10",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-08",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 3,
+        "anchor": "2026-11-09",
+        "lunch_id": "l3",
+        "dinner_id": "d3"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-06",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     }
    }
   },
@@ -2203,7 +2261,30 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 1,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-12",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2026-11-06",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-08",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       }
+      ]
+     }
     },
     "api/state?from=2026-11-11&to=2026-12-08": {
      "today": "2026-11-11",
@@ -2813,7 +2894,30 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 1,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-12",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2026-11-06",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-08",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       }
+      ]
+     }
     }
    }
   },
@@ -3261,7 +3365,42 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 4,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-11",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2026-11-08",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-04",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-06",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-07",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     },
     "api/state?from=2026-11-10&to=2026-12-07": {
      "today": "2026-11-10",
@@ -3871,7 +4010,42 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 4,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-11",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2026-11-08",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-04",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-06",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-07",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     }
    }
   },
@@ -4385,7 +4559,36 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 5,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-05",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-01",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 3,
+        "anchor": "2026-11-04",
+        "lunch_id": "l3",
+        "dinner_id": "d3"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-02",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     },
     "api/state?from=2026-11-04&to=2026-12-01": {
      "today": "2026-11-04",
@@ -5061,7 +5264,36 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 5,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-05",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-01",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 3,
+        "anchor": "2026-11-04",
+        "lunch_id": "l3",
+        "dinner_id": "d3"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-02",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     }
    }
   },
@@ -5394,7 +5626,30 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 4,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2027-03-30",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2027-03-24",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 4,
+        "anchor": "2027-03-21",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       }
+      ]
+     }
     },
     "api/state?from=2027-03-29&to=2027-04-25": {
      "today": "2027-03-29",
@@ -5889,7 +6144,30 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": 4,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2027-03-30",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2027-03-24",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 4,
+        "anchor": "2027-03-21",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       }
+      ]
+     }
     }
    }
   },
@@ -6358,7 +6636,36 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": null,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-07",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-05",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-02",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-03",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     },
     "api/state?from=2026-11-06&to=2026-12-03": {
      "today": "2026-11-06",
@@ -6989,7 +7296,36 @@
        }
       ]
      },
-     "version": 1
+     "version": 1,
+     "today_position": {
+      "current": null,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-07",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 2,
+        "anchor": "2026-11-05",
+        "lunch_id": "l2",
+        "dinner_id": "d2"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-02",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       },
+       {
+        "dish": 5,
+        "anchor": "2026-11-03",
+        "lunch_id": "l5",
+        "dinner_id": "d5"
+       }
+      ]
+     }
     }
    }
   }

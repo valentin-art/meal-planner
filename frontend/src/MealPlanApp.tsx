@@ -166,7 +166,13 @@ export default function MealPlanApp() {
         ) : tab === 'shopping' ? (
           <ShoppingTab trip={state.next_shopping_trip} recipes={state.recipes} />
         ) : (
-          <SettingsTab settings={state.settings} recipes={state.recipes} saveError={saveError} runAction={runAction} />
+          <SettingsTab
+            settings={state.settings}
+            position={state.today_position}
+            recipes={state.recipes}
+            saveError={saveError}
+            runAction={runAction}
+          />
         )}
         {state && loadError && (
           <p style={{ color: '#8a3b2b', fontSize: 12, textAlign: 'center', marginTop: 12 }}>
@@ -610,12 +616,13 @@ function ShoppingTab({ trip, recipes }: ShoppingTabProps) {
 // ---------- Settings Tab ----------
 type SettingsTabProps = {
   settings: Settings;
+  position: AppState['today_position'];
   recipes: Recipes;
   saveError: SaveError | null;
   runAction: RunAction;
 };
 
-function SettingsTab({ settings, recipes, saveError, runAction }: SettingsTabProps) {
+function SettingsTab({ settings, position, recipes, saveError, runAction }: SettingsTabProps) {
   const setCookSchedule = (change: Partial<ActionPayloads['set-cook-schedule']>) =>
     runAction('set-cook-schedule', {
       cook_count: settings.cook_count === 1 ? 1 : 2,
@@ -627,7 +634,29 @@ function SettingsTab({ settings, recipes, saveError, runAction }: SettingsTabPro
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <section style={cardStyle}>
-        <label style={labelStyle}>Первый день цикла блюд (блюдо №1)</label>
+        {/* Оба поля — одна настройка (якорь): варианты и якорь к ним считает сервер. */}
+        <label style={labelStyle}>Сегодня</label>
+        <select
+          value={position.current ?? ''}
+          onChange={(e) => runAction('set-cycle-position', { dish: Number(e.target.value) })}
+          style={inputStyle}
+        >
+          {position.current === null && (
+            <option value="" disabled>
+              Цикл начнётся {weekdayShort(settings.meal_anchor_date)} {fmtDate(settings.meal_anchor_date)}
+            </option>
+          )}
+          {position.options.map((o) => (
+            <option key={o.dish} value={o.dish}>
+              {o.lunch_id && o.dinner_id
+                ? `блюдо №${o.dish} · ${recipes[o.lunch_id].name} + ${recipes[o.dinner_id].name}`
+                : 'день 0 · готовка, цикл с завтра'}
+            </option>
+          ))}
+        </select>
+        <FieldError error={saveError} action="set-cycle-position" />
+
+        <label style={{ ...labelStyle, marginTop: 10 }}>Первый день цикла</label>
         <input
           type="date"
           value={settings.meal_anchor_date}
@@ -635,7 +664,8 @@ function SettingsTab({ settings, recipes, saveError, runAction }: SettingsTabPro
           style={inputStyle}
         />
         <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '8px 0 0' }}>
-          От этой даты отсчитывается цикл из 5 блюд на обед и ужин (блюдо 1 → блюдо 5 → снова блюдо 1…).
+          От этой даты отсчитывается цикл из 5 блюд на обед и ужин. Рыбные блюда в каждой партии едятся первыми,
+          поэтому сегодня можно выбрать не любое блюдо.
         </p>
         <FieldError error={saveError} action="set-anchor-date" />
       </section>

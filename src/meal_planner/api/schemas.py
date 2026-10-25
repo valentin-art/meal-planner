@@ -21,6 +21,7 @@ from meal_planner.core.models import (
     ShoppingItem,
     ShoppingTiming,
     ShoppingTrip,
+    TodayPosition,
 )
 from meal_planner.core.shopping import format_qty
 
@@ -119,6 +120,24 @@ class SetAnchorDateIn(BaseModel):
     meal_anchor_date: date  # "" или кривая дата → 422, ничего не сохраняется
 
 
+class SetCyclePositionIn(BaseModel):
+    # 0 — сегодня день 0 (готовка, цикл с завтра); 1..5 — «сегодня блюдо №N».
+    # Недостижимое сегодня блюдо → 422 (варианты — в today_position.options).
+    dish: int = Field(ge=0, le=5)
+
+
+class CyclePositionOut(BaseModel):
+    dish: int
+    anchor: date
+    lunch_id: str | None
+    dinner_id: str | None
+
+
+class TodayPositionOut(BaseModel):
+    current: int | None  # None — цикл ещё не начался
+    options: list[CyclePositionOut]
+
+
 class AppStateOut(BaseModel):
     today: date
     settings: SettingsOut
@@ -126,6 +145,7 @@ class AppStateOut(BaseModel):
     next_shopping_trip: ShoppingTripOut
     recipes: dict[str, RecipeOut]
     version: int
+    today_position: TodayPositionOut
 
 
 def to_settings_out(s: Settings) -> SettingsOut:
@@ -218,6 +238,21 @@ def to_shopping_trip_out(t: ShoppingTrip) -> ShoppingTripOut:
     )
 
 
+def to_today_position_out(p: TodayPosition) -> TodayPositionOut:
+    return TodayPositionOut(
+        current=p.current,
+        options=[
+            CyclePositionOut(
+                dish=o.dish,
+                anchor=o.anchor,
+                lunch_id=o.lunch.id if o.lunch else None,
+                dinner_id=o.dinner.id if o.dinner else None,
+            )
+            for o in p.options
+        ],
+    )
+
+
 def to_app_state_out(s: AppState) -> AppStateOut:
     return AppStateOut(
         today=s.today,
@@ -226,4 +261,5 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         next_shopping_trip=to_shopping_trip_out(s.next_shopping_trip),
         recipes=to_recipes_out(s.recipes),
         version=s.version,
+        today_position=to_today_position_out(s.today_position),
     )

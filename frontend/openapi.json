@@ -312,6 +312,80 @@
           }
         }
       }
+    },
+    "/api/actions/set-cycle-position": {
+      "post": {
+        "summary": "Set Cycle Position",
+        "operationId": "set_cycle_position_api_actions_set_cycle_position_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCyclePositionIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -346,6 +420,9 @@
           "version": {
             "type": "integer",
             "title": "Version"
+          },
+          "today_position": {
+            "$ref": "#/components/schemas/TodayPositionOut"
           }
         },
         "type": "object",
@@ -355,7 +432,8 @@
           "schedule",
           "next_shopping_trip",
           "recipes",
-          "version"
+          "version",
+          "today_position"
         ],
         "title": "AppStateOut"
       },
@@ -381,6 +459,49 @@
           "portions"
         ],
         "title": "CookItemOut"
+      },
+      "CyclePositionOut": {
+        "properties": {
+          "dish": {
+            "type": "integer",
+            "title": "Dish"
+          },
+          "anchor": {
+            "type": "string",
+            "format": "date",
+            "title": "Anchor"
+          },
+          "lunch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lunch Id"
+          },
+          "dinner_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dinner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dish",
+          "anchor",
+          "lunch_id",
+          "dinner_id"
+        ],
+        "title": "CyclePositionOut"
       },
       "DayOut": {
         "properties": {
@@ -666,6 +787,21 @@
         ],
         "title": "SetCookScheduleIn"
       },
+      "SetCyclePositionIn": {
+        "properties": {
+          "dish": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 0.0,
+            "title": "Dish"
+          }
+        },
+        "type": "object",
+        "required": [
+          "dish"
+        ],
+        "title": "SetCyclePositionIn"
+      },
       "SetShoppingTimingIn": {
         "properties": {
           "shopping_timing": {
@@ -834,6 +970,34 @@
           "shopping_groups"
         ],
         "title": "ShoppingTripOut"
+      },
+      "TodayPositionOut": {
+        "properties": {
+          "current": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/CyclePositionOut"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "current",
+          "options"
+        ],
+        "title": "TodayPositionOut"
       },
       "ValidationError": {
         "properties": {

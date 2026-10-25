@@ -11,6 +11,7 @@ from meal_planner.core.scheduling import (
     cook_date_for_trip,
     cook_weekdays,
     nearest_cook_date,
+    today_position,
 )
 from meal_planner.core.shopping import count_portions, extract_shopping_list
 
@@ -68,4 +69,7 @@ def recompute(
         next_shopping_trip=next_shopping_trip(settings, today),
         recipes=ALL_RECIPES,
         version=version,
+        today_position=today_position(
+            today, settings.meal_anchor_date, cook_weekdays(settings)
+        ),
     )

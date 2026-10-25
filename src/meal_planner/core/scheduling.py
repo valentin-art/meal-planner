@@ -5,7 +5,13 @@
 
 from datetime import date, timedelta
 
-from meal_planner.core.models import DayMeals, Recipe, Settings
+from meal_planner.core.models import (
+    CyclePosition,
+    DayMeals,
+    Recipe,
+    Settings,
+    TodayPosition,
+)
 from meal_planner.core.recipes_data import ALL_RECIPES
 
 # Порядок 5-дневной ротации: позиция k (1..5) → обед/ужин LUNCH_IDS[k-1]/DINNER_IDS[k-1].
@@ -150,4 +156,41 @@ def build_schedule(
     return tuple(
         meals_for_date(date_from + timedelta(days=i), anchor, weekdays)
         for i in range(max(days, 0))
+    )
+
+
+def today_position(
+    today: date, anchor: date, cook_weekdays: tuple[int, ...]
+) -> TodayPosition:
+    """Позиция «сегодня — блюдо N» (6.6): текущая и все достижимые.
+
+    Из-за перестановки рыбы в партии сегодня может стоять не любое из 5 блюд,
+    поэтому варианты перебираются: каждому достижимому блюду — один якорь.
+    Порядок кандидатов: сначала «цикл уже идёт» (якорь не позже начала
+    текущего окна, от ближайшего), потом «начался внутри окна».
+    """
+    window_end = nearest_cook_date(cook_weekdays, today)
+    window_start = previous_cook_date(cook_weekdays, window_end) + timedelta(days=1)
+    candidates = [window_start - timedelta(days=r) for r in range(5)] + [
+        window_start + timedelta(days=i)
+        for i in range(1, (today - window_start).days + 1)
+    ]
+    anchors = {0: today + timedelta(days=1)}  # сегодня день 0: готовка, цикл с завтра
+    for candidate in candidates:
+        dish = meals_for_date(today, candidate, cook_weekdays).cycle_index
+        if dish is not None:  # всегда: кандидаты не позже сегодня
+            anchors.setdefault(dish, candidate)
+
+    current = meals_for_date(today, anchor, cook_weekdays)
+    return TodayPosition(
+        current=0 if current.is_day_zero else current.cycle_index,
+        options=tuple(
+            CyclePosition(
+                dish=dish,
+                anchor=anchors[dish],
+                lunch=ALL_RECIPES[LUNCH_IDS[dish - 1]] if dish else None,
+                dinner=ALL_RECIPES[DINNER_IDS[dish - 1]] if dish else None,
+            )
+            for dish in sorted(anchors)
+        ),
     )

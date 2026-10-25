@@ -115,6 +115,22 @@ class ShoppingTrip:
 
 
 @dataclass(frozen=True, slots=True)
+class CyclePosition:
+    """Что может быть сегодня и какой якорь к этому приводит (6.6)."""
+
+    dish: int  # 0 — сегодня день 0 (готовка, цикл с завтра), 1..5 — cycle_index
+    anchor: date
+    lunch: Recipe | None  # блюдо позиции; у dish=0 — None
+    dinner: Recipe | None
+
+
+@dataclass(frozen=True, slots=True)
+class TodayPosition:
+    current: int | None  # как в options; None — цикл ещё не начался
+    options: tuple[CyclePosition, ...]  # по dish, всегда с 0
+
+
+@dataclass(frozen=True, slots=True)
 class AppState:
     today: date  # от него считается поездка в магазин; UI берёт «сегодня» отсюда
     settings: Settings
@@ -122,3 +138,4 @@ class AppState:
     next_shopping_trip: ShoppingTrip
     recipes: Mapping[str, Recipe]
     version: int
+    today_position: TodayPosition

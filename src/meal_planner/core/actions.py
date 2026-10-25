@@ -9,6 +9,16 @@ from dataclasses import replace
 from datetime import date
 
 from meal_planner.core.models import Settings, ShoppingTiming
+from meal_planner.core.scheduling import cook_weekdays, today_position
+
+
+class ActionError(ValueError):
+    """Действие невыполнимо при текущих настройках (API отвечает 422)."""
+
+    def __init__(self, field: str, message: str):
+        super().__init__(message)
+        self.field = field
+        self.message = message
 
 
 def set_anchor_date(settings: Settings, meal_anchor_date: date) -> Settings:
@@ -39,3 +49,17 @@ def set_shopping_timing(
     settings: Settings, shopping_timing: ShoppingTiming
 ) -> Settings:
     return replace(settings, shopping_timing=shopping_timing)
+
+
+def set_cycle_position(settings: Settings, today: date, dish: int) -> Settings:
+    """«Сегодня — блюдо №dish» (0 — сегодня день 0): сервер сам выбирает якорь."""
+    options = today_position(
+        today, settings.meal_anchor_date, cook_weekdays(settings)
+    ).options
+    anchor = next((o.anchor for o in options if o.dish == dish), None)
+    if anchor is None:
+        possible = ", ".join(
+            "день 0" if o.dish == 0 else f"блюдо №{o.dish}" for o in options
+        )
+        raise ActionError("dish", f"Сегодня может быть только: {possible}")
+    return replace(settings, meal_anchor_date=anchor)

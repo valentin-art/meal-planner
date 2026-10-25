@@ -18,6 +18,7 @@ from meal_planner.api.schemas import (
     RecipeOut,
     SetAnchorDateIn,
     SetCookScheduleIn,
+    SetCyclePositionIn,
     SetShoppingTimingIn,
     to_app_state_out,
     to_recipes_out,
@@ -113,7 +114,10 @@ def apply_action(
     # не важны. Первое действие сохраняет дефолты + изменение, как первый
     # persist({...DEFAULT_SETTINGS, поле}) в JS.
     settings, _ = current_settings(repo, today)
-    settings = change(settings)
+    try:
+        settings = change(settings)
+    except actions.ActionError as e:
+        raise unprocessable((["body", e.field], e.message)) from e
     errors = settings_errors(settings)
     if errors:
         raise unprocessable(*((["body", e.field], e.message) for e in errors))
@@ -187,6 +191,22 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.set_anchor_date(s, body.meal_anchor_date),
+        )
+
+    @app.post("/api/actions/set-cycle-position", response_model=AppStateOut)
+    def set_cycle_position(
+        body: SetCyclePositionIn,
+        repo: Repo,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.set_cycle_position(s, today, body.dish),
         )
 
     # Монтируется последним, чтобы не перекрывать /api.

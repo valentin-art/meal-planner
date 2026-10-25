@@ -43,11 +43,17 @@ def expected(scenario, case) -> dict:
     if d < anchor:
         return before_anchor(d, anchor)
     jsx = {k: v for k, v in case.items() if k not in ("tags", "natural_cycle_index")}
-    return {
+    day = {
         **jsx,
         "is_before_start": False,
         **CLIPPED_DAYS.get((scenario["name"], case["date"]), {}),
     }
+    # С 6.9 ккал/белок рецептов считаются из ингредиентов: суммы дня — по
+    # текущим рецептам тех же блюд, а не числа из JSX.
+    recipes = [ALL_RECIPES[day[slot]] for slot in ("breakfast", "lunch", "dinner")]
+    day["kcal_total"] = sum(r.kcal for r in recipes)
+    day["protein_total"] = sum(r.protein for r in recipes)
+    return day
 
 
 @pytest.mark.parametrize("scenario", SCENARIOS, ids=lambda s: s["name"])
@@ -80,8 +86,8 @@ def test_build_schedule_bounds():
 
 
 def test_day_totals():
-    # default_2x, 2026-11-07: b1 + l1 + d1
+    # default_2x, 2026-11-07: b1 + l1 + d1 (540 + 700 + 620, 33 + 54 + 47)
     assert day_totals(ALL_RECIPES["b1"], ALL_RECIPES["l1"], ALL_RECIPES["d1"]) == (
-        2025,
-        151,
+        1860,
+        134,
     )

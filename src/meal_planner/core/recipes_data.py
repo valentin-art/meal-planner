@@ -2,6 +2,8 @@
 
 Только данные. Порядок ротации (LUNCH_IDS/DINNER_IDS) — в scheduling.py.
 
+Ккал и белок не хранятся, а считаются из ингредиентов (6.9, core/nutrition.py).
+
 Единицы (6.7): г — твёрдое, мл — жидкое, шт — где вес бессмыслен (яйца),
 ст.л. — масло. Овощи — вес как куплено; авокадо — мякоть; лимон — сок.
 Доли штуки из JSX («0.3 шт» перца) переведены по весу штуки в чешских
@@ -15,15 +17,39 @@ from collections.abc import Mapping
 from types import MappingProxyType
 
 from meal_planner.core.models import Ingredient, MealKind, Recipe, RecipeStorage
+from meal_planner.core.nutrition import nutrition
+
+
+def _recipe(
+    id: str,
+    name: str,
+    kind: MealKind,
+    ingredients: tuple[Ingredient, ...],
+    steps: tuple[str, ...],
+    storage: RecipeStorage | None = None,
+    is_fish: bool = False,
+) -> Recipe:
+    # Ккал и белок — из ингредиентов (6.9), см. core/nutrition.py.
+    kcal, protein = nutrition(ingredients)
+    return Recipe(
+        id=id,
+        name=name,
+        kind=kind,
+        kcal=kcal,
+        protein=protein,
+        ingredients=ingredients,
+        steps=steps,
+        storage=storage,
+        is_fish=is_fish,
+    )
+
 
 ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
     {
-        "b1": Recipe(
+        "b1": _recipe(
             id="b1",
             name="Яйца (яичница / бенедикт)",
             kind=MealKind.BREAKFAST,
-            kcal=550,
-            protein=26,
             ingredients=(
                 Ingredient("яйца", 4, "шт", "Яйца и молочное"),
                 Ingredient("масло сливочное", 1, "ст.л.", "Прочее"),
@@ -43,12 +69,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 "Тост (для обоих вариантов): сухую сковороду без масла разогрейте на уровне 4-5 в течение 40 секунд, выложите хлеб, жарьте 1.5-2 минуты с каждой стороны до золотисто-коричневого цвета (не тёмно-коричневого).",
             ),
         ),
-        "b2": Recipe(
+        "b2": _recipe(
             id="b2",
             name="Греческий йогурт + тост с гуакамоле",
             kind=MealKind.BREAKFAST,
-            kcal=570,
-            protein=20,
             ingredients=(
                 Ingredient("греческий йогурт", 250, "г", "Яйца и молочное"),
                 Ingredient("гранола или орехи", 30, "г", "Прочее"),
@@ -67,12 +91,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 "В миску выложите 250 г йогурта, сверху — 30 г гранолы или рубленых орехов. Подавайте с тостом.",
             ),
         ),
-        "l1": Recipe(
+        "l1": _recipe(
             id="l1",
             name="Курица с киноа и овощами",
             kind=MealKind.LUNCH,
-            kcal=780,
-            protein=66,
             ingredients=(
                 Ingredient("куриное филе", 180, "г", "Белок"),
                 Ingredient("киноа", 70, "г", "Крупы"),
@@ -96,12 +118,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 micro="Средняя мощность (50-60%), 1 ст.л. воды, накрыть крышкой или тарелкой. 1 минута → перемешать → ещё 1-1.5 минуты, пока вся порция не станет горячей насквозь. Брокколи при разогреве мягчеет, поэтому не греть дольше.",
             ),
         ),
-        "l2": Recipe(
+        "l2": _recipe(
             id="l2",
             name="Гречка с тушёной говядиной",
             kind=MealKind.LUNCH,
-            kcal=800,
-            protein=51,
             ingredients=(
                 Ingredient("говядина", 180, "г", "Белок"),
                 Ingredient("гречка", 80, "г", "Крупы"),
@@ -125,12 +145,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 micro="Средняя мощность (50-60%), 1-2 ст.л. воды, накрыть. 1.5 минуты → перемешать, передвинув кусочки мяса из центра к краям → ещё 1-1.5 минуты.",
             ),
         ),
-        "l3": Recipe(
+        "l3": _recipe(
             id="l3",
             name="Цельнозерновая паста с тунцом/креветками",
             kind=MealKind.LUNCH,
-            kcal=795,
-            protein=46,
             ingredients=(
                 Ingredient("паста цельнозерновая", 90, "г", "Крупы"),
                 Ingredient(
@@ -163,12 +181,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "l4": Recipe(
+        "l4": _recipe(
             id="l4",
             name="Булгур с курицей и овощами",
             kind=MealKind.LUNCH,
-            kcal=790,
-            protein=66,
             ingredients=(
                 Ingredient("куриное филе", 180, "г", "Белок"),
                 Ingredient("булгур", 80, "г", "Крупы"),
@@ -190,12 +206,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 micro="Средняя мощность (50-60%), 1 ст.л. воды, накрыть. 1 минута → перемешать → ещё 1-1.5 минуты, пока куриные кусочки не станут горячими в центре.",
             ),
         ),
-        "l5": Recipe(
+        "l5": _recipe(
             id="l5",
             name="Рис басмати с лососем",
             kind=MealKind.LUNCH,
-            kcal=730,
-            protein=40,
             ingredients=(
                 Ingredient("лосось", 170, "г", "Белок"),
                 Ingredient("рис басмати", 80, "г", "Крупы"),
@@ -220,12 +234,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "d1": Recipe(
+        "d1": _recipe(
             id="d1",
             name="Салат с курицей гриль",
             kind=MealKind.DINNER,
-            kcal=695,
-            protein=59,
             ingredients=(
                 Ingredient("куриное филе", 180, "г", "Белок"),
                 Ingredient("листовой салат/шпинат/руккола", 60, "г", "Овощи"),
@@ -255,12 +267,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 after="Зелень, помидор и авокадо нарезать в день ужина, перед едой. Заправка — в самый последний момент. Орехи — сверху.",
             ),
         ),
-        "d2": Recipe(
+        "d2": _recipe(
             id="d2",
             name="Салат с лососем и авокадо",
             kind=MealKind.DINNER,
-            kcal=715,
-            protein=39,
             ingredients=(
                 Ingredient("лосось", 170, "г", "Белок"),
                 Ingredient("листовой салат/шпинат/руккола", 60, "г", "Овощи"),
@@ -287,12 +297,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "d3": Recipe(
+        "d3": _recipe(
             id="d3",
             name="Тёплый салат с креветками",
             kind=MealKind.DINNER,
-            kcal=735,
-            protein=52,
             ingredients=(
                 Ingredient(
                     "креветки варёные очищенные (размороженные или замороженные)",
@@ -326,12 +334,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "d4": Recipe(
+        "d4": _recipe(
             id="d4",
             name="Греческий салат с курицей",
             kind=MealKind.DINNER,
-            kcal=680,
-            protein=57,
             ingredients=(
                 Ingredient("куриное филе", 160, "г", "Белок"),
                 Ingredient("огурец", 150, "г", "Овощи"),  # ½ огурца
@@ -357,12 +363,10 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 after="Всё собирается перед едой. Фету и авокадо добавляйте последними и перемешивайте бережно, чтобы не размять.",
             ),
         ),
-        "d5": Recipe(
+        "d5": _recipe(
             id="d5",
             name="Салат с курицей, яйцом и нутом",
             kind=MealKind.DINNER,
-            kcal=750,
-            protein=60,
             ingredients=(
                 Ingredient("куриное филе", 140, "г", "Белок"),
                 Ingredient("яйца", 2, "шт", "Яйца и молочное"),

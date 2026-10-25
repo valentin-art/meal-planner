@@ -3,8 +3,8 @@
   "id": "b1",
   "name": "Яйца (яичница / бенедикт)",
   "kind": "breakfast",
-  "kcal": 550,
-  "protein": 26,
+  "kcal": 540,
+  "protein": 33,
   "ingredients": [
    {
     "name": "яйца",
@@ -43,8 +43,8 @@
   "id": "b2",
   "name": "Греческий йогурт + тост с гуакамоле",
   "kind": "breakfast",
-  "kcal": 570,
-  "protein": 20,
+  "kcal": 735,
+  "protein": 27,
   "ingredients": [
    {
     "name": "греческий йогурт",
@@ -92,8 +92,8 @@
   "id": "l1",
   "name": "Курица с киноа и овощами",
   "kind": "lunch",
-  "kcal": 780,
-  "protein": 66,
+  "kcal": 700,
+  "protein": 54,
   "ingredients": [
    {
     "name": "куриное филе",
@@ -148,8 +148,8 @@
   "id": "l2",
   "name": "Гречка с тушёной говядиной",
   "kind": "lunch",
-  "kcal": 800,
-  "protein": 51,
+  "kcal": 740,
+  "protein": 50,
   "ingredients": [
    {
     "name": "говядина",
@@ -204,8 +204,8 @@
   "id": "l3",
   "name": "Цельнозерновая паста с тунцом/креветками",
   "kind": "lunch",
-  "kcal": 795,
-  "protein": 46,
+  "kcal": 685,
+  "protein": 40,
   "ingredients": [
    {
     "name": "паста цельнозерновая",
@@ -267,8 +267,8 @@
   "id": "l4",
   "name": "Булгур с курицей и овощами",
   "kind": "lunch",
-  "kcal": 790,
-  "protein": 66,
+  "kcal": 710,
+  "protein": 52,
   "ingredients": [
    {
     "name": "куриное филе",
@@ -321,8 +321,8 @@
   "id": "l5",
   "name": "Рис басмати с лососем",
   "kind": "lunch",
-  "kcal": 730,
-  "protein": 40,
+  "kcal": 685,
+  "protein": 43,
   "ingredients": [
    {
     "name": "лосось",
@@ -371,8 +371,8 @@
   "id": "d1",
   "name": "Салат с курицей гриль",
   "kind": "dinner",
-  "kcal": 695,
-  "protein": 59,
+  "kcal": 620,
+  "protein": 47,
   "ingredients": [
    {
     "name": "куриное филе",
@@ -452,8 +452,8 @@
   "id": "d2",
   "name": "Салат с лососем и авокадо",
   "kind": "dinner",
-  "kcal": 715,
-  "protein": 39,
+  "kcal": 740,
+  "protein": 41,
   "ingredients": [
    {
     "name": "лосось",
@@ -514,7 +514,7 @@
   "id": "d3",
   "name": "Тёплый салат с креветками",
   "kind": "dinner",
-  "kcal": 735,
+  "kcal": 565,
   "protein": 52,
   "ingredients": [
    {
@@ -584,8 +584,8 @@
   "id": "d4",
   "name": "Греческий салат с курицей",
   "kind": "dinner",
-  "kcal": 680,
-  "protein": 57,
+  "kcal": 620,
+  "protein": 45,
   "ingredients": [
    {
     "name": "куриное филе",
@@ -652,7 +652,7 @@
   "name": "Салат с курицей, яйцом и нутом",
   "kind": "dinner",
   "kcal": 750,
-  "protein": 60,
+  "protein": 63,
   "ingredients": [
    {
     "name": "куриное филе",

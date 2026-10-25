@@ -18,14 +18,12 @@ def test_ids_and_order_match_jsx():
 
 @pytest.mark.parametrize("rid", list(GOLDEN["recipes"]))
 def test_recipe_matches_jsx(rid):
-    # С 6.7 количества, единицы и тексты с ними — свои (см. снапшот ниже);
-    # с JSX сверяется то, что не менялось.
+    # С 6.7 количества, единицы и тексты с ними — свои, с 6.9 ккал/белок
+    # считаются (см. снапшот ниже); с JSX сверяется то, что не менялось.
     js = GOLDEN["recipes"][rid]
     recipe = ALL_RECIPES[rid]
     assert recipe.name == js["name"]
     assert recipe.kind is JS_KIND[js["kind"]]
-    assert recipe.kcal == js["kcal"]
-    assert recipe.protein == js["protein"]
     assert len(recipe.steps) == len(js["steps"])
     assert ("storage" in js) == (recipe.storage is not None)
     if recipe.storage is not None:

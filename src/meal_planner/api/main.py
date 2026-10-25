@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from meal_planner.api.schemas import (
     AppStateOut,
     RecipeOut,
+    SetAnchorDateIn,
     SetCookScheduleIn,
     SetShoppingTimingIn,
     to_app_state_out,
@@ -126,6 +127,22 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.set_shopping_timing(s, body.shopping_timing),
+        )
+
+    @app.post("/api/actions/set-anchor-date", response_model=AppStateOut)
+    def set_anchor_date(
+        body: SetAnchorDateIn,
+        repo: Repo,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.set_anchor_date(s, body.meal_anchor_date),
         )
 
     # Монтируется последним, чтобы не перекрывать /api.

@@ -1,3 +1,4 @@
+import dataclasses
 from datetime import date
 
 import pytest
@@ -205,4 +206,38 @@ def test_action_respects_range(client, repo):
 )
 def test_action_type_errors_are_422_and_not_saved(client, repo, action, body):
     assert post(client, action, body).status_code == 422
+    assert repo.get_settings() is None
+
+
+def test_set_anchor_date_matches_recompute(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(client, "set-anchor-date", {"meal_anchor_date": "2026-11-12"}).json()
+    moved = dataclasses.replace(DEFAULT_2X, meal_anchor_date=date(2026, 11, 12))
+    expected = to_app_state_out(recompute(moved, TODAY, version=2))
+    assert body == expected.model_dump(mode="json")
+    # день 0 — накануне нового якоря, и он единственный в окне
+    assert [d["date"] for d in body["schedule"] if d["is_day_zero"]] == ["2026-11-11"]
+
+
+def test_actions_do_not_overwrite_each_other(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    post(client, "set-anchor-date", {"meal_anchor_date": "2026-11-12"})
+    body = post(
+        client, "set-cook-schedule", {"cook_count": 1, "cook_weekday1": 7}
+    ).json()
+    assert body["settings"]["meal_anchor_date"] == "2026-11-12"
+    assert body["settings"]["cook_count"] == 1
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"meal_anchor_date": ""},  # в JS очищенное поле даты сохранялось как ""
+        {"meal_anchor_date": "2026-13-01"},
+        {"meal_anchor_date": "tomorrow"},
+        {},
+    ],
+)
+def test_set_anchor_date_rejects_bad_dates(client, repo, body):
+    assert post(client, "set-anchor-date", body).status_code == 422
     assert repo.get_settings() is None

@@ -112,6 +112,10 @@ class SetShoppingTimingIn(BaseModel):
     shopping_timing: ShoppingTiming
 
 
+class SetAnchorDateIn(BaseModel):
+    meal_anchor_date: date  # "" или кривая дата → 422, ничего не сохраняется
+
+
 class AppStateOut(BaseModel):
     today: date
     settings: SettingsOut

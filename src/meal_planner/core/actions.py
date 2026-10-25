@@ -6,8 +6,15 @@
 """
 
 from dataclasses import replace
+from datetime import date
 
 from meal_planner.core.models import Settings, ShoppingTiming
+
+
+def set_anchor_date(settings: Settings, meal_anchor_date: date) -> Settings:
+    # Любая дата, прошлая или будущая — как в JS. Пустую дату (в JS очищенный
+    # <input type="date"> сохранял "" и ломал расписание) отсекает API.
+    return replace(settings, meal_anchor_date=meal_anchor_date)
 
 
 def set_cook_schedule(

@@ -1,6 +1,10 @@
 from datetime import date
 
-from meal_planner.core.actions import set_cook_schedule, set_shopping_timing
+from meal_planner.core.actions import (
+    set_anchor_date,
+    set_cook_schedule,
+    set_shopping_timing,
+)
 from meal_planner.core.models import Settings
 
 BASE = Settings(date(2026, 11, 5), 2, 3, 6, "same")
@@ -23,4 +27,10 @@ def test_second_day_survives_switching_to_one_cook_and_back():
 def test_set_shopping_timing_changes_only_timing():
     assert set_shopping_timing(BASE, "before") == Settings(
         date(2026, 11, 5), 2, 3, 6, "before"
+    )
+
+
+def test_set_anchor_date_changes_only_anchor():
+    assert set_anchor_date(BASE, date(2026, 11, 12)) == Settings(
+        date(2026, 11, 12), 2, 3, 6, "same"
     )

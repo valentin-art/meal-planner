@@ -1,5 +1,5 @@
 import dataclasses
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from fastapi.testclient import TestClient
@@ -8,10 +8,11 @@ from scenario_settings import settings_of
 
 from meal_planner.api.main import create_app, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
+from meal_planner.core.models import Settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.shopping import format_qty
-from meal_planner.db.repository import SettingsRepository
+from meal_planner.db.repository import SettingsRepository, StoredSettings
 
 TODAY = date(2026, 11, 9)
 DEFAULT_2X = settings_of(next(s for s in SCENARIOS if s["name"] == "default_2x"))
@@ -240,4 +241,73 @@ def test_actions_do_not_overwrite_each_other(client, repo):
 )
 def test_set_anchor_date_rejects_bad_dates(client, repo, body):
     assert post(client, "set-anchor-date", body).status_code == 422
+    assert repo.get_settings() is None
+
+
+@pytest.mark.parametrize("weekday", [0, 8])
+def test_weekday_out_of_range_is_422(client, repo, weekday):
+    r = post(client, "set-cook-schedule", {"cook_count": 1, "cook_weekday1": weekday})
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["loc"] == ["body", "cook_weekday1"]
+    assert repo.get_settings() is None
+
+
+def test_second_day_required_for_two_cooks(client, repo):
+    # Раньше здесь был 500 из cook_weekdays: второго дня нет ни в запросе,
+    # ни в сохранённых настройках.
+    single = Settings(date(2026, 11, 5), 1, 7, None, "same")
+    repo.save_settings(single)
+    r = post(client, "set-cook-schedule", {"cook_count": 2, "cook_weekday1": 3})
+    assert r.status_code == 422
+    assert r.json()["detail"] == [
+        {
+            "type": "value_error",
+            "loc": ["body", "cook_weekday2"],
+            "msg": "При двух готовках в неделю нужен второй день готовки",
+        }
+    ]
+    assert repo.get_settings() == StoredSettings(single, 1)  # ничего не записано
+    ok = post(
+        client,
+        "set-cook-schedule",
+        {"cook_count": 2, "cook_weekday1": 3, "cook_weekday2": 5},
+    )
+    assert ok.status_code == 200
+    assert ok.json()["version"] == 2
+
+
+def test_range_from_after_to_is_422(client):
+    r = client.get("/api/state", params={"from": "2026-11-10", "to": "2026-11-09"})
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["loc"] == ["query", "from"]
+
+
+def test_range_to_before_today_without_from_is_422(client):
+    assert client.get("/api/state", params={"to": "2026-11-08"}).status_code == 422
+
+
+def test_range_limit_366_days(client):
+    start = date(2026, 11, 9)
+    ok = client.get(
+        "/api/state",
+        params={"from": str(start), "to": str(start + timedelta(days=365))},
+    )
+    assert ok.status_code == 200
+    assert len(ok.json()["schedule"]) == 366
+    too_long = client.get(
+        "/api/state",
+        params={"from": str(start), "to": str(start + timedelta(days=366))},
+    )
+    assert too_long.status_code == 422
+    assert too_long.json()["detail"][0]["msg"] == "Диапазон дат — не больше 366 дней"
+
+
+def test_action_with_bad_range_saves_nothing(client, repo):
+    r = post(
+        client,
+        "set-shopping-timing",
+        {"shopping_timing": "before"},
+        **{"from": "2026-11-10", "to": "2026-11-09"},
+    )
+    assert r.status_code == 422
     assert repo.get_settings() is None

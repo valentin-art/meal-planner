@@ -8,7 +8,7 @@ from collections.abc import Mapping
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from meal_planner.core.models import (
     AppState,
@@ -102,10 +102,11 @@ class ShoppingTripOut(BaseModel):
 
 
 class SetCookScheduleIn(BaseModel):
-    # Пока только типы; диапазон 1–7 и обязательность второго дня — тикет 2.6.
+    # ge/le дублируют core/validation намеренно: так пределы видны в OpenAPI.
+    # Обязательность второго дня проверяется по итоговым настройкам в core.
     cook_count: Literal[1, 2]
-    cook_weekday1: int
-    cook_weekday2: int | None = None  # None — оставить сохранённый
+    cook_weekday1: int = Field(ge=1, le=7)
+    cook_weekday2: int | None = Field(default=None, ge=1, le=7)  # None — оставить
 
 
 class SetShoppingTimingIn(BaseModel):

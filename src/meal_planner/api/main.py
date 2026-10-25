@@ -10,7 +10,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.staticfiles import StaticFiles
 
 from meal_planner.api.schemas import (
@@ -26,9 +26,11 @@ from meal_planner.core import actions
 from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.validation import settings_errors
 from meal_planner.db.repository import SettingsRepository, db_path_from_env
 
 DEFAULT_STATIC_DIR = Path("frontend/dist")
+MAX_RANGE_DAYS = 366  # ограничение API (?from=&to=), не бизнес-правило
 
 
 @lru_cache
@@ -64,6 +66,29 @@ def state_response(
     return to_app_state_out(recompute(settings, today, date_from, date_to, version))
 
 
+def unprocessable(*errors: tuple[list[str], str]) -> HTTPException:
+    # Тот же формат detail, что у ошибок валидации Pydantic/FastAPI.
+    return HTTPException(
+        422,
+        detail=[{"type": "value_error", "loc": loc, "msg": msg} for loc, msg in errors],
+    )
+
+
+def check_range(today: date, date_from: date | None, date_to: date | None) -> None:
+    # Без ?to= recompute берёт 14 дней — проверять нечего.
+    if date_to is None:
+        return
+    start = date_from or today
+    if start > date_to:
+        raise unprocessable(
+            (["query", "from"], "Начало диапазона (from) позже конца (to)")
+        )
+    if (date_to - start).days + 1 > MAX_RANGE_DAYS:
+        raise unprocessable(
+            (["query", "to"], f"Диапазон дат — не больше {MAX_RANGE_DAYS} дней")
+        )
+
+
 def apply_action(
     repo: SettingsRepository,
     today: date,
@@ -71,11 +96,16 @@ def apply_action(
     date_to: date | None,
     change: Callable[[Settings], Settings],
 ) -> AppStateOut:
+    # Всё проверяется до save_settings: невалидный запрос ничего не пишет.
+    check_range(today, date_from, date_to)
     # Чтение и запись не в одной транзакции — для одного пользователя гонки
     # не важны. Первое действие сохраняет дефолты + изменение, как первый
     # persist({...DEFAULT_SETTINGS, поле}) в JS.
     settings, _ = current_settings(repo, today)
     settings = change(settings)
+    errors = settings_errors(settings)
+    if errors:
+        raise unprocessable(*((["body", e.field], e.message) for e in errors))
     version = repo.save_settings(settings)
     return state_response(settings, version, today, date_from, date_to)
 
@@ -87,6 +117,7 @@ def create_app() -> FastAPI:
     def get_state(
         repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
     ) -> AppStateOut:
+        check_range(today, date_from, date_to)
         settings, version = current_settings(repo, today)
         return state_response(settings, version, today, date_from, date_to)
 

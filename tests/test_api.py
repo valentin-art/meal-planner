@@ -8,7 +8,7 @@ from scenario_settings import settings_of
 
 from meal_planner.api.main import create_app, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
-from meal_planner.core.models import Settings
+from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.shopping import format_qty
@@ -23,10 +23,10 @@ def repo(tmp_path):
     return SettingsRepository(tmp_path / "db.sqlite")
 
 
-def make_client(repo) -> TestClient:
+def make_client(repo, today: date = TODAY) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_repository] = lambda: repo
-    app.dependency_overrides[get_today] = lambda: TODAY
+    app.dependency_overrides[get_today] = lambda: today
     return TestClient(app)
 
 
@@ -41,7 +41,7 @@ def test_state_without_settings_returns_defaults(client, repo):
     assert r.status_code == 200
     body = r.json()
     assert body["today"] == "2026-11-09"
-    assert body["version"] == 0
+    assert body["version"] == 1
     assert body["settings"] == {
         "meal_anchor_date": "2026-11-10",
         "cook_count": 2,
@@ -52,7 +52,23 @@ def test_state_without_settings_returns_defaults(client, repo):
     assert [d["date"] for d in body["schedule"]][:2] == ["2026-11-09", "2026-11-10"]
     assert len(body["schedule"]) == 14
     assert len(body["recipes"]) == 12
-    assert repo.get_settings() is None  # дефолты в БД не пишутся
+    # первый GET сохраняет дефолты (6.4)
+    assert repo.get_settings() == StoredSettings(default_settings(TODAY), 1)
+
+
+def test_anchor_does_not_move_with_today(client, repo):
+    first = client.get("/api/state").json()
+    next_day = make_client(repo, TODAY + timedelta(days=1)).get("/api/state").json()
+    assert next_day["today"] == "2026-11-10"
+    assert first["settings"] == next_day["settings"]
+    assert next_day["settings"]["meal_anchor_date"] == "2026-11-10"
+    assert next_day["version"] == 1
+
+
+def test_state_with_bad_range_saves_nothing(client, repo):
+    r = client.get("/api/state", params={"from": "2026-11-10", "to": "2026-11-09"})
+    assert r.status_code == 422
+    assert repo.get_settings() is None
 
 
 def test_state_with_saved_settings_matches_recompute(client, repo):
@@ -129,6 +145,9 @@ def test_recipes_endpoint(client):
 class ExplodingRepository:
     def get_settings(self):
         raise AssertionError("/api/recipes не должен читать настройки")
+
+    def init_settings(self, defaults):
+        raise AssertionError("/api/recipes не должен писать настройки")
 
 
 def test_recipes_endpoint_does_not_touch_db(tmp_path, monkeypatch):

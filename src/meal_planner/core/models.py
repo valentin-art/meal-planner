@@ -56,7 +56,8 @@ class Settings:
 
 def default_settings(today: date) -> Settings:
     # JS DEFAULT_SETTINGS: якорь — завтра, готовка Ср/Сб, закупка в день готовки.
-    # Пока ничего не сохранено, якорь каждый день снова «завтра» — как в JS.
+    # Якорь — «завтра» от первого обращения: API сохраняет дефолты при первом
+    # GET /api/state (6.4), иначе цикл сдвигался бы каждый день, как в JS.
     return Settings(
         meal_anchor_date=today + timedelta(days=1),
         cook_count=2,

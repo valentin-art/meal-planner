@@ -15,7 +15,8 @@ from meal_planner.core.planner import recompute
 
 PAGE_SIZE = 14  # как PAGE_SIZE/LOAD_STEP во фронтенде
 
-# (имя, сегодня, сохранённые настройки или None — «ещё ничего не сохранено»)
+# (имя, сегодня, сохранённые настройки или None — первый запуск: первый GET
+# сохраняет дефолты, version 1)
 SCENARIOS = [
     # день 0 сегодня: якорь по умолчанию — завтра
     ("defaults", date(2026, 11, 9), None),
@@ -55,12 +56,11 @@ def build() -> dict:
     scenarios = []
     for name, today, saved in SCENARIOS:
         settings = saved or default_settings(today)
-        version = 0 if saved is None else 1
         more_to = today + timedelta(days=2 * PAGE_SIZE - 1)
         responses = {
-            "api/state": state_json(settings, today, version),
+            "api/state": state_json(settings, today, 1),
             f"api/state?from={today}&to={more_to}": state_json(
-                settings, today, version, today, more_to
+                settings, today, 1, today, more_to
             ),
         }
         for state in responses.values():

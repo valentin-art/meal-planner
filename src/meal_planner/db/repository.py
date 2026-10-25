@@ -41,6 +41,13 @@ ON CONFLICT(id) DO UPDATE SET
 RETURNING version
 """
 
+_INSERT_IF_ABSENT = """
+INSERT INTO settings
+    (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing)
+VALUES (1, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO NOTHING
+"""
+
 
 def db_path_from_env() -> Path:
     return Path(os.environ.get("MEALPLAN_DB_PATH", DEFAULT_DB_PATH))
@@ -50,6 +57,28 @@ def db_path_from_env() -> Path:
 class StoredSettings:
     settings: Settings
     version: int
+
+
+def _row(settings: Settings) -> tuple:
+    return (
+        settings.meal_anchor_date.isoformat(),
+        settings.cook_count,
+        settings.cook_weekday1,
+        settings.cook_weekday2,
+        settings.shopping_timing,
+    )
+
+
+def _read(conn: sqlite3.Connection) -> StoredSettings | None:
+    row = conn.execute(
+        "SELECT meal_anchor_date, cook_count, cook_weekday1, cook_weekday2,"
+        " shopping_timing, version FROM settings WHERE id = 1"
+    ).fetchone()
+    if row is None:
+        return None
+    anchor, cook_count, wd1, wd2, timing, version = row
+    settings = Settings(date.fromisoformat(anchor), cook_count, wd1, wd2, timing)
+    return StoredSettings(settings=settings, version=version)
 
 
 class SettingsRepository:
@@ -70,27 +99,22 @@ class SettingsRepository:
     def get_settings(self) -> StoredSettings | None:
         """None, если ещё ничего не сохранено — дефолты подставляет вызывающий."""
         with self._connect() as conn:
-            row = conn.execute(
-                "SELECT meal_anchor_date, cook_count, cook_weekday1, cook_weekday2,"
-                " shopping_timing, version FROM settings WHERE id = 1"
-            ).fetchone()
-        if row is None:
-            return None
-        anchor, cook_count, wd1, wd2, timing, version = row
-        settings = Settings(date.fromisoformat(anchor), cook_count, wd1, wd2, timing)
-        return StoredSettings(settings=settings, version=version)
+            return _read(conn)
+
+    def init_settings(self, defaults: Settings) -> StoredSettings:
+        """Сохраняет defaults, только если ещё ничего нет; возвращает то, что в БД.
+
+        Вставка и чтение — в одной транзакции: при одновременных первых
+        запросах оба получат одну и ту же строку.
+        """
+        with self._connect() as conn:
+            conn.execute(_INSERT_IF_ABSENT, _row(defaults))
+            stored = _read(conn)
+        assert stored is not None
+        return stored
 
     def save_settings(self, settings: Settings) -> int:
         """Сохраняет настройки целиком и возвращает новую версию (1, 2, ...)."""
         with self._connect() as conn:
-            (version,) = conn.execute(
-                _UPSERT,
-                (
-                    settings.meal_anchor_date.isoformat(),
-                    settings.cook_count,
-                    settings.cook_weekday1,
-                    settings.cook_weekday2,
-                    settings.shopping_timing,
-                ),
-            ).fetchone()
+            (version,) = conn.execute(_UPSERT, _row(settings)).fetchone()
         return version

@@ -49,6 +49,22 @@ def test_single_row(tmp_path):
         assert conn.execute("SELECT count(*) FROM settings").fetchone() == (1,)
 
 
+def test_init_settings_writes_only_into_empty_db(tmp_path):
+    repo = SettingsRepository(tmp_path / "db.sqlite")
+    assert repo.init_settings(SETTINGS) == StoredSettings(SETTINGS, 1)
+    other = Settings(date(2026, 12, 1), 1, 7, None, "before")
+    assert repo.init_settings(other) == StoredSettings(SETTINGS, 1)  # не тронуто
+    assert repo.get_settings() == StoredSettings(SETTINGS, 1)
+
+
+def test_init_settings_keeps_saved(tmp_path):
+    repo = SettingsRepository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    repo.save_settings(SETTINGS)
+    other = Settings(date(2026, 12, 1), 1, 7, None, "before")
+    assert repo.init_settings(other) == StoredSettings(SETTINGS, 2)
+
+
 def test_db_path_from_env(monkeypatch, tmp_path):
     monkeypatch.delenv("MEALPLAN_DB_PATH", raising=False)
     assert db_path_from_env() == DEFAULT_DB_PATH == Path("data/mealplan.db")

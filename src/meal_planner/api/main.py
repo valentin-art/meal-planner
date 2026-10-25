@@ -27,7 +27,11 @@ from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.validation import settings_errors
-from meal_planner.db.repository import SettingsRepository, db_path_from_env
+from meal_planner.db.repository import (
+    SettingsRepository,
+    StoredSettings,
+    db_path_from_env,
+)
 
 DEFAULT_STATIC_DIR = Path("frontend/dist")
 MAX_RANGE_DAYS = 366  # ограничение API (?from=&to=), не бизнес-правило
@@ -51,9 +55,16 @@ DateTo = Annotated[date | None, Query(alias="to")]
 def current_settings(repo: SettingsRepository, today: date) -> tuple[Settings, int]:
     stored = repo.get_settings()
     if stored is None:
-        # Как в JS: пока ничего не сохранено — дефолты, в БД не пишем.
+        # Для действий: дефолты в памяти, пишутся вместе с изменением, а
+        # невалидное действие не пишет ничего.
         return default_settings(today), 0
     return stored.settings, stored.version
+
+
+def stored_or_initial(repo: SettingsRepository, today: date) -> StoredSettings:
+    # Первый GET сохраняет дефолты: иначе якорь («завтра») пересчитывался бы
+    # от каждого нового «сегодня» и цикл начинался заново (6.4).
+    return repo.get_settings() or repo.init_settings(default_settings(today))
 
 
 def state_response(
@@ -118,8 +129,10 @@ def create_app() -> FastAPI:
         repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
     ) -> AppStateOut:
         check_range(today, date_from, date_to)
-        settings, version = current_settings(repo, today)
-        return state_response(settings, version, today, date_from, date_to)
+        stored = stored_or_initial(repo, today)
+        return state_response(
+            stored.settings, stored.version, today, date_from, date_to
+        )
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
     def get_recipes() -> dict[str, RecipeOut]:

@@ -1,0 +1,847 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Meal planner",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/api/state": {
+      "get": {
+        "summary": "Get State",
+        "operationId": "get_state_api_state_get",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/recipes": {
+      "get": {
+        "summary": "Get Recipes",
+        "operationId": "get_recipes_api_recipes_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "$ref": "#/components/schemas/RecipeOut"
+                  },
+                  "type": "object",
+                  "title": "Response Get Recipes Api Recipes Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/set-cook-schedule": {
+      "post": {
+        "summary": "Set Cook Schedule",
+        "operationId": "set_cook_schedule_api_actions_set_cook_schedule_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCookScheduleIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/set-shopping-timing": {
+      "post": {
+        "summary": "Set Shopping Timing",
+        "operationId": "set_shopping_timing_api_actions_set_shopping_timing_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetShoppingTimingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/set-anchor-date": {
+      "post": {
+        "summary": "Set Anchor Date",
+        "operationId": "set_anchor_date_api_actions_set_anchor_date_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetAnchorDateIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AppStateOut": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/SettingsOut"
+          },
+          "schedule": {
+            "items": {
+              "$ref": "#/components/schemas/DayOut"
+            },
+            "type": "array",
+            "title": "Schedule"
+          },
+          "next_shopping_trip": {
+            "$ref": "#/components/schemas/ShoppingTripOut"
+          },
+          "recipes": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RecipeOut"
+            },
+            "type": "object",
+            "title": "Recipes"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "settings",
+          "schedule",
+          "next_shopping_trip",
+          "recipes",
+          "version"
+        ],
+        "title": "AppStateOut"
+      },
+      "CookItemOut": {
+        "properties": {
+          "lunch_id": {
+            "type": "string",
+            "title": "Lunch Id"
+          },
+          "dinner_id": {
+            "type": "string",
+            "title": "Dinner Id"
+          },
+          "portions": {
+            "type": "integer",
+            "title": "Portions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lunch_id",
+          "dinner_id",
+          "portions"
+        ],
+        "title": "CookItemOut"
+      },
+      "DayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "cycle_index": {
+            "type": "integer",
+            "title": "Cycle Index"
+          },
+          "breakfast_id": {
+            "type": "string",
+            "title": "Breakfast Id"
+          },
+          "lunch_id": {
+            "type": "string",
+            "title": "Lunch Id"
+          },
+          "dinner_id": {
+            "type": "string",
+            "title": "Dinner Id"
+          },
+          "kcal_total": {
+            "type": "integer",
+            "title": "Kcal Total"
+          },
+          "protein_total": {
+            "type": "integer",
+            "title": "Protein Total"
+          },
+          "is_day_zero": {
+            "type": "boolean",
+            "title": "Is Day Zero"
+          },
+          "is_cook_day": {
+            "type": "boolean",
+            "title": "Is Cook Day"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "cycle_index",
+          "breakfast_id",
+          "lunch_id",
+          "dinner_id",
+          "kcal_total",
+          "protein_total",
+          "is_day_zero",
+          "is_cook_day"
+        ],
+        "title": "DayOut"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "IngredientOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "qty": {
+            "type": "number",
+            "title": "Qty"
+          },
+          "qty_display": {
+            "type": "string",
+            "title": "Qty Display"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "qty",
+          "qty_display",
+          "unit",
+          "category"
+        ],
+        "title": "IngredientOut"
+      },
+      "RecipeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein": {
+            "type": "integer",
+            "title": "Protein"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStorageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "is_fish": {
+            "type": "boolean",
+            "title": "Is Fish"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "kcal",
+          "protein",
+          "ingredients",
+          "steps",
+          "storage",
+          "is_fish"
+        ],
+        "title": "RecipeOut"
+      },
+      "RecipeStorageOut": {
+        "properties": {
+          "keep": {
+            "type": "string",
+            "title": "Keep"
+          },
+          "pan": {
+            "type": "string",
+            "title": "Pan"
+          },
+          "micro": {
+            "type": "string",
+            "title": "Micro"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keep",
+          "pan",
+          "micro",
+          "after"
+        ],
+        "title": "RecipeStorageOut"
+      },
+      "SetAnchorDateIn": {
+        "properties": {
+          "meal_anchor_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Meal Anchor Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_anchor_date"
+        ],
+        "title": "SetAnchorDateIn"
+      },
+      "SetCookScheduleIn": {
+        "properties": {
+          "cook_count": {
+            "type": "integer",
+            "enum": [
+              1,
+              2
+            ],
+            "title": "Cook Count"
+          },
+          "cook_weekday1": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Cook Weekday1"
+          },
+          "cook_weekday2": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 7.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cook Weekday2"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cook_count",
+          "cook_weekday1"
+        ],
+        "title": "SetCookScheduleIn"
+      },
+      "SetShoppingTimingIn": {
+        "properties": {
+          "shopping_timing": {
+            "type": "string",
+            "enum": [
+              "same",
+              "before"
+            ],
+            "title": "Shopping Timing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shopping_timing"
+        ],
+        "title": "SetShoppingTimingIn"
+      },
+      "SettingsOut": {
+        "properties": {
+          "meal_anchor_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Meal Anchor Date"
+          },
+          "cook_count": {
+            "type": "integer",
+            "title": "Cook Count"
+          },
+          "cook_weekday1": {
+            "type": "integer",
+            "title": "Cook Weekday1"
+          },
+          "cook_weekday2": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cook Weekday2"
+          },
+          "shopping_timing": {
+            "type": "string",
+            "enum": [
+              "same",
+              "before"
+            ],
+            "title": "Shopping Timing"
+          }
+        },
+        "type": "object",
+        "required": [
+          "meal_anchor_date",
+          "cook_count",
+          "cook_weekday1",
+          "cook_weekday2",
+          "shopping_timing"
+        ],
+        "title": "SettingsOut"
+      },
+      "ShoppingGroupOut": {
+        "properties": {
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ShoppingItemOut"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "category",
+          "items"
+        ],
+        "title": "ShoppingGroupOut"
+      },
+      "ShoppingItemOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "qty": {
+            "type": "number",
+            "title": "Qty"
+          },
+          "qty_display": {
+            "type": "string",
+            "title": "Qty Display"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "qty",
+          "qty_display",
+          "unit",
+          "category"
+        ],
+        "title": "ShoppingItemOut"
+      },
+      "ShoppingTripOut": {
+        "properties": {
+          "shopping_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Shopping Date"
+          },
+          "cook_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Cook Date"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Window End"
+          },
+          "window_days": {
+            "type": "integer",
+            "title": "Window Days"
+          },
+          "cook_items": {
+            "items": {
+              "$ref": "#/components/schemas/CookItemOut"
+            },
+            "type": "array",
+            "title": "Cook Items"
+          },
+          "shopping_groups": {
+            "items": {
+              "$ref": "#/components/schemas/ShoppingGroupOut"
+            },
+            "type": "array",
+            "title": "Shopping Groups"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shopping_date",
+          "cook_date",
+          "window_start",
+          "window_end",
+          "window_days",
+          "cook_items",
+          "shopping_groups"
+        ],
+        "title": "ShoppingTripOut"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

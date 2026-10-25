@@ -1,5 +1,23 @@
 # meal-planner
 
+## Frontend
+
+`frontend/` — Vite + React, Node 24 (`frontend/.node-version`; например через
+[fnm](https://github.com/Schniz/fnm) с `--use-on-cd`).
+
+```sh
+uv run uvicorn meal_planner.api.main:app --reload   # backend на :8000
+cd frontend
+npm ci
+npm run dev        # Vite, /api проксируется на :8000
+npm test           # vitest
+npm run build      # frontend/dist — его раздаёт FastAPI (MEALPLAN_STATIC_DIR)
+```
+
+Типы API (`src/api-types.ts`) генерируются из OpenAPI-схемы backend. После
+изменения схем в `api/schemas.py` — `npm run gen:api` (обновляет
+`frontend/openapi.json` и типы); `uv run pytest` падает, пока снапшот устарел.
+
 ## Docker
 
 ```sh

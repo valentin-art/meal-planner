@@ -1,8 +1,22 @@
 # syntax=docker/dockerfile:1
-# Backend-образ. Node-стадия для frontend/ добавится в фазе 3 (тикет 3.1).
+# Образ приложения: собранный frontend/ + FastAPI + SQLite.
 #
 #   docker build -t meal-planner .
 #   docker run -p 8000:8000 -v meal-planner-data:/data -e TZ=Europe/Berlin meal-planner
+
+# Статика от платформы не зависит: собираем на платформе сборки, а не под
+# QEMU для arm64.
+FROM --platform=$BUILDPLATFORM node:24-slim AS frontend
+
+WORKDIR /frontend
+
+COPY frontend/package.json frontend/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci
+
+COPY frontend/ ./
+RUN npm run build
+
 
 FROM python:3.12-slim-trixie AS builder
 
@@ -38,6 +52,7 @@ RUN useradd --system --create-home --uid 10001 app \
 # Тот же путь и тот же базовый образ, что в builder: шебанги и симлинк
 # на python остаются валидными.
 COPY --from=builder /app/.venv /app/.venv
+COPY --from=frontend /frontend/dist /app/frontend/dist
 
 ENV PATH=/app/.venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \

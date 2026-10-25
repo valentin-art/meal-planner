@@ -4,9 +4,10 @@
 второй день готовки, которого нет ни в запросе, ни в сохранённых настройках.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import date
 
-from meal_planner.core.models import Settings
+from meal_planner.core.models import Settings, default_settings
 
 WEEKDAY_MESSAGE = "День готовки — число от 1 (пн) до 7 (вс)"
 
@@ -35,8 +36,27 @@ def settings_errors(settings: Settings) -> list[SettingsError]:
             )
         elif not 1 <= settings.cook_weekday2 <= 7:
             errors.append(SettingsError("cook_weekday2", WEEKDAY_MESSAGE))
+        elif settings.cook_weekday2 == settings.cook_weekday1:
+            # В JS допустимо (Чт/Чт = одна готовка с окном 7 дней) — запрещено с 6.8.
+            errors.append(
+                SettingsError("cook_weekday2", "Два дня готовки должны различаться")
+            )
     if settings.shopping_timing not in ("same", "before"):
         errors.append(
             SettingsError("shopping_timing", "Закупка — в день готовки или за день до")
         )
     return errors
+
+
+def usable_settings(
+    settings: Settings, today: date
+) -> tuple[Settings, list[SettingsError]]:
+    """Сохранённые настройки, а если они невалидны (например, из старой версии
+    или правлены руками) — дефолты с сохранённым якорем: цикл не сбрасывается."""
+    errors = settings_errors(settings)
+    if not errors:
+        return settings, []
+    fallback = replace(
+        default_settings(today), meal_anchor_date=settings.meal_anchor_date
+    )
+    return fallback, errors

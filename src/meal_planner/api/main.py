@@ -3,6 +3,7 @@
 Запуск: uv run uvicorn meal_planner.api.main:app
 """
 
+import logging
 import os
 from collections.abc import Callable
 from datetime import date
@@ -27,12 +28,14 @@ from meal_planner.core import actions
 from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.recipes_data import ALL_RECIPES
-from meal_planner.core.validation import settings_errors
+from meal_planner.core.validation import settings_errors, usable_settings
 from meal_planner.db.repository import (
     SettingsRepository,
     StoredSettings,
     db_path_from_env,
 )
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_STATIC_DIR = Path("frontend/dist")
 MAX_RANGE_DAYS = 366  # ограничение API (?from=&to=), не бизнес-правило
@@ -53,19 +56,31 @@ DateFrom = Annotated[date | None, Query(alias="from")]
 DateTo = Annotated[date | None, Query(alias="to")]
 
 
+def checked(stored: StoredSettings, today: date) -> Settings:
+    settings, errors = usable_settings(stored.settings, today)
+    if errors:
+        logger.warning(
+            "Сохранённые настройки невалидны (%s): расписание — по дефолтам"
+            " с сохранённым якорем, пока их не перезапишет действие",
+            "; ".join(f"{e.field}: {e.message}" for e in errors),
+        )
+    return settings
+
+
 def current_settings(repo: SettingsRepository, today: date) -> tuple[Settings, int]:
     stored = repo.get_settings()
     if stored is None:
         # Для действий: дефолты в памяти, пишутся вместе с изменением, а
         # невалидное действие не пишет ничего.
         return default_settings(today), 0
-    return stored.settings, stored.version
+    return checked(stored, today), stored.version
 
 
-def stored_or_initial(repo: SettingsRepository, today: date) -> StoredSettings:
+def stored_or_initial(repo: SettingsRepository, today: date) -> tuple[Settings, int]:
     # Первый GET сохраняет дефолты: иначе якорь («завтра») пересчитывался бы
     # от каждого нового «сегодня» и цикл начинался заново (6.4).
-    return repo.get_settings() or repo.init_settings(default_settings(today))
+    stored = repo.get_settings() or repo.init_settings(default_settings(today))
+    return checked(stored, today), stored.version
 
 
 def state_response(
@@ -133,10 +148,8 @@ def create_app() -> FastAPI:
         repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
     ) -> AppStateOut:
         check_range(today, date_from, date_to)
-        stored = stored_or_initial(repo, today)
-        return state_response(
-            stored.settings, stored.version, today, date_from, date_to
-        )
+        settings, version = stored_or_initial(repo, today)
+        return state_response(settings, version, today, date_from, date_to)
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
     def get_recipes() -> dict[str, RecipeOut]:

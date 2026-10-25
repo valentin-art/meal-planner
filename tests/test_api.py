@@ -51,7 +51,7 @@ def test_state_without_settings_returns_defaults(client, repo):
     }
     assert [d["date"] for d in body["schedule"]][:2] == ["2026-11-09", "2026-11-10"]
     assert len(body["schedule"]) == 14
-    assert len(body["recipes"]) == 12
+    assert "recipes" not in body  # справочник — GET /api/recipes
     # первый GET сохраняет дефолты (6.4)
     assert repo.get_settings() == StoredSettings(default_settings(TODAY), 1)
 
@@ -96,7 +96,7 @@ def test_state_range_keeps_trip_from_today(client, repo):
 def test_ids_resolve_and_qty_display(client, repo):
     repo.save_settings(DEFAULT_2X)
     body = client.get("/api/state").json()
-    recipes = body["recipes"]
+    recipes = client.get("/api/recipes").json()
     for day in body["schedule"]:
         assert {
             day["breakfast_id"],
@@ -139,7 +139,7 @@ def test_recipes_endpoint(client):
         rid: out.model_dump(mode="json")
         for rid, out in to_recipes_out(ALL_RECIPES).items()
     }
-    assert body == client.get("/api/state").json()["recipes"]
+    assert len(body) == 12
 
 
 class ExplodingRepository:
@@ -371,3 +371,48 @@ def test_action_with_bad_range_saves_nothing(client, repo):
     )
     assert r.status_code == 422
     assert repo.get_settings() is None
+
+
+def test_same_cook_days_are_rejected(client, repo):
+    r = post(
+        client,
+        "set-cook-schedule",
+        {"cook_count": 2, "cook_weekday1": 4, "cook_weekday2": 4},
+    )
+    assert r.status_code == 422
+    assert r.json()["detail"] == [
+        {
+            "type": "value_error",
+            "loc": ["body", "cook_weekday2"],
+            "msg": "Два дня готовки должны различаться",
+        }
+    ]
+    assert repo.get_settings() is None
+
+
+BROKEN = Settings(date(2026, 11, 5), 2, 4, 4, "before")  # Чт/Чт из старой версии
+
+
+def test_invalid_saved_settings_fall_back_with_warning(client, repo, caplog):
+    repo.save_settings(BROKEN)
+    with caplog.at_level("WARNING", logger="meal_planner.api.main"):
+        body = client.get("/api/state").json()
+    assert body["settings"] == {
+        "meal_anchor_date": "2026-11-05",  # якорь сохранён
+        "cook_count": 2,
+        "cook_weekday1": 3,
+        "cook_weekday2": 6,
+        "shopping_timing": "same",
+    }
+    assert body["version"] == 1
+    assert "cook_weekday2: Два дня готовки должны различаться" in caplog.text
+    assert repo.get_settings().settings == BROKEN  # GET не перезаписывает
+
+
+def test_action_heals_invalid_saved_settings(client, repo):
+    repo.save_settings(BROKEN)
+    body = post(client, "set-shopping-timing", {"shopping_timing": "before"}).json()
+    stored = repo.get_settings()
+    assert stored.version == 2
+    assert stored.settings == Settings(date(2026, 11, 5), 2, 3, 6, "before")
+    assert body["settings"]["cook_weekday2"] == 6

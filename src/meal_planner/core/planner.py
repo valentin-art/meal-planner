@@ -13,6 +13,8 @@ from meal_planner.core.scheduling import (
 )
 from meal_planner.core.shopping import count_portions, extract_shopping_list
 
+SCHEDULE_DAYS = 14  # JS PAGE_SIZE
+
 
 def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
     # JS ShoppingTab: едим со следующего дня после готовки по следующую готовку
@@ -47,14 +49,21 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
 
 
 def recompute(
-    settings: Settings, today: date, window_days: int = 14, version: int = 0
+    settings: Settings,
+    today: date,
+    date_from: date | None = None,
+    date_to: date | None = None,
+    version: int = 0,
 ) -> AppState:
-    """version приходит снаружи (из SQLite в API) — в core нет состояния."""
+    """Расписание на date_from..date_to (по умолчанию 14 дней с today, как
+    PAGE_SIZE в JS); поездка в магазин — всегда от today. version приходит
+    снаружи (из SQLite в API) — в core нет состояния."""
+    date_from = date_from or today
+    date_to = date_to or date_from + timedelta(days=SCHEDULE_DAYS - 1)
     return AppState(
+        today=today,
         settings=settings,
-        schedule=build_schedule(
-            settings, today, today + timedelta(days=window_days - 1)
-        ),
+        schedule=build_schedule(settings, date_from, date_to),
         next_shopping_trip=next_shopping_trip(settings, today),
         recipes=ALL_RECIPES,
         version=version,

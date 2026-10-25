@@ -112,6 +112,7 @@ class ShoppingTrip:
 
 @dataclass(frozen=True, slots=True)
 class AppState:
+    today: date  # от него считается поездка в магазин; UI берёт «сегодня» отсюда
     settings: Settings
     schedule: tuple[DayMeals, ...]
     next_shopping_trip: ShoppingTrip

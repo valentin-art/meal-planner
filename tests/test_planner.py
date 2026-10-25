@@ -36,7 +36,7 @@ def test_trip_window_beyond_schedule():
     # окно поездки — следующая неделя, далеко за пределами 3-дневного расписания.
     settings = BY_NAME["single_1x_sunday"]
     today = date(2026, 11, 2)
-    state = recompute(settings, today, window_days=3)
+    state = recompute(settings, today, date_to=today + timedelta(days=2))
     trip = state.next_shopping_trip
     assert trip.window_end == today + timedelta(days=13)
     assert state.schedule[-1].date < trip.window_start
@@ -49,7 +49,8 @@ def test_trip_window_beyond_schedule():
 def test_recompute():
     settings = BY_NAME["default_2x"]
     today = date(2026, 11, 9)
-    state = recompute(settings, today, window_days=14, version=7)
+    state = recompute(settings, today, version=7)
+    # по умолчанию — 14 дней с today, как PAGE_SIZE в JS
     assert [d.date for d in state.schedule] == [
         today + timedelta(days=i) for i in range(14)
     ]
@@ -57,4 +58,23 @@ def test_recompute():
     assert state.next_shopping_trip == next_shopping_trip(settings, today)
     assert state.recipes is ALL_RECIPES
     assert state.settings is settings
+    assert state.today == today
     assert state.version == 7
+
+
+def test_recompute_arbitrary_range_keeps_trip_from_today():
+    settings = BY_NAME["default_2x"]
+    today = date(2026, 11, 9)
+    state = recompute(settings, today, date(2026, 12, 1), date(2026, 12, 3))
+    assert [d.date for d in state.schedule] == [
+        date(2026, 12, 1),
+        date(2026, 12, 2),
+        date(2026, 12, 3),
+    ]
+    assert state.next_shopping_trip == next_shopping_trip(settings, today)
+
+
+def test_recompute_from_only_gives_14_days():
+    state = recompute(BY_NAME["default_2x"], date(2026, 11, 9), date(2026, 12, 1))
+    assert len(state.schedule) == 14
+    assert state.schedule[0].date == date(2026, 12, 1)

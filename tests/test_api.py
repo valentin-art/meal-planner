@@ -263,6 +263,47 @@ def test_set_anchor_date_rejects_bad_dates(client, repo, body):
     assert repo.get_settings() is None
 
 
+def test_set_cycle_position(client, repo):
+    # Пн 9 нояб., готовка Ср/Сб: сегодня возможны день 0, блюда 2, 3, 5.
+    repo.save_settings(DEFAULT_2X)
+    options = client.get("/api/state").json()["today_position"]["options"]
+    assert [o["dish"] for o in options] == [0, 2, 3, 5]
+    body = post(client, "set-cycle-position", {"dish": 5}).json()
+    assert body["today_position"]["current"] == 5
+    assert body["schedule"][0]["cycle_index"] == 5
+    assert body["settings"]["meal_anchor_date"] == options[-1]["anchor"]
+    assert body["version"] == 2
+
+
+def test_cycle_position_day_zero_starts_tomorrow(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(client, "set-cycle-position", {"dish": 0}).json()
+    assert body["settings"]["meal_anchor_date"] == "2026-11-10"
+    assert body["today_position"]["current"] == 0
+    assert body["schedule"][0]["is_day_zero"]
+
+
+@pytest.mark.parametrize(
+    ("body", "msg"),
+    [
+        (
+            {"dish": 1},
+            "Сегодня может быть только: день 0, блюдо №2, блюдо №3, блюдо №5",
+        ),
+        ({"dish": 6}, None),
+        ({}, None),
+    ],
+)
+def test_set_cycle_position_rejects_unreachable(client, repo, body, msg):
+    r = post(client, "set-cycle-position", body)
+    assert r.status_code == 422
+    if msg:
+        assert r.json()["detail"] == [
+            {"type": "value_error", "loc": ["body", "dish"], "msg": msg}
+        ]
+    assert repo.get_settings() is None
+
+
 @pytest.mark.parametrize("weekday", [0, 8])
 def test_weekday_out_of_range_is_422(client, repo, weekday):
     r = post(client, "set-cook-schedule", {"cook_count": 1, "cook_weekday1": weekday})

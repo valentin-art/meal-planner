@@ -1,0 +1,29 @@
+# Стенд «как HA Ingress»: образ приложения за nginx под /ingress-test/.
+#
+#   docker compose -f tools/ingress-test/compose.yaml up -d --build
+#   python3 tools/ingress-test/check.py
+#   браузер: http://localhost:8080/ingress-test/
+#   docker compose -f tools/ingress-test/compose.yaml down -v
+
+name: meal-planner-ingress-test
+
+services:
+  app:
+    build: ../..
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - data:/data
+
+  proxy:
+    image: nginx:1.27-alpine
+    depends_on: [app]
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      # Каталог, а не файл: bind-mount одного файла в Docker Desktop/WSL
+      # теряется, когда редактор заменяет файл новым.
+      - ./nginx:/etc/nginx/conf.d:ro
+
+volumes:
+  data:

@@ -42,3 +42,20 @@ docker run -d -p 8000:8000 -v meal-planner-data:/data -e TZ=Europe/Berlin meal-p
 ```sh
 docker buildx build --platform linux/amd64,linux/arm64 -t meal-planner .
 ```
+
+## Проверка под префиксом (как HA Ingress)
+
+Home Assistant Ingress отдаёт add-on под `/api/hassio_ingress/<token>/` и
+срезает префикс. Стенд `tools/ingress-test` повторяет это на nginx под
+`/ingress-test/`:
+
+```sh
+docker compose -f tools/ingress-test/compose.yaml up -d --build
+python3 tools/ingress-test/check.py        # ассеты и API резолвятся от страницы
+# браузер: http://localhost:8080/ingress-test/
+docker compose -f tools/ingress-test/compose.yaml down -v
+```
+
+Без завершающего `/` (`/ingress-test`) прокси редиректит на `/ingress-test/`:
+иначе `./assets` и `api/…` резолвились бы мимо приложения. HA сам всегда
+открывает Ingress со слешем.

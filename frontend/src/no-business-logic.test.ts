@@ -44,9 +44,8 @@ function violations(source: string): string[] {
   return found;
 }
 
-// storage-shim — только для parity-теста со старым артефактом (уйдёт в 3.4);
 // api-types — сгенерированные типы, пути OpenAPI в них — ключи, не запросы.
-const EXCLUDED = ['./storage-shim.ts', './api-types.ts'];
+const EXCLUDED = ['./api-types.ts'];
 const APP_SOURCES = Object.entries(sources).filter(([path]) => !EXCLUDED.includes(path));
 
 it('исходники найдены', () => {

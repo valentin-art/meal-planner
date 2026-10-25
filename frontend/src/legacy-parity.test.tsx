@@ -3,14 +3,40 @@
 // тех же настройках и «сегодня». Ответы сервера — фикстуры от настоящего
 // backend (tools/dump_ui_fixtures.py), их свежесть проверяет pytest.
 
-import './storage-shim';
-
 import type { ComponentType } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { SCENARIOS, type Scenario, buttons, click, mockFetchFromScenario, render } from './__fixtures__/harness';
 
 type Rendered = Awaited<ReturnType<typeof render>>;
+
+// Окружение артефакта Claude: настройки он читает и пишет через window.storage.
+// Новое приложение его не знает — оно есть только здесь, для старого UI.
+type StorageEntry = { key: string; value: string };
+
+declare global {
+  interface Window {
+    storage?: {
+      get(key: string): Promise<StorageEntry | null>;
+      set(key: string, value: string): Promise<StorageEntry>;
+    };
+  }
+}
+
+function installArtifactStorage(settings: object | null) {
+  const data = new Map<string, string>();
+  if (settings) data.set('settings', JSON.stringify(settings));
+  window.storage = {
+    async get(key) {
+      const value = data.get(key);
+      return value === undefined ? null : { key, value };
+    },
+    async set(key, value) {
+      data.set(key, value);
+      return { key, value };
+    },
+  };
+}
 
 /** Одинаковый для обоих UI сценарий кликов; текст после каждого шага. */
 async function walk(ui: Rendered): Promise<Record<string, string>> {
@@ -43,10 +69,7 @@ async function renderLegacy(scenario: Scenario): Promise<Rendered> {
   // при импорте модуля — поэтому часы ставим до импорта, модуль — заново.
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date(`${scenario.today}T12:00:00`));
-  localStorage.clear();
-  if (scenario.legacy_settings) {
-    await window.storage.set('settings', JSON.stringify(scenario.legacy_settings));
-  }
+  installArtifactStorage(scenario.legacy_settings); // у defaults — ничего не сохранено
   vi.resetModules();
   const { default: Legacy } = (await import('../../meal-plan.jsx')) as { default: ComponentType };
   return render(<Legacy />);
@@ -56,7 +79,7 @@ async function renderNew(scenario: Scenario): Promise<Rendered> {
   // Часы браузера намеренно врут: «сегодня» должно прийти с сервера.
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2031-01-01T12:00:00'));
-  localStorage.clear();
+  delete window.storage; // новому UI окружение артефакта не нужно
   mockFetchFromScenario(scenario);
   vi.resetModules();
   const { default: MealPlanApp } = await import('./MealPlanApp');

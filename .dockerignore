@@ -1,0 +1,19 @@
+.git
+.venv
+**/__pycache__
+*.pyc
+.pytest_cache
+.ruff_cache
+.vscode
+*.code-workspace
+.python-version
+data/
+tests/
+tools/
+meal-plan.jsx
+*.md
+!README.md
+
+# фронтенд (фаза 3) собирается внутри образа
+**/node_modules
+frontend/dist

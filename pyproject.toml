@@ -14,6 +14,7 @@ dependencies = [
 
 [project.scripts]
 meal-planner = "meal_planner:main"
+meal-planner-backup = "meal_planner.db.backup:main"
 
 [build-system]
 requires = ["uv_build>=0.11.12,<0.12.0"]

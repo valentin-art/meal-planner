@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 
 from meal_planner.api.schemas import (
     AppStateOut,
+    HealthOut,
     RecipeOut,
     SetAnchorDateIn,
     SetCookScheduleIn,
@@ -142,6 +143,13 @@ def apply_action(
 
 def create_app() -> FastAPI:
     app = FastAPI(title="Meal planner")
+
+    @app.get("/api/health", response_model=HealthOut)
+    def health(repo: Repo) -> HealthOut:
+        # Для HEALTHCHECK в Dockerfile: сервер отвечает и БД читается.
+        # Только чтение — дефолты пишет первый GET /api/state, не проверка.
+        repo.get_settings()
+        return HealthOut(status="ok")
 
     @app.get("/api/state", response_model=AppStateOut)
     def get_state(

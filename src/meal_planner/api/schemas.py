@@ -139,6 +139,10 @@ class TodayPositionOut(BaseModel):
     options: list[CyclePositionOut]
 
 
+class HealthOut(BaseModel):
+    status: Literal["ok"]
+
+
 class AppStateOut(BaseModel):
     today: date
     settings: SettingsOut

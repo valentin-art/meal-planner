@@ -156,6 +156,21 @@ def test_recipes_endpoint_does_not_touch_db(tmp_path, monkeypatch):
     assert client.get("/api/recipes").status_code == 200
 
 
+def test_health_reads_db_without_writing(tmp_path, monkeypatch):
+    monkeypatch.setenv("MEALPLAN_STATIC_DIR", str(tmp_path / "no-static"))
+
+    class ReadOnlyRepository(ExplodingRepository):
+        def get_settings(self):
+            return None
+
+        def save_settings(self, settings):
+            raise AssertionError("/api/health не должен писать настройки")
+
+    r = make_client(ReadOnlyRepository()).get("/api/health")
+    assert r.status_code == 200
+    assert r.json() == {"status": "ok"}
+
+
 def post(client, action, body, **params):
     return client.post(f"/api/actions/{action}", json=body, params=params)
 

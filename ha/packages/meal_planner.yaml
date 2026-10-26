@@ -324,6 +324,100 @@ script:
       - stop: Ошибка
         response_variable: result
 
+  # Список покупок в to-do (7.8): пункты помечены в описании
+  # «meal-planner <дата закупки>» — так видно свои пункты и их закупку.
+  # Добавляется недостающее, купленное не возвращается, устаревшие свои
+  # пункты (прошлая закупка, план поменялся) удаляются, чужие не трогаются.
+  # Внимание: x.items в Jinja — метод dict, поэтому везде ['items'].
+  meal_planner_sync_shopping_list:
+    alias: Питание — список покупок в to-do
+    description: >-
+      Переносит список покупок ближайшей закупки в список дел «Покупки»:
+      добавляет недостающее, убирает устаревшее, уже купленное не
+      возвращает, чужие пункты не трогает. Вызывай, когда просят добавить
+      или обновить покупки в списке.
+    mode: queued
+    fields:
+      todo_list:
+        name: Список дел
+        description: Куда переносить; по умолчанию «Покупки» (todo.pokupki)
+        required: false
+        selector:
+          entity:
+            domain: todo
+    sequence:
+      - variables:
+          todo_entity: "{{ todo_list | default('todo.pokupki', true) }}"
+      - action: rest_command.meal_planner_summary
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ not (resp is defined and resp.status == 200) }}"
+        then:
+          - variables:
+              result:
+                ok: false
+                error: *error
+          - stop: Ошибка
+            response_variable: result
+      - action: todo.get_items
+        target:
+          entity_id: "{{ todo_entity }}"
+        data:
+          status: [needs_action, completed]
+        response_variable: todo
+      - variables:
+          tag: "meal-planner {{ resp.content.next_shopping.date }}"
+          lines: "{{ resp.content.next_shopping['items'] }}"
+          ours: >-
+            {{ todo[todo_entity]['items']
+               | selectattr('description', 'defined')
+               | selectattr('description', 'match', 'meal-planner ')
+               | list }}
+          current: "{{ ours | selectattr('description', 'eq', tag) | list }}"
+          stale: >-
+            {{ (ours | rejectattr('description', 'eq', tag) | map(attribute='uid') | list)
+               + (current | rejectattr('summary', 'in', lines) | map(attribute='uid') | list) }}
+          missing: >-
+            {{ lines | reject('in', current | map(attribute='summary') | list) | list }}
+      - repeat:
+          for_each: "{{ stale }}"
+          sequence:
+            - action: todo.remove_item
+              target:
+                entity_id: "{{ todo_entity }}"
+              data:
+                item: "{{ repeat.item }}"
+      - repeat:
+          for_each: "{{ missing }}"
+          sequence:
+            - action: todo.add_item
+              target:
+                entity_id: "{{ todo_entity }}"
+              data:
+                item: "{{ repeat.item }}"
+                description: "{{ tag }}"
+      - variables:
+          result:
+            ok: true
+            added: "{{ missing | length }}"
+            removed: "{{ stale | length }}"
+      - stop: Готово
+        response_variable: result
+
+automation:
+  - id: meal_planner_shopping_list_morning
+    alias: Питание — список покупок утром в день закупки
+    description: В 07:00 в день закупки переносит список покупок в to-do.
+    triggers:
+      - trigger: time
+        at: "07:00:00"
+    conditions:
+      - condition: template
+        value_template: >-
+          {{ states('sensor.meal_planner_next_shopping') == now().date().isoformat() }}
+    actions:
+      - action: script.meal_planner_sync_shopping_list
+
 # Частые вопросы — локально, без LLM (в пайплайне: «Предпочитать
 # локальную обработку»). Отвечают из сенсоров, без запроса к приложению.
 conversation:

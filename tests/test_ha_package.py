@@ -107,3 +107,14 @@ def test_scripts_describe_their_fields_for_the_llm():
                 name,
                 field_name,
             )
+
+
+def test_script_references_resolve():
+    used = set(re.findall(r"script\.(meal_planner_\w+)", TEXT))
+    assert used and used <= set(PACKAGE["script"])
+    assert all(a.get("id") for a in PACKAGE["automation"])  # иначе нет трассировок
+
+
+def test_items_key_is_not_an_attribute():
+    # В Jinja x.items — метод dict, а не поле «items»: только x['items'].
+    assert not re.search(r"(next_shopping|\])\.items\b", TEXT)

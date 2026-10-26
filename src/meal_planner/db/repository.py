@@ -23,28 +23,36 @@ CREATE TABLE IF NOT EXISTS settings (
     cook_weekday1 INTEGER NOT NULL,
     cook_weekday2 INTEGER,
     shopping_timing TEXT NOT NULL,
-    version INTEGER NOT NULL DEFAULT 1
+    version INTEGER NOT NULL DEFAULT 1,
+    skipped_cook_date TEXT
 )
 """
 
+# Колонки, добавленные после первой версии схемы: (имя, определение).
+_ADDED_COLUMNS = (("skipped_cook_date", "TEXT"),)  # 7.7
+
+
 _UPSERT = """
 INSERT INTO settings
-    (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing)
-VALUES (1, ?, ?, ?, ?, ?)
+    (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing,
+     skipped_cook_date)
+VALUES (1, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     meal_anchor_date = excluded.meal_anchor_date,
     cook_count = excluded.cook_count,
     cook_weekday1 = excluded.cook_weekday1,
     cook_weekday2 = excluded.cook_weekday2,
     shopping_timing = excluded.shopping_timing,
+    skipped_cook_date = excluded.skipped_cook_date,
     version = version + 1
 RETURNING version
 """
 
 _INSERT_IF_ABSENT = """
 INSERT INTO settings
-    (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing)
-VALUES (1, ?, ?, ?, ?, ?)
+    (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing,
+     skipped_cook_date)
+VALUES (1, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING
 """
 
@@ -66,19 +74,36 @@ def _row(settings: Settings) -> tuple:
         settings.cook_weekday1,
         settings.cook_weekday2,
         settings.shopping_timing,
+        settings.skipped_cook_date and settings.skipped_cook_date.isoformat(),
     )
 
 
 def _read(conn: sqlite3.Connection) -> StoredSettings | None:
     row = conn.execute(
         "SELECT meal_anchor_date, cook_count, cook_weekday1, cook_weekday2,"
-        " shopping_timing, version FROM settings WHERE id = 1"
+        " shopping_timing, skipped_cook_date, version FROM settings WHERE id = 1"
     ).fetchone()
     if row is None:
         return None
-    anchor, cook_count, wd1, wd2, timing, version = row
-    settings = Settings(date.fromisoformat(anchor), cook_count, wd1, wd2, timing)
+    anchor, cook_count, wd1, wd2, timing, skipped, version = row
+    settings = Settings(
+        date.fromisoformat(anchor),
+        cook_count,
+        wd1,
+        wd2,
+        timing,
+        skipped and date.fromisoformat(skipped),
+    )
     return StoredSettings(settings=settings, version=version)
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    # CREATE TABLE IF NOT EXISTS не трогает таблицу из старой версии —
+    # недостающие колонки добавляются здесь (NULL у существующей строки).
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(settings)")}
+    for name, definition in _ADDED_COLUMNS:
+        if name not in existing:
+            conn.execute(f"ALTER TABLE settings ADD COLUMN {name} {definition}")
 
 
 class SettingsRepository:
@@ -87,6 +112,7 @@ class SettingsRepository:
         db_path.parent.mkdir(parents=True, exist_ok=True)
         with self._connect() as conn:
             conn.execute(_SCHEMA)
+            _migrate(conn)
 
     @contextmanager
     def _connect(self) -> Generator[sqlite3.Connection]:

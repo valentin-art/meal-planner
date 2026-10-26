@@ -189,7 +189,7 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.set_cook_schedule(
-                s, body.cook_count, body.cook_weekday1, body.cook_weekday2
+                s, today, body.cook_count, body.cook_weekday1, body.cook_weekday2
             ),
         )
 
@@ -239,6 +239,30 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.set_cycle_position(s, today, body.dish),
+        )
+
+    @app.post("/api/actions/skip-next-cook", response_model=AppStateOut)
+    def skip_next_cook(
+        repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.skip_next_cook(s, today),
+        )
+
+    @app.post("/api/actions/unskip-cook", response_model=AppStateOut)
+    def unskip_cook(
+        repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.unskip_cook(s, today),
         )
 
     # Монтируется последним, чтобы не перекрывать /api.

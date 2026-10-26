@@ -33,20 +33,22 @@ rest:
         value_template: >-
           {% set d = value_json.days.today %}
           {%- if d.lunch -%}Обед: {{ d.lunch }}. Ужин: {{ d.dinner }}
+          {%- elif d.is_skipped -%}Пауза: готовка пропущена, блюд нет
           {%- elif d.is_day_zero -%}День 0: готовка, блюда с завтра
           {%- else -%}Цикл ещё не начался{%- endif %}
         json_attributes_path: "$.days.today"
-        json_attributes: [date, breakfast, lunch, dinner, kcal, protein, is_cook_day]
+        json_attributes: [date, breakfast, lunch, dinner, kcal, protein, is_cook_day, is_skipped]
       - name: Meal planner tomorrow
         unique_id: meal_planner_tomorrow
         icon: mdi:food-outline
         value_template: >-
           {% set d = value_json.days.tomorrow %}
           {%- if d.lunch -%}Обед: {{ d.lunch }}. Ужин: {{ d.dinner }}
+          {%- elif d.is_skipped -%}Пауза: готовка пропущена, блюд нет
           {%- elif d.is_day_zero -%}День 0: готовка, блюда с завтра
           {%- else -%}Цикл ещё не начался{%- endif %}
         json_attributes_path: "$.days.tomorrow"
-        json_attributes: [date, breakfast, lunch, dinner, kcal, protein, is_cook_day]
+        json_attributes: [date, breakfast, lunch, dinner, kcal, protein, is_cook_day, is_skipped]
       - name: Meal planner next shopping
         unique_id: meal_planner_next_shopping
         icon: mdi:cart
@@ -72,6 +74,14 @@ rest_command:
     content_type: application/json
     timeout: 10
     payload: '{{ {"shopping_timing": timing} | to_json }}'
+  meal_planner_skip_next_cook:
+    url: http://127.0.0.1:8001/api/actions/skip-next-cook
+    method: post
+    timeout: 10
+  meal_planner_unskip_cook:
+    url: http://127.0.0.1:8001/api/actions/unskip-cook
+    method: post
+    timeout: 10
   meal_planner_set_cook_schedule:
     url: http://127.0.0.1:8001/api/actions/set-cook-schedule
     method: post
@@ -239,6 +249,62 @@ script:
           cook_count: "{{ cook_count }}"
           weekday1: "{{ weekday1 }}"
           weekday2: "{{ weekday2 | default('') }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_today
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_skip_next_cook:
+    alias: Питание — пропустить готовку
+    description: >-
+      Пропускает ближайшую готовку (уезжаем, едим не дома): дни до следующей
+      готовки — пауза без блюд и без закупки, потом цикл продолжается с того
+      же блюда. Уже приготовленное не меняется. Пропуск может быть только
+      один; при ошибке перескажи её текст.
+    mode: queued
+    sequence:
+      - action: rest_command.meal_planner_skip_next_cook
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_today
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_unskip_cook:
+    alias: Питание — отменить пропуск готовки
+    description: >-
+      Отменяет пропуск готовки: она снова состоится, пауза убирается. Можно,
+      пока день пропущенной готовки не прошёл.
+    mode: queued
+    sequence:
+      - action: rest_command.meal_planner_unskip_cook
         response_variable: resp
         continue_on_error: true
       - if: "{{ resp is defined and resp.status == 200 }}"

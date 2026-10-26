@@ -22,6 +22,7 @@ from meal_planner.core.models import (
     ShoppingItem,
     ShoppingTiming,
     ShoppingTrip,
+    SkippedCook,
     TodayPosition,
 )
 from meal_planner.core.shopping import format_qty
@@ -33,6 +34,7 @@ class SettingsOut(BaseModel):
     cook_weekday1: int
     cook_weekday2: int | None
     shopping_timing: ShoppingTiming
+    skipped_cook_date: date | None
 
 
 class IngredientOut(BaseModel):
@@ -74,6 +76,7 @@ class DayOut(BaseModel):
     is_day_zero: bool
     is_cook_day: bool
     is_before_start: bool
+    is_skipped: bool  # пауза после пропущенной готовки — блюд нет (7.7)
 
 
 class ShoppingItemOut(BaseModel):
@@ -151,6 +154,7 @@ class SummaryDayOut(BaseModel):
     is_cook_day: bool
     is_day_zero: bool
     is_before_start: bool
+    is_skipped: bool
 
 
 class SummaryDaysOut(BaseModel):
@@ -167,6 +171,13 @@ class SummaryTripOut(BaseModel):
     items: list[str]  # «название — 540 г (≈ 2 шт)», как «Что купить» в UI
 
 
+class SkippedCookOut(BaseModel):
+    cook_date: date
+    pause_start: date
+    pause_end: date  # он же следующая готовка
+    can_undo: bool
+
+
 class SummaryOut(BaseModel):
     """Компактный ответ для REST-сенсоров и Assist в HA (7.5)."""
 
@@ -174,6 +185,7 @@ class SummaryOut(BaseModel):
     version: int
     days: SummaryDaysOut
     next_shopping: SummaryTripOut
+    skipped_cook: SkippedCookOut | None
 
 
 class HealthOut(BaseModel):
@@ -187,6 +199,8 @@ class AppStateOut(BaseModel):
     next_shopping_trip: ShoppingTripOut
     version: int
     today_position: TodayPositionOut
+    skipped_cook: SkippedCookOut | None  # пропущенная готовка и пауза (7.7)
+    can_skip_next_cook: bool
 
 
 def to_settings_out(s: Settings) -> SettingsOut:
@@ -196,6 +210,7 @@ def to_settings_out(s: Settings) -> SettingsOut:
         cook_weekday1=s.cook_weekday1,
         cook_weekday2=s.cook_weekday2,
         shopping_timing=s.shopping_timing,
+        skipped_cook_date=s.skipped_cook_date,
     )
 
 
@@ -244,6 +259,7 @@ def to_day_out(d: DayMeals) -> DayOut:
         is_day_zero=d.is_day_zero,
         is_cook_day=d.is_cook_day,
         is_before_start=d.is_before_start,
+        is_skipped=d.is_skipped,
     )
 
 
@@ -295,6 +311,17 @@ def to_today_position_out(p: TodayPosition) -> TodayPositionOut:
     )
 
 
+def to_skipped_cook_out(c: SkippedCook | None) -> SkippedCookOut | None:
+    if c is None:
+        return None
+    return SkippedCookOut(
+        cook_date=c.cook_date,
+        pause_start=c.pause_start,
+        pause_end=c.pause_end,
+        can_undo=c.can_undo,
+    )
+
+
 def to_app_state_out(s: AppState) -> AppStateOut:
     return AppStateOut(
         today=s.today,
@@ -303,6 +330,8 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         next_shopping_trip=to_shopping_trip_out(s.next_shopping_trip),
         version=s.version,
         today_position=to_today_position_out(s.today_position),
+        skipped_cook=to_skipped_cook_out(s.skipped_cook),
+        can_skip_next_cook=s.can_skip_next_cook,
     )
 
 
@@ -326,6 +355,7 @@ def to_summary_day_out(d: DayMeals) -> SummaryDayOut:
         is_cook_day=d.is_cook_day,
         is_day_zero=d.is_day_zero,
         is_before_start=d.is_before_start,
+        is_skipped=d.is_skipped,
     )
 
 
@@ -347,4 +377,5 @@ def to_summary_out(s: AppState) -> SummaryOut:
             cook=[cook_line(c) for c in t.cook_items],
             items=[shopping_line(i) for g in t.shopping_groups for i in g.items],
         ),
+        skipped_cook=to_skipped_cook_out(s.skipped_cook),
     )

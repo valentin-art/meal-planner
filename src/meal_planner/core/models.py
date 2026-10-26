@@ -51,6 +51,10 @@ class Settings:
     cook_weekday1: int  # 1..7, пн=1
     cook_weekday2: int | None  # при cook_count=1 игнорируется (JS cookWeekdays)
     shopping_timing: ShoppingTiming
+    # Пропущенная готовка (7.7): её окно — пауза без блюд, цикл продолжается
+    # с того же блюда со следующей готовки. Один пропуск; прошедший
+    # переносится в якорь (scheduling.settle_skip).
+    skipped_cook_date: date | None = None
 
 
 def default_settings(today: date) -> Settings:
@@ -80,6 +84,7 @@ class DayMeals:
     is_day_zero: bool  # anchor - 1: первая готовка, блюд ещё нет
     is_cook_day: bool  # is_day_zero или день недели готовки после старта
     is_before_start: bool  # раньше дня 0: цикл ещё не начался
+    is_skipped: bool = False  # в паузе пропущенной готовки: блюд нет (7.7)
 
 
 @dataclass(frozen=True, slots=True)
@@ -131,6 +136,16 @@ class TodayPosition:
 
 
 @dataclass(frozen=True, slots=True)
+class SkippedCook:
+    """Пропущенная готовка и пауза за ней (7.7)."""
+
+    cook_date: date  # готовки не будет
+    pause_start: date  # первый день без блюд
+    pause_end: date  # последний день без блюд — он же следующая готовка
+    can_undo: bool  # отменить можно, пока день готовки не прошёл
+
+
+@dataclass(frozen=True, slots=True)
 class AppState:
     today: date  # от него считается поездка в магазин; UI берёт «сегодня» отсюда
     settings: Settings
@@ -138,3 +153,5 @@ class AppState:
     next_shopping_trip: ShoppingTrip
     version: int
     today_position: TodayPosition
+    skipped_cook: SkippedCook | None
+    can_skip_next_cook: bool

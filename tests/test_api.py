@@ -48,6 +48,7 @@ def test_state_without_settings_returns_defaults(client, repo):
         "cook_weekday1": 3,
         "cook_weekday2": 6,
         "shopping_timing": "same",
+        "skipped_cook_date": None,
     }
     assert [d["date"] for d in body["schedule"]][:2] == ["2026-11-09", "2026-11-10"]
     assert len(body["schedule"]) == 14
@@ -175,6 +176,7 @@ def test_summary_reshapes_state_for_today_and_tomorrow(client, repo):
             "is_cook_day": day.is_cook_day,
             "is_day_zero": day.is_day_zero,
             "is_before_start": day.is_before_start,
+            "is_skipped": day.is_skipped,
         }
 
     trip, out = state.next_shopping_trip, body["next_shopping"]
@@ -213,6 +215,34 @@ def test_summary_first_request_saves_defaults(client, repo):
 def test_summary_is_compact(client, repo):
     # Атрибуты сенсора HA должны быть короткими; /api/state — ~6 КБ.
     assert len(client.get("/api/summary").content) < 4096
+
+
+def test_skip_and_unskip_next_cook(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(client, "skip-next-cook", None).json()
+    assert body["settings"]["skipped_cook_date"] == "2026-11-11"
+    assert body["skipped_cook"] == {
+        "cook_date": "2026-11-11",
+        "pause_start": "2026-11-12",
+        "pause_end": "2026-11-14",
+        "can_undo": True,
+    }
+    assert body["can_skip_next_cook"] is False
+    assert body["next_shopping_trip"]["cook_date"] == "2026-11-14"
+    paused = [d["date"] for d in body["schedule"] if d["is_skipped"]]
+    assert paused == ["2026-11-12", "2026-11-13", "2026-11-14"]
+
+    summary = client.get("/api/summary").json()
+    assert summary["skipped_cook"] == body["skipped_cook"]
+
+    again = post(client, "skip-next-cook", None)
+    assert again.status_code == 422
+    assert again.json()["detail"][0]["msg"].startswith("Уже пропущена готовка ср 11.11")
+
+    body = post(client, "unskip-cook", None).json()
+    assert body["skipped_cook"] is None
+    assert repo.get_settings().settings == DEFAULT_2X
+    assert post(client, "unskip-cook", None).status_code == 422
 
 
 def test_health_reads_db_without_writing(tmp_path, monkeypatch):
@@ -477,6 +507,7 @@ def test_invalid_saved_settings_fall_back_with_warning(client, repo, caplog):
         "cook_weekday1": 3,
         "cook_weekday2": 6,
         "shopping_timing": "same",
+        "skipped_cook_date": None,
     }
     assert body["version"] == 1
     assert "cook_weekday2: Два дня готовки должны различаться" in caplog.text

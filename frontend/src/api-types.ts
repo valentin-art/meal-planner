@@ -140,6 +140,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/skip-next-cook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skip Next Cook */
+        post: operations["skip_next_cook_api_actions_skip_next_cook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/unskip-cook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unskip Cook */
+        post: operations["unskip_cook_api_actions_unskip_cook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -158,6 +192,9 @@ export interface components {
             /** Version */
             version: number;
             today_position: components["schemas"]["TodayPositionOut"];
+            skipped_cook: components["schemas"]["SkippedCookOut"] | null;
+            /** Can Skip Next Cook */
+            can_skip_next_cook: boolean;
         };
         /** CookItemOut */
         CookItemOut: {
@@ -207,6 +244,8 @@ export interface components {
             is_cook_day: boolean;
             /** Is Before Start */
             is_before_start: boolean;
+            /** Is Skipped */
+            is_skipped: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -316,6 +355,8 @@ export interface components {
              * @enum {string}
              */
             shopping_timing: "same" | "before";
+            /** Skipped Cook Date */
+            skipped_cook_date: string | null;
         };
         /** ShoppingGroupOut */
         ShoppingGroupOut: {
@@ -368,6 +409,26 @@ export interface components {
             /** Shopping Groups */
             shopping_groups: components["schemas"]["ShoppingGroupOut"][];
         };
+        /** SkippedCookOut */
+        SkippedCookOut: {
+            /**
+             * Cook Date
+             * Format: date
+             */
+            cook_date: string;
+            /**
+             * Pause Start
+             * Format: date
+             */
+            pause_start: string;
+            /**
+             * Pause End
+             * Format: date
+             */
+            pause_end: string;
+            /** Can Undo */
+            can_undo: boolean;
+        };
         /** SummaryDayOut */
         SummaryDayOut: {
             /**
@@ -391,6 +452,8 @@ export interface components {
             is_day_zero: boolean;
             /** Is Before Start */
             is_before_start: boolean;
+            /** Is Skipped */
+            is_skipped: boolean;
         };
         /** SummaryDaysOut */
         SummaryDaysOut: {
@@ -411,6 +474,7 @@ export interface components {
             version: number;
             days: components["schemas"]["SummaryDaysOut"];
             next_shopping: components["schemas"]["SummaryTripOut"];
+            skipped_cook: components["schemas"]["SkippedCookOut"] | null;
         };
         /** SummaryTripOut */
         SummaryTripOut: {
@@ -685,6 +749,70 @@ export interface operations {
                 "application/json": components["schemas"]["SetCyclePositionIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    skip_next_cook_api_actions_skip_next_cook_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unskip_cook_api_actions_unskip_cook_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

@@ -181,6 +181,24 @@ describe('настройки уходят в action-эндпоинты, отве
   });
 });
 
+it('пропуск готовки: кнопка в «Закупках», отмена — в баннере', async () => {
+  const skipped = fullState(SCENARIOS.find((s) => s.name === 'skipped_2x')!);
+  handler = (url) => (url === 'api/actions/skip-next-cook' ? jsonResponse(skipped) : jsonResponse(BASE));
+  const ui = await render(<MealPlanApp />);
+  expect(ui.text()).not.toContain('пропущена');
+  await click(buttons(ui.container, 'Закупки')[0]);
+
+  await click(buttons(ui.container, 'Пропустить эту готовку')[0]);
+  expect(calls.at(-1)).toEqual({ url: 'api/actions/skip-next-cook', method: 'POST', body: {} });
+  expect(ui.text()).toContain('пропущена');
+  expect(buttons(ui.container, 'Пропустить эту готовку')).toHaveLength(0); // один пропуск
+
+  await click(buttons(ui.container, 'Отменить пропуск')[0]);
+  expect(calls.at(-1)).toEqual({ url: 'api/actions/unskip-cook', method: 'POST', body: {} });
+  expect(ui.text()).not.toContain('пропущена');
+  ui.unmount();
+});
+
 describe('ошибки', () => {
   it('422 — сообщение сервера на экране, state прежний', async () => {
     const detail = [{ type: 'value_error', loc: ['body', 'cook_weekday2'], msg: 'При двух готовках в неделю нужен второй день готовки' }];

@@ -70,3 +70,31 @@ def test_db_path_from_env(monkeypatch, tmp_path):
     assert db_path_from_env() == DEFAULT_DB_PATH == Path("data/mealplan.db")
     monkeypatch.setenv("MEALPLAN_DB_PATH", str(tmp_path / "x.db"))
     assert db_path_from_env() == tmp_path / "x.db"
+
+
+def test_skipped_cook_roundtrip(tmp_path):
+    repo = SettingsRepository(tmp_path / "db.sqlite")
+    skipped = Settings(date(2026, 11, 5), 2, 3, 6, "same", date(2026, 11, 11))
+    repo.save_settings(skipped)
+    assert repo.get_settings() == StoredSettings(skipped, 1)
+    repo.save_settings(SETTINGS)  # пропуск снят — NULL в БД
+    assert repo.get_settings() == StoredSettings(SETTINGS, 2)
+
+
+def test_migrates_db_from_before_skip(tmp_path):
+    # Таблица до 7.7: без skipped_cook_date, со строкой настроек.
+    path = tmp_path / "old.db"
+    with closing(sqlite3.connect(path)) as conn, conn:
+        conn.execute(
+            "CREATE TABLE settings (id INTEGER PRIMARY KEY CHECK (id = 1),"
+            " meal_anchor_date TEXT NOT NULL, cook_count INTEGER NOT NULL,"
+            " cook_weekday1 INTEGER NOT NULL, cook_weekday2 INTEGER,"
+            " shopping_timing TEXT NOT NULL, version INTEGER NOT NULL DEFAULT 1)"
+        )
+        conn.execute(
+            "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 4)"
+        )
+    repo = SettingsRepository(path)
+    assert repo.get_settings() == StoredSettings(SETTINGS, 4)
+    assert repo.save_settings(SETTINGS) == 5
+    SettingsRepository(path)  # повторное открытие — колонка уже есть

@@ -422,6 +422,134 @@
           }
         }
       }
+    },
+    "/api/actions/skip-next-cook": {
+      "post": {
+        "summary": "Skip Next Cook",
+        "operationId": "skip_next_cook_api_actions_skip_next_cook_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/unskip-cook": {
+      "post": {
+        "summary": "Unskip Cook",
+        "operationId": "unskip_cook_api_actions_unskip_cook_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -452,6 +580,20 @@
           },
           "today_position": {
             "$ref": "#/components/schemas/TodayPositionOut"
+          },
+          "skipped_cook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkippedCookOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "can_skip_next_cook": {
+            "type": "boolean",
+            "title": "Can Skip Next Cook"
           }
         },
         "type": "object",
@@ -461,7 +603,9 @@
           "schedule",
           "next_shopping_trip",
           "version",
-          "today_position"
+          "today_position",
+          "skipped_cook",
+          "can_skip_next_cook"
         ],
         "title": "AppStateOut"
       },
@@ -601,6 +745,10 @@
           "is_before_start": {
             "type": "boolean",
             "title": "Is Before Start"
+          },
+          "is_skipped": {
+            "type": "boolean",
+            "title": "Is Skipped"
           }
         },
         "type": "object",
@@ -614,7 +762,8 @@
           "protein_total",
           "is_day_zero",
           "is_cook_day",
-          "is_before_start"
+          "is_before_start",
+          "is_skipped"
         ],
         "title": "DayOut"
       },
@@ -894,6 +1043,18 @@
               "before"
             ],
             "title": "Shopping Timing"
+          },
+          "skipped_cook_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Skipped Cook Date"
           }
         },
         "type": "object",
@@ -902,7 +1063,8 @@
           "cook_count",
           "cook_weekday1",
           "cook_weekday2",
-          "shopping_timing"
+          "shopping_timing",
+          "skipped_cook_date"
         ],
         "title": "SettingsOut"
       },
@@ -1025,6 +1187,37 @@
         ],
         "title": "ShoppingTripOut"
       },
+      "SkippedCookOut": {
+        "properties": {
+          "cook_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Cook Date"
+          },
+          "pause_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Pause Start"
+          },
+          "pause_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Pause End"
+          },
+          "can_undo": {
+            "type": "boolean",
+            "title": "Can Undo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cook_date",
+          "pause_start",
+          "pause_end",
+          "can_undo"
+        ],
+        "title": "SkippedCookOut"
+      },
       "SummaryDayOut": {
         "properties": {
           "date": {
@@ -1084,6 +1277,10 @@
           "is_before_start": {
             "type": "boolean",
             "title": "Is Before Start"
+          },
+          "is_skipped": {
+            "type": "boolean",
+            "title": "Is Skipped"
           }
         },
         "type": "object",
@@ -1096,7 +1293,8 @@
           "protein",
           "is_cook_day",
           "is_day_zero",
-          "is_before_start"
+          "is_before_start",
+          "is_skipped"
         ],
         "title": "SummaryDayOut"
       },
@@ -1132,6 +1330,16 @@
           },
           "next_shopping": {
             "$ref": "#/components/schemas/SummaryTripOut"
+          },
+          "skipped_cook": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SkippedCookOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -1139,7 +1347,8 @@
           "today",
           "version",
           "days",
-          "next_shopping"
+          "next_shopping",
+          "skipped_cook"
         ],
         "title": "SummaryOut",
         "description": "Компактный ответ для REST-сенсоров и Assist в HA (7.5)."

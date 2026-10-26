@@ -8,6 +8,7 @@ from dataclasses import dataclass, replace
 from datetime import date
 
 from meal_planner.core.models import Settings, default_settings
+from meal_planner.core.scheduling import cook_weekdays
 
 WEEKDAY_MESSAGE = "День готовки — число от 1 (пн) до 7 (вс)"
 
@@ -44,6 +45,22 @@ def settings_errors(settings: Settings) -> list[SettingsError]:
     if settings.shopping_timing not in ("same", "before"):
         errors.append(
             SettingsError("shopping_timing", "Закупка — в день готовки или за день до")
+        )
+    skipped = settings.skipped_cook_date
+    # Дни готовки проверяются только у валидного расписания (not errors).
+    if (
+        skipped is not None
+        and not errors
+        and (
+            skipped.isoweekday() not in cook_weekdays(settings)
+            or skipped < settings.meal_anchor_date
+        )
+    ):
+        errors.append(
+            SettingsError(
+                "skipped_cook_date",
+                "Пропустить можно только день готовки после начала цикла",
+            )
         )
     return errors
 

@@ -1,8 +1,10 @@
 """Ротация блюд и даты готовки. Порт 1:1 функций из meal-plan.jsx.
 
 Отличие с 6.5: до якоря блюд нет, первая готовка — день 0 (якорь − 1).
+С 7.7: пропущенная готовка ставит цикл на паузу (skipped).
 """
 
+from dataclasses import replace
 from datetime import date, timedelta
 
 from meal_planner.core.models import (
@@ -90,7 +92,17 @@ def cook_date_for_trip(
     return nearest_cook_date(cook_weekdays, today)
 
 
-def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> DayMeals:
+def pause_end(skipped: date, cook_weekdays: tuple[int, ...]) -> date:
+    """Пауза после пропущенной готовки — по следующую готовку включительно."""
+    return nearest_cook_date(cook_weekdays, skipped + timedelta(days=1))
+
+
+def meals_for_date(
+    d: date,
+    anchor: date,
+    cook_weekdays: tuple[int, ...],
+    skipped: date | None = None,
+) -> DayMeals:
     if d < anchor:
         # Цикл ещё не начался (6.5): до дня 0 ничего не готовим и не едим,
         # в день 0 — первая готовка.
@@ -107,6 +119,25 @@ def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> Day
             is_cook_day=is_day_zero,
             is_before_start=not is_day_zero,
         )
+    if skipped is not None and d > skipped:
+        end = pause_end(skipped, cook_weekdays)
+        if d <= end:
+            # Пауза (7.7): готовки skipped не было — до следующей не едим дома.
+            return DayMeals(
+                date=d,
+                cycle_index=None,
+                breakfast=None,
+                lunch=None,
+                dinner=None,
+                kcal_total=0,
+                protein_total=0,
+                is_day_zero=False,
+                is_cook_day=d == end,
+                is_before_start=False,
+                is_skipped=True,
+            )
+        # После паузы цикл продолжается с того же блюда, на котором встал.
+        anchor += end - skipped
     # Какие блюда попадают в партию, решает обычная 5-дневная ротация, поэтому
     # состав закупки не меняется. Меняется только порядок внутри партии: рыбные
     # блюда — на самые свежие дни, мясные — в конец (дольше хранятся).
@@ -141,7 +172,7 @@ def meals_for_date(d: date, anchor: date, cook_weekdays: tuple[int, ...]) -> Day
         kcal_total=kcal,
         protein_total=protein,
         is_day_zero=False,
-        is_cook_day=d.isoweekday() in cook_weekdays,
+        is_cook_day=d.isoweekday() in cook_weekdays and d != skipped,
         is_before_start=False,
     )
 
@@ -152,15 +183,60 @@ def build_schedule(
     """Расписание на date_from..date_to включительно."""
     anchor = settings.meal_anchor_date
     weekdays = cook_weekdays(settings)
+    skipped = settings.skipped_cook_date
     days = (date_to - date_from).days + 1
     return tuple(
-        meals_for_date(date_from + timedelta(days=i), anchor, weekdays)
+        meals_for_date(date_from + timedelta(days=i), anchor, weekdays, skipped)
         for i in range(max(days, 0))
     )
 
 
+def trip_cook_date(settings: Settings, today: date) -> date:
+    """Готовка, к которой ближайшая закупка."""
+    weekdays = cook_weekdays(settings)
+    cook_date = cook_date_for_trip(settings.meal_anchor_date, weekdays, today)
+    if settings.shopping_timing == "before" and cook_date == today:
+        # Закупка для сегодняшней готовки была вчера (в JS показывалась
+        # вчерашняя дата) — ближайшая поездка уже к следующей готовке (6.8).
+        cook_date = nearest_cook_date(weekdays, today + timedelta(days=1))
+    if cook_date == settings.skipped_cook_date:
+        # Пропущенную готовку не закупаем: следующая — в конце паузы (7.7).
+        cook_date = pause_end(cook_date, weekdays)
+    return cook_date
+
+
+def settle_skip(settings: Settings, today: date) -> Settings:
+    """Прошедшая пауза уходит в якорь: блюда после неё те же, пропуск свободен.
+
+    Дни до пропуска при этом показываются по новому якорю — это прошлое.
+    """
+    skipped = settings.skipped_cook_date
+    if skipped is None:
+        return settings
+    end = pause_end(skipped, cook_weekdays(settings))
+    if end >= today:
+        return settings
+    return without_skip(settings)
+
+
+def without_skip(settings: Settings) -> Settings:
+    """Снять пропуск, засчитав паузу: цикл продолжается с того же блюда."""
+    skipped = settings.skipped_cook_date
+    if skipped is None:
+        return settings
+    end = pause_end(skipped, cook_weekdays(settings))
+    return replace(
+        settings,
+        meal_anchor_date=settings.meal_anchor_date + (end - skipped),
+        skipped_cook_date=None,
+    )
+
+
 def today_position(
-    today: date, anchor: date, cook_weekdays: tuple[int, ...]
+    today: date,
+    anchor: date,
+    cook_weekdays: tuple[int, ...],
+    skipped: date | None = None,
 ) -> TodayPosition:
     """Позиция «сегодня — блюдо N» (6.6): текущая и все достижимые.
 
@@ -168,6 +244,8 @@ def today_position(
     поэтому варианты перебираются: каждому достижимому блюду — один якорь.
     Порядок кандидатов: сначала «цикл уже идёт» (якорь не позже начала
     текущего окна, от ближайшего), потом «начался внутри окна».
+    Варианты — без пропуска: выбор позиции его снимает (7.7); в паузе
+    current — None.
     """
     window_end = nearest_cook_date(cook_weekdays, today)
     window_start = previous_cook_date(cook_weekdays, window_end) + timedelta(days=1)
@@ -181,7 +259,7 @@ def today_position(
         if dish is not None:  # всегда: кандидаты не позже сегодня
             anchors.setdefault(dish, candidate)
 
-    current = meals_for_date(today, anchor, cook_weekdays)
+    current = meals_for_date(today, anchor, cook_weekdays, skipped)
     return TodayPosition(
         current=0 if current.is_day_zero else current.cycle_index,
         options=tuple(

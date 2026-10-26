@@ -42,6 +42,7 @@ const LOAD_STEP = 14;
 type Day = AppState['schedule'][number];
 type Settings = AppState['settings'];
 type Trip = AppState['next_shopping_trip'];
+type SkippedCook = NonNullable<AppState['skipped_cook']>;
 type MealDay = Day & { cycle_index: number; breakfast_id: string; lunch_id: string; dinner_id: string };
 type RunAction = <N extends ActionName>(name: N, payload: ActionPayloads[N]) => Promise<void>;
 type Tab = 'schedule' | 'menu' | 'shopping' | 'settings';
@@ -149,6 +150,8 @@ export default function MealPlanApp() {
             goToDate={goToDate}
             goToToday={goToToday}
             loadMore={loadMore}
+            saveError={saveError}
+            runAction={runAction}
             onOpenDay={(dateStr) => {
               goToDate(dateStr);
               setTab('menu');
@@ -165,11 +168,12 @@ export default function MealPlanApp() {
             loadMore={loadMore}
           />
         ) : tab === 'shopping' ? (
-          <ShoppingTab trip={state.next_shopping_trip} recipes={recipes} />
+          <ShoppingTab state={state} recipes={recipes} saveError={saveError} runAction={runAction} />
         ) : (
           <SettingsTab
             settings={state.settings}
             position={state.today_position}
+            skipped={state.skipped_cook}
             recipes={recipes}
             saveError={saveError}
             runAction={runAction}
@@ -186,7 +190,7 @@ export default function MealPlanApp() {
   );
 }
 
-/** До якоря (день 0 и раньше) блюд нет — сервер присылает null. */
+/** До якоря (день 0 и раньше) и в паузе блюд нет — сервер присылает null. */
 function hasMeals(day: Day): day is MealDay {
   return day.cycle_index !== null && day.breakfast_id !== null && day.lunch_id !== null && day.dinner_id !== null;
 }
@@ -199,6 +203,27 @@ function CycleStartsNote({ anchor, style }: { anchor: string; style: CSSProperti
   );
 }
 
+const PAUSE_NOTE = 'Пауза — готовка пропущена, блюд нет';
+
+/** Пропущенная готовка (7.7): даты паузы и «можно ли отменить» — от сервера. */
+function SkippedCookBanner({ skipped, saveError, runAction }: { skipped: SkippedCook; saveError: SaveError | null; runAction: RunAction }) {
+  return (
+    <section style={{ ...cardStyle, borderLeft: `4px solid ${COLORS.flame}`, marginBottom: 14 }}>
+      <p style={{ fontSize: 13, margin: 0 }}>
+        <b>Готовка {weekdayShort(skipped.cook_date)} {fmtDate(skipped.cook_date)} пропущена.</b> Пауза с{' '}
+        {weekdayShort(skipped.pause_start)} {fmtDate(skipped.pause_start)} по {weekdayShort(skipped.pause_end)}{' '}
+        {fmtDate(skipped.pause_end)} — в этот день снова готовка, цикл продолжится с того же блюда.
+      </p>
+      {skipped.can_undo && (
+        <button onClick={() => runAction('unskip-cook', {})} style={{ ...ghostBtnStyle, marginTop: 8 }}>
+          Отменить пропуск
+        </button>
+      )}
+      <FieldError error={saveError} action="unskip-cook" />
+    </section>
+  );
+}
+
 // ---------- Schedule Tab ----------
 type ScheduleTabProps = {
   state: AppState;
@@ -207,14 +232,17 @@ type ScheduleTabProps = {
   goToDate: (iso: string) => void;
   goToToday: () => void;
   loadMore: () => void;
+  saveError: SaveError | null;
+  runAction: RunAction;
   onOpenDay: (iso: string) => void;
 };
 
-function ScheduleTab({ state, recipes, selectedDateStr, goToDate, goToToday, loadMore, onOpenDay }: ScheduleTabProps) {
+function ScheduleTab({ state, recipes, selectedDateStr, goToDate, goToToday, loadMore, saveError, runAction, onOpenDay }: ScheduleTabProps) {
   const { schedule, today, settings } = state;
   const isToday = selectedDateStr === today;
   return (
     <div>
+      {state.skipped_cook && <SkippedCookBanner skipped={state.skipped_cook} saveError={saveError} runAction={runAction} />}
       <section style={{ ...cardStyle, display: 'flex', alignItems: 'flex-end', gap: 10 }}>
         <div style={{ flex: 1 }}>
           <label style={labelStyle}>Перейти к дате</label>
@@ -287,6 +315,8 @@ function ScheduleTab({ state, recipes, selectedDateStr, goToDate, goToToday, loa
                 <p style={{ fontSize: 13, color: COLORS.flame, fontWeight: 600, margin: '6px 0 0' }}>
                   День 0 · готовка — меню начнётся завтра
                 </p>
+              ) : day.is_skipped ? (
+                <p style={{ fontSize: 13, color: COLORS.inkSoft, margin: '6px 0 0' }}>{PAUSE_NOTE}</p>
               ) : !hasMeals(day) ? (
                 <CycleStartsNote anchor={settings.meal_anchor_date} style={{ fontSize: 13, margin: '6px 0 0' }} />
               ) : (
@@ -388,7 +418,7 @@ function MenuTab({ state, recipes, selectedDateStr, goToDate, openRecipe, setOpe
           const dateStr = d.date;
           const isToday = dateStr === today;
           const isSelected = dateStr === selectedDateStr;
-          const noMenu = d.is_day_zero || d.is_before_start;
+          const noMenu = d.is_day_zero || d.is_before_start || d.is_skipped;
           return (
             <button
               key={dateStr}
@@ -437,6 +467,8 @@ function MenuTab({ state, recipes, selectedDateStr, goToDate, openRecipe, setOpe
           <p style={{ fontSize: 14, color: COLORS.flame, fontWeight: 600, margin: 0 }}>
             День 0 · готовка — меню начнётся завтра
           </p>
+        ) : day.is_skipped ? (
+          <p style={{ fontSize: 14, color: COLORS.inkSoft, margin: 0 }}>{PAUSE_NOTE}</p>
         ) : !hasMeals(day) ? (
           <CycleStartsNote anchor={state.settings.meal_anchor_date} style={{ fontSize: 14, margin: 0 }} />
         ) : (
@@ -562,14 +594,18 @@ function RecipeDetails({ recipe }: { recipe: Recipe }) {
 
 // ---------- Shopping Tab ----------
 type ShoppingTabProps = {
-  trip: Trip;
+  state: AppState;
   recipes: Recipes;
+  saveError: SaveError | null;
+  runAction: RunAction;
 };
 
-function ShoppingTab({ trip, recipes }: ShoppingTabProps) {
+function ShoppingTab({ state, recipes, saveError, runAction }: ShoppingTabProps) {
   // Окно, что готовить и что купить — целиком из next_shopping_trip.
+  const trip: Trip = state.next_shopping_trip;
   return (
     <div>
+      {state.skipped_cook && <SkippedCookBanner skipped={state.skipped_cook} saveError={saveError} runAction={runAction} />}
       <section style={{ ...cardStyle, borderLeft: `4px solid ${COLORS.accent}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
           <span style={{ fontFamily: 'ui-serif, Georgia, serif', fontWeight: 700, fontSize: 16 }}>Ближайшая закупка</span>
@@ -578,6 +614,12 @@ function ShoppingTab({ trip, recipes }: ShoppingTabProps) {
         <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>
           Готовка — {weekdayShort(trip.cook_date)} {fmtDate(trip.cook_date)}. Едим с {weekdayShort(trip.window_start)} {fmtDate(trip.window_start)} по {weekdayShort(trip.window_end)} {fmtDate(trip.window_end)} включительно ({trip.window_days} {trip.window_days === 1 ? 'день' : 'дня/дней'}).
         </p>
+        {state.can_skip_next_cook && (
+          <button onClick={() => runAction('skip-next-cook', {})} style={{ ...ghostBtnStyle, marginTop: 8, padding: '4px 10px', fontSize: 12 }}>
+            Пропустить эту готовку
+          </button>
+        )}
+        <FieldError error={saveError} action="skip-next-cook" />
 
         <h3 style={{ fontSize: 13, color: COLORS.flame, margin: '12px 0 6px' }}>
           <ChefHat size={14} style={{ verticalAlign: '-2px', marginRight: 4 }} />
@@ -621,12 +663,13 @@ function ShoppingTab({ trip, recipes }: ShoppingTabProps) {
 type SettingsTabProps = {
   settings: Settings;
   position: AppState['today_position'];
+  skipped: AppState['skipped_cook'];
   recipes: Recipes;
   saveError: SaveError | null;
   runAction: RunAction;
 };
 
-function SettingsTab({ settings, position, recipes, saveError, runAction }: SettingsTabProps) {
+function SettingsTab({ settings, position, skipped, recipes, saveError, runAction }: SettingsTabProps) {
   const setCookSchedule = (change: Partial<ActionPayloads['set-cook-schedule']>) =>
     runAction('set-cook-schedule', {
       cook_count: settings.cook_count === 1 ? 1 : 2,
@@ -647,7 +690,9 @@ function SettingsTab({ settings, position, recipes, saveError, runAction }: Sett
         >
           {position.current === null && (
             <option value="" disabled>
-              Цикл начнётся {weekdayShort(settings.meal_anchor_date)} {fmtDate(settings.meal_anchor_date)}
+              {skipped
+                ? `Пауза до ${weekdayShort(skipped.pause_end)} ${fmtDate(skipped.pause_end)}`
+                : `Цикл начнётся ${weekdayShort(settings.meal_anchor_date)} ${fmtDate(settings.meal_anchor_date)}`}
             </option>
           )}
           {position.options.map((o) => (

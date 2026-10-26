@@ -2,16 +2,25 @@
 
 from datetime import date, timedelta
 
-from meal_planner.core.models import AppState, CookItem, Settings, ShoppingTrip
+from meal_planner.core.actions import skip_next_cook_error
+from meal_planner.core.models import (
+    AppState,
+    CookItem,
+    Settings,
+    ShoppingTrip,
+    SkippedCook,
+)
 from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.scheduling import (
     DINNER_IDS,
     LUNCH_IDS,
     build_schedule,
-    cook_date_for_trip,
     cook_weekdays,
     nearest_cook_date,
+    pause_end,
+    settle_skip,
     today_position,
+    trip_cook_date,
 )
 from meal_planner.core.shopping import count_portions, extract_shopping_list
 
@@ -23,11 +32,7 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
     # включительно. Окно может закончиться через 13 дней после today, поэтому
     # дни строим здесь, а не берём из запрошенного расписания.
     weekdays = cook_weekdays(settings)
-    cook_date = cook_date_for_trip(settings.meal_anchor_date, weekdays, today)
-    if settings.shopping_timing == "before" and cook_date == today:
-        # Закупка для сегодняшней готовки была вчера (в JS показывалась
-        # вчерашняя дата) — ближайшая поездка уже к следующей готовке (6.8).
-        cook_date = nearest_cook_date(weekdays, today + timedelta(days=1))
+    cook_date = trip_cook_date(settings, today)
     window_start = cook_date + timedelta(days=1)
     window_end = nearest_cook_date(weekdays, window_start)
     days = build_schedule(settings, window_start, window_end)
@@ -54,6 +59,18 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
     )
 
 
+def skipped_cook(settings: Settings, today: date) -> SkippedCook | None:
+    skipped = settings.skipped_cook_date
+    if skipped is None:
+        return None
+    return SkippedCook(
+        cook_date=skipped,
+        pause_start=skipped + timedelta(days=1),
+        pause_end=pause_end(skipped, cook_weekdays(settings)),
+        can_undo=skipped >= today,
+    )
+
+
 def recompute(
     settings: Settings,
     today: date,
@@ -66,6 +83,7 @@ def recompute(
     снаружи (из SQLite в API) — в core нет состояния."""
     date_from = date_from or today
     date_to = date_to or date_from + timedelta(days=SCHEDULE_DAYS - 1)
+    settings = settle_skip(settings, today)
     return AppState(
         today=today,
         settings=settings,
@@ -73,6 +91,11 @@ def recompute(
         next_shopping_trip=next_shopping_trip(settings, today),
         version=version,
         today_position=today_position(
-            today, settings.meal_anchor_date, cook_weekdays(settings)
+            today,
+            settings.meal_anchor_date,
+            cook_weekdays(settings),
+            settings.skipped_cook_date,
         ),
+        skipped_cook=skipped_cook(settings, today),
+        can_skip_next_cook=skip_next_cook_error(settings, today) is None,
     )

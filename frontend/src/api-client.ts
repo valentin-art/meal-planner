@@ -19,6 +19,9 @@ export type ActionPayloads = {
   'set-shopping-timing': Schemas['SetShoppingTimingIn'];
   'set-anchor-date': Schemas['SetAnchorDateIn'];
   'set-cycle-position': Schemas['SetCyclePositionIn'];
+  // без тела: что пропускать, решает сервер (ближайшая готовка)
+  'skip-next-cook': Record<string, never>;
+  'unskip-cook': Record<string, never>;
 };
 export type ActionName = keyof ActionPayloads;
 

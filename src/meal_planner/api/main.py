@@ -6,7 +6,7 @@
 import logging
 import os
 from collections.abc import Callable
-from datetime import date
+from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
 from typing import Annotated
@@ -22,8 +22,10 @@ from meal_planner.api.schemas import (
     SetCookScheduleIn,
     SetCyclePositionIn,
     SetShoppingTimingIn,
+    SummaryOut,
     to_app_state_out,
     to_recipes_out,
+    to_summary_out,
 )
 from meal_planner.core import actions
 from meal_planner.core.models import Settings, default_settings
@@ -158,6 +160,15 @@ def create_app() -> FastAPI:
         check_range(today, date_from, date_to)
         settings, version = stored_or_initial(repo, today)
         return state_response(settings, version, today, date_from, date_to)
+
+    @app.get("/api/summary", response_model=SummaryOut)
+    def get_summary(repo: Repo, today: Today) -> SummaryOut:
+        # Для HA: сегодня и завтра + ближайшая закупка. Первый запрос, как и
+        # GET /api/state, сохраняет дефолты — иначе якорь плыл бы (6.4).
+        settings, version = stored_or_initial(repo, today)
+        return to_summary_out(
+            recompute(settings, today, today, today + timedelta(days=1), version)
+        )
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
     def get_recipes() -> dict[str, RecipeOut]:

@@ -156,6 +156,65 @@ def test_recipes_endpoint_does_not_touch_db(tmp_path, monkeypatch):
     assert client.get("/api/recipes").status_code == 200
 
 
+def test_summary_reshapes_state_for_today_and_tomorrow(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    r = client.get("/api/summary")
+    assert r.status_code == 200
+    body = r.json()
+    state = recompute(DEFAULT_2X, TODAY, TODAY, TODAY + timedelta(days=1), 1)
+    assert body["today"] == TODAY.isoformat()
+    assert body["version"] == 1
+    for key, day in zip(("today", "tomorrow"), state.schedule, strict=True):
+        assert body["days"][key] == {
+            "date": day.date.isoformat(),
+            "breakfast": day.breakfast.name,
+            "lunch": day.lunch.name,
+            "dinner": day.dinner.name,
+            "kcal": day.kcal_total,
+            "protein": day.protein_total,
+            "is_cook_day": day.is_cook_day,
+            "is_day_zero": day.is_day_zero,
+            "is_before_start": day.is_before_start,
+        }
+
+    trip, out = state.next_shopping_trip, body["next_shopping"]
+    assert (out["date"], out["cook_date"]) == ("2026-11-11", "2026-11-11")
+    assert (out["window_start"], out["window_end"]) == ("2026-11-12", "2026-11-14")
+    assert out["cook"] == [
+        f"{c.lunch.name} + {c.dinner.name} — x{c.portions}" for c in trip.cook_items
+    ]
+    # Плоский список в порядке категорий UI, по строке на позицию.
+    names = [i.name for g in trip.shopping_groups for i in g.items]
+    assert [line.split(" — ")[0] for line in out["items"]] == names
+    # Формат — как «Что купить» в UI: с «≈ N шт» и без.
+    assert "куриное филе — 480 г" in out["items"]
+    assert "авокадо — 200 г (≈ 2 шт)" in out["items"]
+    assert "сок лимона — 40 мл (≈ 1 шт)" in out["items"]
+
+
+def test_summary_before_start_and_day_zero_have_no_dishes(client, repo):
+    # Якорь послезавтра: сегодня цикл ещё не начался, завтра — день 0.
+    repo.save_settings(
+        dataclasses.replace(DEFAULT_2X, meal_anchor_date=TODAY + timedelta(days=2))
+    )
+    days = client.get("/api/summary").json()["days"]
+    for day in days.values():
+        assert (day["breakfast"], day["lunch"], day["dinner"]) == (None, None, None)
+    assert days["today"]["is_before_start"] and not days["today"]["is_cook_day"]
+    assert days["tomorrow"]["is_day_zero"] and days["tomorrow"]["is_cook_day"]
+
+
+def test_summary_first_request_saves_defaults(client, repo):
+    assert repo.get_settings() is None
+    assert client.get("/api/summary").status_code == 200
+    assert repo.get_settings() == StoredSettings(default_settings(TODAY), 1)
+
+
+def test_summary_is_compact(client, repo):
+    # Атрибуты сенсора HA должны быть короткими; /api/state — ~6 КБ.
+    assert len(client.get("/api/summary").content) < 4096
+
+
 def test_health_reads_db_without_writing(tmp_path, monkeypatch):
     monkeypatch.setenv("MEALPLAN_STATIC_DIR", str(tmp_path / "no-static"))
 

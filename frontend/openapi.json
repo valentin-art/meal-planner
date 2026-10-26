@@ -87,6 +87,24 @@
         }
       }
     },
+    "/api/summary": {
+      "get": {
+        "summary": "Get Summary",
+        "operationId": "get_summary_api_summary_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SummaryOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recipes": {
       "get": {
         "summary": "Get Recipes",
@@ -1006,6 +1024,173 @@
           "shopping_groups"
         ],
         "title": "ShoppingTripOut"
+      },
+      "SummaryDayOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "breakfast": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Breakfast"
+          },
+          "lunch": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lunch"
+          },
+          "dinner": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dinner"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein": {
+            "type": "integer",
+            "title": "Protein"
+          },
+          "is_cook_day": {
+            "type": "boolean",
+            "title": "Is Cook Day"
+          },
+          "is_day_zero": {
+            "type": "boolean",
+            "title": "Is Day Zero"
+          },
+          "is_before_start": {
+            "type": "boolean",
+            "title": "Is Before Start"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "breakfast",
+          "lunch",
+          "dinner",
+          "kcal",
+          "protein",
+          "is_cook_day",
+          "is_day_zero",
+          "is_before_start"
+        ],
+        "title": "SummaryDayOut"
+      },
+      "SummaryDaysOut": {
+        "properties": {
+          "today": {
+            "$ref": "#/components/schemas/SummaryDayOut"
+          },
+          "tomorrow": {
+            "$ref": "#/components/schemas/SummaryDayOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "tomorrow"
+        ],
+        "title": "SummaryDaysOut"
+      },
+      "SummaryOut": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "days": {
+            "$ref": "#/components/schemas/SummaryDaysOut"
+          },
+          "next_shopping": {
+            "$ref": "#/components/schemas/SummaryTripOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "version",
+          "days",
+          "next_shopping"
+        ],
+        "title": "SummaryOut",
+        "description": "Компактный ответ для REST-сенсоров и Assist в HA (7.5)."
+      },
+      "SummaryTripOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "cook_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Cook Date"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Window End"
+          },
+          "cook": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cook"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "cook_date",
+          "window_start",
+          "window_end",
+          "cook",
+          "items"
+        ],
+        "title": "SummaryTripOut"
       },
       "TodayPositionOut": {
         "properties": {

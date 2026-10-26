@@ -2,6 +2,7 @@
 
 Только перекладка полей. Дни и cook items ссылаются на рецепты по id —
 справочник — отдельно, GET /api/recipes (клиент берёт его один раз).
+Исключение — SummaryOut для HA: там названия и готовые строки, как в UI.
 """
 
 from collections.abc import Mapping
@@ -139,6 +140,42 @@ class TodayPositionOut(BaseModel):
     options: list[CyclePositionOut]
 
 
+class SummaryDayOut(BaseModel):
+    date: date
+    # До старта и в день 0 блюд нет — null, флаги объясняют почему.
+    breakfast: str | None
+    lunch: str | None
+    dinner: str | None
+    kcal: int
+    protein: int
+    is_cook_day: bool
+    is_day_zero: bool
+    is_before_start: bool
+
+
+class SummaryDaysOut(BaseModel):
+    today: SummaryDayOut
+    tomorrow: SummaryDayOut
+
+
+class SummaryTripOut(BaseModel):
+    date: date
+    cook_date: date
+    window_start: date
+    window_end: date
+    cook: list[str]  # «обед + ужин — xN», как «Что готовить» в UI
+    items: list[str]  # «название — 540 г (≈ 2 шт)», как «Что купить» в UI
+
+
+class SummaryOut(BaseModel):
+    """Компактный ответ для REST-сенсоров и Assist в HA (7.5)."""
+
+    today: date
+    version: int
+    days: SummaryDaysOut
+    next_shopping: SummaryTripOut
+
+
 class HealthOut(BaseModel):
     status: Literal["ok"]
 
@@ -266,4 +303,48 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         next_shopping_trip=to_shopping_trip_out(s.next_shopping_trip),
         version=s.version,
         today_position=to_today_position_out(s.today_position),
+    )
+
+
+def shopping_line(i: ShoppingItem) -> str:
+    line = f"{i.name} — {format_qty(i.qty)} {i.unit}"
+    return line if i.pieces is None else f"{line} (≈ {i.pieces} шт)"
+
+
+def cook_line(c: CookItem) -> str:
+    return f"{c.lunch.name} + {c.dinner.name} — x{c.portions}"
+
+
+def to_summary_day_out(d: DayMeals) -> SummaryDayOut:
+    return SummaryDayOut(
+        date=d.date,
+        breakfast=d.breakfast.name if d.breakfast else None,
+        lunch=d.lunch.name if d.lunch else None,
+        dinner=d.dinner.name if d.dinner else None,
+        kcal=d.kcal_total,
+        protein=d.protein_total,
+        is_cook_day=d.is_cook_day,
+        is_day_zero=d.is_day_zero,
+        is_before_start=d.is_before_start,
+    )
+
+
+def to_summary_out(s: AppState) -> SummaryOut:
+    """s — recompute на сегодня и завтра: schedule[0] и schedule[1]."""
+    today, tomorrow = s.schedule
+    t = s.next_shopping_trip
+    return SummaryOut(
+        today=s.today,
+        version=s.version,
+        days=SummaryDaysOut(
+            today=to_summary_day_out(today), tomorrow=to_summary_day_out(tomorrow)
+        ),
+        next_shopping=SummaryTripOut(
+            date=t.shopping_date,
+            cook_date=t.cook_date,
+            window_start=t.window_start,
+            window_end=t.window_end,
+            cook=[cook_line(c) for c in t.cook_items],
+            items=[shopping_line(i) for g in t.shopping_groups for i in g.items],
+        ),
     )

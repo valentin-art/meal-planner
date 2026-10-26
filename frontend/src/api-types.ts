@@ -38,6 +38,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Summary */
+        get: operations["get_summary_api_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/recipes": {
         parameters: {
             query?: never;
@@ -351,6 +368,77 @@ export interface components {
             /** Shopping Groups */
             shopping_groups: components["schemas"]["ShoppingGroupOut"][];
         };
+        /** SummaryDayOut */
+        SummaryDayOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Breakfast */
+            breakfast: string | null;
+            /** Lunch */
+            lunch: string | null;
+            /** Dinner */
+            dinner: string | null;
+            /** Kcal */
+            kcal: number;
+            /** Protein */
+            protein: number;
+            /** Is Cook Day */
+            is_cook_day: boolean;
+            /** Is Day Zero */
+            is_day_zero: boolean;
+            /** Is Before Start */
+            is_before_start: boolean;
+        };
+        /** SummaryDaysOut */
+        SummaryDaysOut: {
+            today: components["schemas"]["SummaryDayOut"];
+            tomorrow: components["schemas"]["SummaryDayOut"];
+        };
+        /**
+         * SummaryOut
+         * @description Компактный ответ для REST-сенсоров и Assist в HA (7.5).
+         */
+        SummaryOut: {
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            /** Version */
+            version: number;
+            days: components["schemas"]["SummaryDaysOut"];
+            next_shopping: components["schemas"]["SummaryTripOut"];
+        };
+        /** SummaryTripOut */
+        SummaryTripOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Cook Date
+             * Format: date
+             */
+            cook_date: string;
+            /**
+             * Window Start
+             * Format: date
+             */
+            window_start: string;
+            /**
+             * Window End
+             * Format: date
+             */
+            window_end: string;
+            /** Cook */
+            cook: string[];
+            /** Items */
+            items: string[];
+        };
         /** TodayPositionOut */
         TodayPositionOut: {
             /** Current */
@@ -428,6 +516,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_summary_api_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SummaryOut"];
                 };
             };
         };

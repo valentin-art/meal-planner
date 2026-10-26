@@ -65,6 +65,11 @@ WORKDIR /app
 VOLUME /data
 EXPOSE 8000
 
+# Без Supervisor'а следит Docker: unhealthy виден в docker ps / Portainer.
+# В slim-образе нет curl — проверка на python из venv.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+    CMD python -c "import os, urllib.request as u; u.urlopen('http://127.0.0.1:%s/api/health' % os.environ['MEALPLAN_PORT'], timeout=4)"
+
 # Exec-форма: entry point пакета — PID 1 и получает SIGTERM от docker stop;
 # порт он берёт из MEALPLAN_PORT сам.
 CMD ["meal-planner"]

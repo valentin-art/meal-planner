@@ -124,6 +124,7 @@ HA, пути `/opt/...` — пример раскладки (compose стека 
        title: Питание
        icon: mdi:food
        work_mode: ingress
+       ui_mode: toolbar   # шапка с ☰: без неё в iOS Companion не выйти из панели
        url: http://127.0.0.1:8001
    ```
 
@@ -213,6 +214,7 @@ linux/arm64 -t meal-planner .` (тогда в compose — `image:` вместо 
 | сенсоров `meal_planner_*` нет, в логе HA ни слова о пакете | HA подняли раньше клона: Docker создал пустой каталог-источник от root, `git pull` в него не пишет | `sudo chown -R <user>: ~/meal-planner/ha && cd ~/meal-planner && git pull && git checkout -- ha`, `docker restart homeassistant` |
 | сенсоры `unavailable`, в логе HA `Error fetching data` | приложение не запущено или старая версия без эндпоинта | `docker ps`, `curl -s 127.0.0.1:8001/api/summary`, пересобрать |
 | панель «Питание» пустая / ошибка прокси | контейнер не поднят | `docker ps`, `curl -s 127.0.0.1:8001/api/health` |
+| в мобильном приложении HA панель «Питание» без шапки, не вернуться в HA | `ui_mode` по умолчанию `normal` — голый iframe без кнопки меню | `ui_mode: toolbar` в `ingress:`, затем «Ingress: Reload» или перезапуск HA |
 | Assist не знает про план | скрипты не открыты для Assist | «Голосовые ассистенты → Открыть доступ» |
 | контейнер `unhealthy` | Docker его сам не перезапускает (только при падении процесса) | `docker logs meal-planner`, `docker restart meal-planner` |
 

@@ -1,0 +1,306 @@
+# Пакет Home Assistant для meal-planner (тикет 7.6).
+#
+# Подключение: каталог ha/packages монтируется в контейнер HA
+# (/config/packages/meal_planner:ro), в configuration.yaml —
+#   homeassistant:
+#     packages: !include_dir_named packages
+#
+# Адрес — порт приложения на loopback хоста (HA в host-сети, 7.2).
+# tests/test_ha_package.py сверяет URL, поля запросов и пути в шаблонах
+# с frontend/openapi.json.
+#
+# Атрибуты сущностей LLM в Assist не видит (в контекст попадают только
+# состояние и белый список атрибутов HA), поэтому полные данные модель
+# получает из ответа скрипта meal_planner_plan.
+
+homeassistant:
+  customize:
+    sensor.meal_planner_today:
+      friendly_name: Питание сегодня
+    sensor.meal_planner_tomorrow:
+      friendly_name: Питание завтра
+    sensor.meal_planner_next_shopping:
+      friendly_name: Ближайшая закупка
+
+rest:
+  - resource: http://127.0.0.1:8001/api/summary
+    scan_interval: 900
+    timeout: 10
+    sensor:
+      - name: Meal planner today
+        unique_id: meal_planner_today
+        icon: mdi:food
+        value_template: >-
+          {% set d = value_json.days.today %}
+          {%- if d.lunch -%}Обед: {{ d.lunch }}. Ужин: {{ d.dinner }}
+          {%- elif d.is_day_zero -%}День 0: готовка, блюда с завтра
+          {%- else -%}Цикл ещё не начался{%- endif %}
+        json_attributes_path: "$.days.today"
+        json_attributes: [date, breakfast, lunch, dinner, kcal, protein, is_cook_day]
+      - name: Meal planner tomorrow
+        unique_id: meal_planner_tomorrow
+        icon: mdi:food-outline
+        value_template: >-
+          {% set d = value_json.days.tomorrow %}
+          {%- if d.lunch -%}Обед: {{ d.lunch }}. Ужин: {{ d.dinner }}
+          {%- elif d.is_day_zero -%}День 0: готовка, блюда с завтра
+          {%- else -%}Цикл ещё не начался{%- endif %}
+        json_attributes_path: "$.days.tomorrow"
+        json_attributes: [date, breakfast, lunch, dinner, kcal, protein, is_cook_day]
+      - name: Meal planner next shopping
+        unique_id: meal_planner_next_shopping
+        icon: mdi:cart
+        device_class: date
+        value_template: "{{ value_json.next_shopping.date }}"
+        json_attributes_path: "$.next_shopping"
+        json_attributes: [cook_date, window_start, window_end, cook, items]
+
+rest_command:
+  meal_planner_summary:
+    url: http://127.0.0.1:8001/api/summary
+    method: get
+    timeout: 10
+  meal_planner_set_cycle_position:
+    url: http://127.0.0.1:8001/api/actions/set-cycle-position
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"dish": dish | int} | to_json }}'
+  meal_planner_set_shopping_timing:
+    url: http://127.0.0.1:8001/api/actions/set-shopping-timing
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"shopping_timing": timing} | to_json }}'
+  meal_planner_set_cook_schedule:
+    url: http://127.0.0.1:8001/api/actions/set-cook-schedule
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {{ {"cook_count": cook_count | int,
+          "cook_weekday1": weekday1 | int,
+          "cook_weekday2": weekday2 | int if weekday2 else none} | to_json }}
+
+# Скрипты — инструменты для LLM: description и fields идут в схему tool.
+# Действия возвращают {ok: true} или {ok: false, error: "<текст из API>"};
+# текст ошибки — по-русски из core, его можно зачитать пользователю.
+script:
+  meal_planner_plan:
+    alias: Питание — план
+    description: >-
+      План питания: что на завтрак, обед и ужин сегодня и завтра (с ккал и
+      белком), когда ближайшая закупка и день готовки, какие блюда готовить и
+      полный список покупок. Вызывай для любых вопросов о еде, готовке и
+      покупках. Даты — в формате ГГГГ-ММ-ДД, today — сегодняшняя дата.
+    mode: parallel
+    sequence:
+      - action: rest_command.meal_planner_summary
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - variables:
+              result: "{{ resp.content }}"
+          - stop: План получен
+            response_variable: result
+      - variables:
+          result:
+            error: Приложение питания недоступно
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_set_cycle_position:
+    alias: Питание — какое блюдо сегодня
+    description: >-
+      Сдвигает цикл питания так, чтобы сегодня было блюдо номер N (1–5), или
+      0 — сегодня день готовки, а блюда цикла начнутся завтра. Не каждый
+      номер возможен при текущих днях готовки: при ошибке перескажи
+      пользователю текст ошибки, в нём перечислены допустимые варианты.
+    mode: queued
+    fields:
+      dish:
+        name: Блюдо
+        description: Номер блюда цикла сегодня, от 0 до 5 (0 — день готовки)
+        required: true
+        selector:
+          number:
+            min: 0
+            max: 5
+            mode: box
+    sequence:
+      - action: rest_command.meal_planner_set_cycle_position
+        data:
+          dish: "{{ dish }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_today
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: &error >-
+              {% if resp is not defined %}Приложение питания недоступно
+              {%- elif resp.content is mapping and resp.content.detail is string %}{{ resp.content.detail }}
+              {%- elif resp.content is mapping %}{{ resp.content.detail | map(attribute='msg') | join('; ') }}
+              {%- else %}Ошибка {{ resp.status }}{% endif %}
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_set_shopping_timing:
+    alias: Питание — когда закупка
+    description: >-
+      Когда ходить за продуктами: в день готовки (same) или накануне (before).
+    mode: queued
+    fields:
+      timing:
+        name: Закупка
+        description: same — в день готовки, before — накануне
+        required: true
+        selector:
+          select:
+            options:
+              - label: В день готовки
+                value: same
+              - label: Накануне
+                value: before
+    sequence:
+      - action: rest_command.meal_planner_set_shopping_timing
+        data:
+          timing: "{{ timing }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_today
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_set_cook_schedule:
+    alias: Питание — дни готовки
+    description: >-
+      Задаёт, сколько раз в неделю готовить (1 или 2) и в какие дни недели
+      (1 — понедельник … 7 — воскресенье). При двух готовках дни должны
+      различаться.
+    mode: queued
+    fields:
+      cook_count:
+        name: Готовок в неделю
+        description: 1 или 2
+        required: true
+        selector:
+          number:
+            min: 1
+            max: 2
+            mode: box
+      weekday1:
+        name: Первый день
+        description: День недели первой готовки, 1 — понедельник … 7 — воскресенье
+        required: true
+        selector:
+          select:
+            options: &weekdays
+              - {label: Понедельник, value: "1"}
+              - {label: Вторник, value: "2"}
+              - {label: Среда, value: "3"}
+              - {label: Четверг, value: "4"}
+              - {label: Пятница, value: "5"}
+              - {label: Суббота, value: "6"}
+              - {label: Воскресенье, value: "7"}
+      weekday2:
+        name: Второй день
+        description: День недели второй готовки; нужен, только если готовок 2
+        required: false
+        selector:
+          select:
+            options: *weekdays
+    sequence:
+      - action: rest_command.meal_planner_set_cook_schedule
+        data:
+          cook_count: "{{ cook_count }}"
+          weekday1: "{{ weekday1 }}"
+          weekday2: "{{ weekday2 | default('') }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_today
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      - stop: Ошибка
+        response_variable: result
+
+# Частые вопросы — локально, без LLM (в пайплайне: «Предпочитать
+# локальную обработку»). Отвечают из сенсоров, без запроса к приложению.
+conversation:
+  intents:
+    MealPlannerToday:
+      - "что [сегодня] (на обед|на ужин|едим|готовим)"
+      - "что (на обед|на ужин) сегодня"
+    MealPlannerTomorrow:
+      - "что завтра (на обед|на ужин|едим|готовим)"
+      - "что (на обед|на ужин) завтра"
+    MealPlannerShopping:
+      - "когда [следующая|ближайшая] (закупка|покупки)"
+      - "когда [мне] (идти|ехать) (в магазин|за продуктами|за покупками)"
+
+intent_script:
+  MealPlannerToday:
+    speech:
+      text: >-
+        {% set s = 'sensor.meal_planner_today' %}
+        {%- if states(s) in ['unknown', 'unavailable'] %}План питания сейчас недоступен.
+        {%- elif state_attr(s, 'lunch') %}Сегодня на обед {{ state_attr(s, 'lunch') }}, на ужин {{ state_attr(s, 'dinner') }}.
+        {%- else %}Сегодня {{ states(s) | lower }}.{% endif %}
+  MealPlannerTomorrow:
+    speech:
+      text: >-
+        {% set s = 'sensor.meal_planner_tomorrow' %}
+        {%- if states(s) in ['unknown', 'unavailable'] %}План питания сейчас недоступен.
+        {%- elif state_attr(s, 'lunch') %}Завтра на обед {{ state_attr(s, 'lunch') }}, на ужин {{ state_attr(s, 'dinner') }}.
+        {%- else %}Завтра {{ states(s) | lower }}.{% endif %}
+  MealPlannerShopping:
+    speech:
+      text: >-
+        {% set s = 'sensor.meal_planner_next_shopping' %}
+        {%- if states(s) in ['unknown', 'unavailable'] %}План питания сейчас недоступен.
+        {%- else %}
+        {%- set days = ['в понедельник', 'во вторник', 'в среду', 'в четверг',
+                        'в пятницу', 'в субботу', 'в воскресенье'] %}
+        {%- set months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля',
+                          'августа', 'сентября', 'октября', 'ноября', 'декабря'] %}
+        {%- set d = as_datetime(states(s)).date() %}
+        {%- set delta = (d - now().date()).days %}
+        {%- set when = 'сегодня' if delta == 0 else 'завтра' if delta == 1
+                       else days[d.weekday()] ~ ', ' ~ d.day ~ ' ' ~ months[d.month - 1] %}
+        {%- set same = state_attr(s, 'cook_date') == states(s) -%}
+        Ближайшая закупка {{ when }}{{ ', в день готовки' if same else ', накануне готовки' }}.
+        {%- endif %}

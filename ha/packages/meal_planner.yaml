@@ -144,6 +144,12 @@ rest_command:
     content_type: application/json
     timeout: 10
     payload: '{{ {"recipe_id": recipe_id, "stock": stock} | to_json }}'
+  meal_planner_set_dish_portions:
+    url: http://127.0.0.1:8001/api/actions/set-dish-portions
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"recipe_id": recipe_id, "portions": portions | int} | to_json }}'
   meal_planner_unmark_cooked:
     url: http://127.0.0.1:8001/api/actions/unmark-cooked
     method: post
@@ -504,6 +510,53 @@ script:
           notification_id: meal_planner_cooking
           title: Блюдо не отмечено
           message: "{{ result.error }}"
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_set_dish_portions:
+    alias: Питание — порции блюда
+    description: >-
+      Сколько порций блюда готовят на самом деле (1–20): столько продуктов
+      спишется, когда блюдо отметят приготовленным. План и список покупок не
+      меняются. Только для неотмеченного блюда текущей партии или
+      сегодняшнего завтрака; recipe_id — из раздела cooking ответа
+      meal_planner_plan.
+    mode: queued
+    fields:
+      recipe_id:
+        name: Блюдо
+        description: recipe_id блюда из cooking (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+      portions:
+        name: Порции
+        description: Сколько порций готовят, от 1 до 20
+        required: true
+        selector:
+          number:
+            min: 1
+            max: 20
+            mode: box
+    sequence:
+      - action: rest_command.meal_planner_set_dish_portions
+        data:
+          recipe_id: "{{ recipe_id }}"
+          portions: "{{ portions }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - event: meal_planner_changed
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
       - stop: Ошибка
         response_variable: result
 

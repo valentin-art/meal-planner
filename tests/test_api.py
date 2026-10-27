@@ -923,3 +923,56 @@ def test_mark_cooked_refused_when_stock_is_short(client, repo):
     # Ничего не отмечено и не записано.
     assert repo.get_cooked() == frozenset()
     assert repo.get_settings().version == 1
+
+
+def test_dish_portions_change_only_the_write_off(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    state_before = client.get("/api/state").json()
+    dish = client.get("/api/summary").json()["cooking"]["dishes"][0]
+    recipe = SEED_CATALOG.recipes[dish["recipe_id"]]
+    r = client.post(
+        "/api/actions/set-dish-portions", json={"recipe_id": recipe.id, "portions": 3}
+    )
+    assert r.status_code == 200
+    assert r.json() == {
+        "version": 2,
+        "day": "2026-11-07",
+        "recipe_id": recipe.id,
+        "portions": 3,
+    }
+    dish = client.get("/api/summary").json()["cooking"]["dishes"][0]
+    assert (dish["portions"], dish["planned_portions"]) == (3, 1)
+    # План не меняется — только версия.
+    state = client.get("/api/state").json()
+    assert {**state, "version": 1} == state_before
+
+    first = recipe.ingredients[0]
+    ingredient = SEED_CATALOG.ingredients[first.name]
+    stock = [
+        {
+            "ingredient_id": ingredient.id,
+            "qty": 10000,
+            "unit": ingredient.unit,
+            "entity_id": "input_number.x",
+        }
+    ]
+    body = {"recipe_id": recipe.id, "stock": stock}
+    out = client.post("/api/actions/mark-cooked", json=body).json()
+    assert out["counters"][0]["value"] == 10000 - first.qty * 3
+    # У отмеченного порции не меняются; снятие возвращает те же 3 порции.
+    r = client.post(
+        "/api/actions/set-dish-portions", json={"recipe_id": recipe.id, "portions": 1}
+    )
+    assert r.status_code == 422
+    out = client.post("/api/actions/unmark-cooked", json=body).json()
+    assert out["counters"][0]["value"] == 10000 + first.qty * 3
+
+
+@pytest.mark.parametrize("portions", [0, 21])
+def test_dish_portions_out_of_range_is_422(client, repo, portions):
+    repo.save_settings(DEFAULT_2X)
+    r = client.post(
+        "/api/actions/set-dish-portions", json={"recipe_id": "l1", "portions": portions}
+    )
+    assert r.status_code == 422
+    assert repo.get_dish_portions() == {}

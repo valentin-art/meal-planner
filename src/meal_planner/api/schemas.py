@@ -17,7 +17,12 @@ from meal_planner.core.catalog_actions import (
     RecipeLineInput,
     used_in,
 )
-from meal_planner.core.cooking import Cooking, CounterUpdate
+from meal_planner.core.cooking import (
+    MAX_PORTIONS,
+    MIN_PORTIONS,
+    Cooking,
+    CounterUpdate,
+)
 from meal_planner.core.models import (
     AppState,
     Catalog,
@@ -368,6 +373,21 @@ class CookedIn(ShoppingRemainingIn):
     recipe_id: str
 
 
+class SetDishPortionsIn(BaseModel):
+    """Порции неотмеченного блюда (8.3b) — меняют только списание, не план."""
+
+    recipe_id: str
+    # ge/le дублируют core намеренно: так пределы видны в OpenAPI.
+    portions: int = Field(ge=MIN_PORTIONS, le=MAX_PORTIONS)
+
+
+class DishPortionsOut(BaseModel):
+    version: int
+    day: date  # ключ: день готовки партии или сегодня (завтрак)
+    recipe_id: str
+    portions: int
+
+
 class CounterValueOut(BaseModel):
     entity_id: str
     value: float  # новое значение счётчика, в его единице, не меньше 0
@@ -386,7 +406,8 @@ class SummaryDishOut(BaseModel):
     recipe_id: str
     name: str
     kind: MealKind
-    portions: int
+    portions: int  # сколько готовят — выбранное или плановое
+    planned_portions: int  # сколько дней блюдо едят по плану
     cooked: bool
 
 
@@ -394,6 +415,9 @@ class SummaryBreakfastOut(BaseModel):
     date: date
     recipe_id: str
     name: str
+    kind: MealKind  # всегда breakfast — плитки читают одно поле у всех блюд
+    portions: int
+    planned_portions: int
     cooked: bool
 
 
@@ -708,6 +732,7 @@ def to_summary_cooking_out(c: Cooking) -> SummaryCookingOut:
                 name=d.recipe.name,
                 kind=d.recipe.kind,
                 portions=d.portions,
+                planned_portions=d.planned_portions,
                 cooked=d.cooked,
             )
             for d in c.batch.dishes
@@ -715,7 +740,13 @@ def to_summary_cooking_out(c: Cooking) -> SummaryCookingOut:
         breakfast=None
         if b is None
         else SummaryBreakfastOut(
-            date=b.date, recipe_id=b.recipe.id, name=b.recipe.name, cooked=b.cooked
+            date=b.date,
+            recipe_id=b.recipe.id,
+            name=b.recipe.name,
+            kind=b.recipe.kind,
+            portions=b.portions,
+            planned_portions=b.planned_portions,
+            cooked=b.cooked,
         ),
     )
 

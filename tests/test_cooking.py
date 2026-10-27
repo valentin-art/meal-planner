@@ -13,6 +13,7 @@ from meal_planner.core.cooking import (
     cooking,
     counter_update,
     current_cook_date,
+    set_portions,
 )
 from meal_planner.core.models import (
     CycleSlot,
@@ -265,3 +266,49 @@ def test_not_enough_stock_refuses_the_mark():
         "Не хватает продуктов: авокадо — нужно 260 г, есть 195 г;"
         " оливковое масло — нужно 3 ст.л., есть 2 ст.л."
     )
+
+
+def test_chosen_portions_replace_planned_only_for_write_off():
+    today = date(2026, 11, 9)
+    state = cooking(SEED_CATALOG, SETTINGS, today, set())
+    dish = state.batch.dishes[0]
+    breakfast = state.breakfast.recipe.id
+    batch_day = date(2026, 11, 7)
+    portions = {(batch_day, dish.recipe.id): 3, (today, breakfast): 2}
+
+    state = cooking(SEED_CATALOG, SETTINGS, today, set(), portions)
+    first = state.batch.dishes[0]
+    assert (first.portions, first.planned_portions) == (3, dish.portions)
+    assert (state.breakfast.portions, state.breakfast.planned_portions) == (2, 1)
+    # Остальные блюда — по плану.
+    assert all(d.portions == d.planned_portions for d in state.batch.dishes[1:])
+
+    change = cooked_change(
+        SEED_CATALOG, SETTINGS, today, set(), dish.recipe.id, True, portions
+    )
+    assert change.portions == 3  # план не меняется — см. test_api
+
+
+def test_set_portions_rules():
+    today = date(2026, 11, 9)
+    dish = cooking(SEED_CATALOG, SETTINGS, today, set()).batch.dishes[0]
+    rid = dish.recipe.id
+    assert set_portions(SEED_CATALOG, SETTINGS, today, set(), rid, 2) == date(
+        2026, 11, 7
+    )
+    cases = [
+        (set(), "l3", 2, "recipe_id", "Это блюдо сейчас не готовится"),
+        (
+            {(date(2026, 11, 7), rid)},
+            rid,
+            2,
+            "recipe_id",
+            "Блюдо уже отмечено — порции меняются до отметки",
+        ),
+        (set(), rid, 0, "portions", "Порций — от 1 до 20"),
+        (set(), rid, 21, "portions", "Порций — от 1 до 20"),
+    ]
+    for cooked, recipe_id, n, field, message in cases:
+        with pytest.raises(ActionError) as e:
+            set_portions(SEED_CATALOG, SETTINGS, today, cooked, recipe_id, n)
+        assert (e.value.field, e.value.message) == (field, message)

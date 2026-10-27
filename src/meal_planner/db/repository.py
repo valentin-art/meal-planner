@@ -309,6 +309,25 @@ class Repository:
             )
             return _bump_version(conn)
 
+    def get_dish_portions(self) -> dict[tuple[date, str], int]:
+        """Порции, выбранные вместо плановых (8.3b): (день, recipe_id) → N."""
+        with self._connect() as conn:
+            return {
+                (date.fromisoformat(day), recipe_id): portions
+                for day, recipe_id, portions in conn.execute(
+                    "SELECT day, recipe_id, portions FROM dish_portions"
+                )
+            }
+
+    def set_dish_portions(self, day: date, recipe_id: str, portions: int) -> int:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO dish_portions (day, recipe_id, portions) VALUES (?, ?, ?)"
+                " ON CONFLICT (day, recipe_id) DO UPDATE SET portions = excluded.portions",
+                (day.isoformat(), recipe_id, portions),
+            )
+            return _bump_version(conn)
+
     def save_ingredient(self, ingredient: CatalogIngredient) -> int:
         with self._connect() as conn:
             conn.execute(

@@ -795,6 +795,44 @@
         }
       }
     },
+    "/api/actions/set-dish-portions": {
+      "post": {
+        "summary": "Set Dish Portions",
+        "operationId": "set_dish_portions_api_actions_set_dish_portions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDishPortionsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DishPortionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/save-recipe": {
       "post": {
         "summary": "Save Recipe",
@@ -1619,6 +1657,35 @@
         ],
         "title": "DayOut"
       },
+      "DishPortionsOut": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "portions": {
+            "type": "integer",
+            "title": "Portions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "day",
+          "recipe_id",
+          "portions"
+        ],
+        "title": "DishPortionsOut"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -2224,6 +2291,27 @@
         ],
         "title": "SetCycleSlotIn"
       },
+      "SetDishPortionsIn": {
+        "properties": {
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "portions": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Portions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "portions"
+        ],
+        "title": "SetDishPortionsIn",
+        "description": "Порции неотмеченного блюда (8.3b) — меняют только списание, не план."
+      },
       "SetNutritionTargetIn": {
         "properties": {
           "daily_kcal_target": {
@@ -2672,6 +2760,17 @@
             "type": "string",
             "title": "Name"
           },
+          "kind": {
+            "$ref": "#/components/schemas/MealKind"
+          },
+          "portions": {
+            "type": "integer",
+            "title": "Portions"
+          },
+          "planned_portions": {
+            "type": "integer",
+            "title": "Planned Portions"
+          },
           "cooked": {
             "type": "boolean",
             "title": "Cooked"
@@ -2682,6 +2781,9 @@
           "date",
           "recipe_id",
           "name",
+          "kind",
+          "portions",
+          "planned_portions",
           "cooked"
         ],
         "title": "SummaryBreakfastOut"
@@ -2876,6 +2978,10 @@
             "type": "integer",
             "title": "Portions"
           },
+          "planned_portions": {
+            "type": "integer",
+            "title": "Planned Portions"
+          },
           "cooked": {
             "type": "boolean",
             "title": "Cooked"
@@ -2887,6 +2993,7 @@
           "name",
           "kind",
           "portions",
+          "planned_portions",
           "cooked"
         ],
         "title": "SummaryDishOut"

@@ -18,6 +18,7 @@ from meal_planner.api.schemas import (
     AppStateOut,
     CookedActionOut,
     CookedIn,
+    DishPortionsOut,
     HealthOut,
     IngredientActionOut,
     IngredientsOut,
@@ -32,6 +33,7 @@ from meal_planner.api.schemas import (
     SetCookScheduleIn,
     SetCyclePositionIn,
     SetCycleSlotIn,
+    SetDishPortionsIn,
     SetNutritionTargetIn,
     SetShoppingTimingIn,
     ShoppingRemainingIn,
@@ -255,7 +257,13 @@ def cooked_action(
     lines = body.to_lines()
     try:
         change = cooking.cooked_change(
-            catalog, settings, today, repo.get_cooked(), body.recipe_id, mark
+            catalog,
+            settings,
+            today,
+            repo.get_cooked(),
+            body.recipe_id,
+            mark,
+            repo.get_dish_portions(),
         )
         if mark:
             # Не хватает продуктов — блюдо не отмечается и ничего не списано.
@@ -301,7 +309,9 @@ def create_app() -> FastAPI:
             recompute(
                 catalog, settings, today, today, today + timedelta(days=1), version
             ),
-            cooking.cooking(catalog, settings, today, repo.get_cooked()),
+            cooking.cooking(
+                catalog, settings, today, repo.get_cooked(), repo.get_dish_portions()
+            ),
         )
 
     @app.post("/api/shopping/remaining", response_model=ShoppingRemainingOut)
@@ -471,6 +481,28 @@ def create_app() -> FastAPI:
         body: CookedIn, repo: Repo, catalog: CatalogDep, today: Today
     ) -> CookedActionOut:
         return cooked_action(repo, catalog, today, body, mark=False)
+
+    @app.post("/api/actions/set-dish-portions", response_model=DishPortionsOut)
+    def set_dish_portions(
+        body: SetDishPortionsIn, repo: Repo, catalog: CatalogDep, today: Today
+    ) -> DishPortionsOut:
+        # Только списание (8.3b): план и закупка от порций не зависят.
+        settings, _ = stored_or_initial(repo, today)
+        try:
+            day = cooking.set_portions(
+                catalog,
+                settings,
+                today,
+                repo.get_cooked(),
+                body.recipe_id,
+                body.portions,
+            )
+        except actions.ActionError as e:
+            raise unprocessable((["body", e.field], e.message)) from e
+        version = repo.set_dish_portions(day, body.recipe_id, body.portions)
+        return DishPortionsOut(
+            version=version, day=day, recipe_id=body.recipe_id, portions=body.portions
+        )
 
     @app.post("/api/actions/save-recipe", response_model=RecipeActionOut)
     def save_recipe(

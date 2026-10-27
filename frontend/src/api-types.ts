@@ -276,6 +276,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/set-dish-portions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Dish Portions */
+        post: operations["set_dish_portions_api_actions_set_dish_portions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/save-recipe": {
         parameters: {
             query?: never;
@@ -516,6 +533,20 @@ export interface components {
             /** Protein Delta */
             protein_delta: number | null;
         };
+        /** DishPortionsOut */
+        DishPortionsOut: {
+            /** Version */
+            version: number;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Recipe Id */
+            recipe_id: string;
+            /** Portions */
+            portions: number;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -723,6 +754,16 @@ export interface components {
             /** Dinner Id */
             dinner_id: string;
         };
+        /**
+         * SetDishPortionsIn
+         * @description Порции неотмеченного блюда (8.3b) — меняют только списание, не план.
+         */
+        SetDishPortionsIn: {
+            /** Recipe Id */
+            recipe_id: string;
+            /** Portions */
+            portions: number;
+        };
         /** SetNutritionTargetIn */
         SetNutritionTargetIn: {
             /** Daily Kcal Target */
@@ -909,6 +950,11 @@ export interface components {
             recipe_id: string;
             /** Name */
             name: string;
+            kind: components["schemas"]["MealKind"];
+            /** Portions */
+            portions: number;
+            /** Planned Portions */
+            planned_portions: number;
             /** Cooked */
             cooked: boolean;
         };
@@ -969,6 +1015,8 @@ export interface components {
             kind: components["schemas"]["MealKind"];
             /** Portions */
             portions: number;
+            /** Planned Portions */
+            planned_portions: number;
             /** Cooked */
             cooked: boolean;
         };
@@ -1526,6 +1574,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CookedActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_dish_portions_api_actions_set_dish_portions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetDishPortionsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DishPortionsOut"];
                 };
             };
             /** @description Validation Error */

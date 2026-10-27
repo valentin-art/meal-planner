@@ -1,13 +1,14 @@
 """Списание приготовленного (8.3b): партия готовки, отметки, новые остатки.
 
 Готовка отмечается по каждому блюду: блюда текущей партии (обеды и ужины,
-с порциями) и сегодняшний завтрак (1 порция). Отметки хранит приложение —
+с порциями) и сегодняшний завтрак (1 порция). Порции неотмеченного блюда
+можно поменять — это меняет только списание, не план. Отметки хранит приложение —
 повторная отклоняется, поэтому дважды не списать. Остатки — счётчики HA
 (8.2): core отдаёт их новые значения в единицах счётчиков, HA только
 выставляет.
 """
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from collections.abc import Set as AbstractSet
 from dataclasses import dataclass
 from datetime import date
@@ -33,13 +34,18 @@ from meal_planner.core.stock import (
 )
 
 Cooked = AbstractSet[tuple[date, str]]  # (день, recipe_id): день готовки или завтрака
+# Порции, выбранные вместо плановых, — по тому же ключу (день, recipe_id).
+Portions = Mapping[tuple[date, str], int]
+NO_PORTIONS: Portions = {}
+MIN_PORTIONS, MAX_PORTIONS = 1, 20
 COUNTER_STEP = Decimal("0.01")
 
 
 @dataclass(frozen=True, slots=True)
 class CookingDish:
     recipe: Recipe
-    portions: int
+    portions: int  # сколько готовят — выбранное или плановое
+    planned_portions: int  # сколько дней блюдо едят по плану
     cooked: bool
 
 
@@ -53,6 +59,8 @@ class CookingBatch:
 class BreakfastToday:
     date: date
     recipe: Recipe
+    portions: int
+    planned_portions: int  # всегда 1
     cooked: bool
 
 
@@ -110,7 +118,11 @@ def breakfast_today(catalog: Catalog, settings: Settings, today: date) -> Recipe
 
 
 def cooking(
-    catalog: Catalog, settings: Settings, today: date, cooked: Cooked
+    catalog: Catalog,
+    settings: Settings,
+    today: date,
+    cooked: Cooked,
+    portions: Portions = NO_PORTIONS,
 ) -> Cooking:
     settings = settle_skip(settings, today)
     cook_date = current_cook_date(settings, today)
@@ -119,7 +131,12 @@ def cooking(
         batch = CookingBatch(
             cook_date=cook_date,
             dishes=tuple(
-                CookingDish(recipe, n, (cook_date, recipe.id) in cooked)
+                CookingDish(
+                    recipe,
+                    portions.get((cook_date, recipe.id), n),
+                    n,
+                    (cook_date, recipe.id) in cooked,
+                )
                 for recipe, n in batch_dishes(catalog, settings, cook_date)
             ),
         )
@@ -127,9 +144,58 @@ def cooking(
     breakfast = (
         None
         if recipe is None
-        else BreakfastToday(today, recipe, (today, recipe.id) in cooked)
+        else BreakfastToday(
+            today,
+            recipe,
+            portions.get((today, recipe.id), 1),
+            1,
+            (today, recipe.id) in cooked,
+        )
     )
     return Cooking(batch=batch, breakfast=breakfast)
+
+
+def locate_dish(
+    catalog: Catalog, settings: Settings, today: date, recipe_id: str
+) -> tuple[date, int]:
+    """День отметки и плановые порции блюда; settings — после settle_skip.
+
+    Сегодняшний завтрак — сегодня, 1 порция; блюдо партии — день готовки.
+    Иначе ActionError: блюдо сейчас не готовится.
+    """
+    breakfast = breakfast_today(catalog, settings, today)
+    if breakfast is not None and breakfast.id == recipe_id:
+        return today, 1
+    cook_date = current_cook_date(settings, today)
+    if cook_date is not None:
+        for recipe, n in batch_dishes(catalog, settings, cook_date):
+            if recipe.id == recipe_id:
+                return cook_date, n
+    raise ActionError("recipe_id", "Это блюдо сейчас не готовится")
+
+
+def set_portions(
+    catalog: Catalog,
+    settings: Settings,
+    today: date,
+    cooked: Cooked,
+    recipe_id: str,
+    portions: int,
+) -> date:
+    """Порции неотмеченного блюда — сколько списать при отметке; день ключа.
+
+    План (расписание, закупка) не меняется. У отмеченного — нельзя: снятие
+    отметки вернуло бы не то, что списано.
+    """
+    settings = settle_skip(settings, today)
+    day, _ = locate_dish(catalog, settings, today, recipe_id)
+    if (day, recipe_id) in cooked:
+        raise ActionError(
+            "recipe_id", "Блюдо уже отмечено — порции меняются до отметки"
+        )
+    if not MIN_PORTIONS <= portions <= MAX_PORTIONS:
+        raise ActionError("portions", f"Порций — от {MIN_PORTIONS} до {MAX_PORTIONS}")
+    return day
 
 
 @dataclass(frozen=True, slots=True)
@@ -148,29 +214,23 @@ def cooked_change(
     cooked: Cooked,
     recipe_id: str,
     mark: bool,
+    portions: Portions = NO_PORTIONS,
 ) -> CookedChange:
     """mark — отметить, иначе снять. Невозможно — ActionError (API: 422).
 
     Повторная отметка отклоняется: иначе блюдо списалось бы дважды.
+    Порции — выбранные (set_portions), иначе плановые.
     """
     settings = settle_skip(settings, today)
-    day, portions = None, 0
-    breakfast = breakfast_today(catalog, settings, today)
-    if breakfast is not None and breakfast.id == recipe_id:
-        day, portions = today, 1
-    cook_date = current_cook_date(settings, today)
-    if day is None and cook_date is not None:
-        for recipe, n in batch_dishes(catalog, settings, cook_date):
-            if recipe.id == recipe_id:
-                day, portions = cook_date, n
-    if day is None:
-        raise ActionError("recipe_id", "Это блюдо сейчас не готовится")
+    day, planned = locate_dish(catalog, settings, today, recipe_id)
     is_cooked = (day, recipe_id) in cooked
     if mark and is_cooked:
         raise ActionError("recipe_id", "Блюдо уже отмечено как приготовленное")
     if not mark and not is_cooked:
         raise ActionError("recipe_id", "Блюдо не отмечено как приготовленное")
-    return CookedChange(day, catalog.recipes[recipe_id], portions)
+    return CookedChange(
+        day, catalog.recipes[recipe_id], portions.get((day, recipe_id), planned)
+    )
 
 
 def check_enough(

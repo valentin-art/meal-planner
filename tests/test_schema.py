@@ -26,7 +26,7 @@ CATALOG_TABLES = {
     "recipe_steps",
     "cycle_slots",
 }
-ALL_TABLES = {"settings", "cooked"} | CATALOG_TABLES  # cooked — с 8.3b
+ALL_TABLES = {"settings", "cooked", "dish_portions"} | CATALOG_TABLES  # 8.3b
 
 
 def connect(path: Path) -> closing[sqlite3.Connection]:
@@ -88,7 +88,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 4
+        assert user_version(conn) == len(MIGRATIONS) == 5
     assert tables(db) == ALL_TABLES
 
 

@@ -170,3 +170,12 @@ def test_cooked_marks(tmp_path):
     assert repo.get_settings().version == 3  # повтор не записан
     assert repo.unmark_cooked(date(2026, 11, 11), "l3") == 4
     assert repo.get_cooked() == {(date(2026, 11, 12), "b1")}
+
+
+def test_dish_portions(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    assert repo.get_dish_portions() == {}
+    assert repo.set_dish_portions(date(2026, 11, 11), "l3", 3) == 2
+    assert repo.set_dish_portions(date(2026, 11, 11), "l3", 2) == 3  # заменяет
+    assert repo.get_dish_portions() == {(date(2026, 11, 11), "l3"): 2}

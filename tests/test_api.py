@@ -140,7 +140,7 @@ def test_recipes_endpoint(client):
         rid: out.model_dump(mode="json")
         for rid, out in to_recipes_out(ALL_RECIPES).items()
     }
-    assert len(body) == 12
+    assert len(body) == 13  # 12 из JSX + бенедикт b3 (5.1a)
 
 
 class ExplodingRepository:

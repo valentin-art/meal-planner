@@ -1,12 +1,16 @@
 import shutil
+import sqlite3
+from contextlib import closing
 from datetime import date, datetime, timedelta
 
 import pytest
 
 from meal_planner.core.models import Settings
+from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.db import backup as backup_mod
 from meal_planner.db.backup import BackupError, backup, main
 from meal_planner.db.repository import SettingsRepository, StoredSettings
+from meal_planner.db.schema import MIGRATIONS, user_version
 
 SETTINGS = Settings(date(2026, 11, 5), 2, 3, 6, "same")
 NOW = datetime(2026, 10, 26, 3, 30, 0)
@@ -30,6 +34,13 @@ def test_restore_from_scratch(db, tmp_path):
     fresh.parent.mkdir()
     shutil.copy(copy, fresh)
     assert SettingsRepository(fresh).get_settings() == StoredSettings(SETTINGS, 2)
+    # Каталог (5.2) и версия схемы тоже в копии: миграции не перезапускаются.
+    with closing(sqlite3.connect(fresh)) as conn:
+        assert user_version(conn) == len(MIGRATIONS)
+        assert conn.execute("SELECT count(*) FROM recipes").fetchone() == (
+            len(ALL_RECIPES),
+        )
+        assert conn.execute("SELECT count(*) FROM cycle_slots").fetchone() == (5,)
 
 
 def test_keeps_last_n_and_ignores_other_files(db, tmp_path):

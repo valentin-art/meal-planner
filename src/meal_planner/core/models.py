@@ -45,6 +45,27 @@ class Recipe:
 
 
 @dataclass(frozen=True, slots=True)
+class CatalogIngredient:
+    """Ингредиент справочника (фаза 5): одна единица и одна категория."""
+
+    name: str
+    unit: str
+    category: str
+    kcal_100g: float
+    protein_100g: float
+    source: str | None  # «fdc <fdc_id> <описание>» или этикетка
+    grams_per_unit: float | None  # для единиц не г/мл (USDA food_portion)
+    store_piece: float | None  # штука в магазине, в unit — «≈ N шт» (6.7)
+
+
+@dataclass(frozen=True, slots=True)
+class CycleSlot:
+    slot: int  # 1..5 — позиция ротации (cycle_index)
+    lunch_id: str
+    dinner_id: str
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     meal_anchor_date: date
     cook_count: int

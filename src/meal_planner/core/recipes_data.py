@@ -1,8 +1,10 @@
 """Справочник рецептов, перенесённый из RECIPES в meal-plan.jsx.
 
-Только данные. Порядок ротации (LUNCH_IDS/DINNER_IDS) — в scheduling.py.
+Только данные — сид каталога (core/seed.py); с фазы 5 рецепты живут в БД.
+Порядок ротации (LUNCH_IDS/DINNER_IDS) — в seed.py.
 
-Ккал и белок не хранятся, а считаются из ингредиентов (6.9, core/nutrition.py).
+Ккал и белок не хранятся, а считаются из ингредиентов по справочнику (6.9,
+core/nutrition.py, core/catalog.py).
 
 Единицы (6.7): г — твёрдое, мл — жидкое, шт — где вес бессмыслен (яйца),
 ст.л. — масло. Овощи — вес как куплено; авокадо — мякоть; лимон — сок.
@@ -19,37 +21,11 @@ b1 в JSX — «яичница / бенедикт»; с 5.1a глазунья о
 from collections.abc import Mapping
 from types import MappingProxyType
 
-from meal_planner.core.models import Ingredient, MealKind, Recipe, RecipeStorage
-from meal_planner.core.nutrition import nutrition
+from meal_planner.core.models import Ingredient, MealKind, RecipeSpec, RecipeStorage
 
-
-def _recipe(
-    id: str,
-    name: str,
-    kind: MealKind,
-    ingredients: tuple[Ingredient, ...],
-    steps: tuple[str, ...],
-    storage: RecipeStorage | None = None,
-    is_fish: bool = False,
-) -> Recipe:
-    # Ккал и белок — из ингредиентов (6.9), см. core/nutrition.py.
-    kcal, protein = nutrition(ingredients)
-    return Recipe(
-        id=id,
-        name=name,
-        kind=kind,
-        kcal=kcal,
-        protein=protein,
-        ingredients=ingredients,
-        steps=steps,
-        storage=storage,
-        is_fish=is_fish,
-    )
-
-
-ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
+RECIPE_SPECS: Mapping[str, RecipeSpec] = MappingProxyType(
     {
-        "b1": _recipe(
+        "b1": RecipeSpec(
             id="b1",
             name="Яичница-глазунья",
             kind=MealKind.BREAKFAST,
@@ -69,7 +45,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 "Тост: сухую сковороду без масла разогрейте на уровне 4-5 в течение 40 секунд, выложите хлеб, жарьте 1.5-2 минуты с каждой стороны до золотисто-коричневого цвета (не тёмно-коричневого).",
             ),
         ),
-        "b2": _recipe(
+        "b2": RecipeSpec(
             id="b2",
             name="Греческий йогурт + тост с гуакамоле",
             kind=MealKind.BREAKFAST,
@@ -91,7 +67,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 "В миску выложите 250 г йогурта, сверху — 30 г гранолы или рубленых орехов. Подавайте с тостом.",
             ),
         ),
-        "b3": _recipe(
+        "b3": RecipeSpec(
             id="b3",
             name="Яйца бенедикт",
             kind=MealKind.BREAKFAST,
@@ -108,7 +84,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 "Достаньте шумовкой, промокните бумажным полотенцем 5 секунд, выложите на тост.",
             ),
         ),
-        "l1": _recipe(
+        "l1": RecipeSpec(
             id="l1",
             name="Курица с киноа и овощами",
             kind=MealKind.LUNCH,
@@ -135,7 +111,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 micro="Средняя мощность (50-60%), 1 ст.л. воды, накрыть крышкой или тарелкой. 1 минута → перемешать → ещё 1-1.5 минуты, пока вся порция не станет горячей насквозь. Брокколи при разогреве мягчеет, поэтому не греть дольше.",
             ),
         ),
-        "l2": _recipe(
+        "l2": RecipeSpec(
             id="l2",
             name="Гречка с тушёной говядиной",
             kind=MealKind.LUNCH,
@@ -162,7 +138,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 micro="Средняя мощность (50-60%), 1-2 ст.л. воды, накрыть. 1.5 минуты → перемешать, передвинув кусочки мяса из центра к краям → ещё 1-1.5 минуты.",
             ),
         ),
-        "l3": _recipe(
+        "l3": RecipeSpec(
             id="l3",
             name="Цельнозерновая паста с тунцом/креветками",
             kind=MealKind.LUNCH,
@@ -198,7 +174,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "l4": _recipe(
+        "l4": RecipeSpec(
             id="l4",
             name="Булгур с курицей и овощами",
             kind=MealKind.LUNCH,
@@ -223,7 +199,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 micro="Средняя мощность (50-60%), 1 ст.л. воды, накрыть. 1 минута → перемешать → ещё 1-1.5 минуты, пока куриные кусочки не станут горячими в центре.",
             ),
         ),
-        "l5": _recipe(
+        "l5": RecipeSpec(
             id="l5",
             name="Рис басмати с лососем",
             kind=MealKind.LUNCH,
@@ -251,7 +227,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "d1": _recipe(
+        "d1": RecipeSpec(
             id="d1",
             name="Салат с курицей гриль",
             kind=MealKind.DINNER,
@@ -284,7 +260,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 after="Зелень, помидор и авокадо нарезать в день ужина, перед едой. Заправка — в самый последний момент. Орехи — сверху.",
             ),
         ),
-        "d2": _recipe(
+        "d2": RecipeSpec(
             id="d2",
             name="Салат с лососем и авокадо",
             kind=MealKind.DINNER,
@@ -314,7 +290,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "d3": _recipe(
+        "d3": RecipeSpec(
             id="d3",
             name="Тёплый салат с креветками",
             kind=MealKind.DINNER,
@@ -351,7 +327,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
             ),
             is_fish=True,
         ),
-        "d4": _recipe(
+        "d4": RecipeSpec(
             id="d4",
             name="Греческий салат с курицей",
             kind=MealKind.DINNER,
@@ -380,7 +356,7 @@ ALL_RECIPES: Mapping[str, Recipe] = MappingProxyType(
                 after="Всё собирается перед едой. Фету и авокадо добавляйте последними и перемешивайте бережно, чтобы не размять.",
             ),
         ),
-        "d5": _recipe(
+        "d5": RecipeSpec(
             id="d5",
             name="Салат с курицей, яйцом и нутом",
             kind=MealKind.DINNER,

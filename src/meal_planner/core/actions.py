@@ -8,7 +8,7 @@
 from dataclasses import replace
 from datetime import date
 
-from meal_planner.core.models import Settings, ShoppingTiming
+from meal_planner.core.models import Catalog, Settings, ShoppingTiming
 from meal_planner.core.scheduling import (
     cook_weekdays,
     settle_skip,
@@ -73,10 +73,13 @@ def set_shopping_timing(
     return replace(settings, shopping_timing=shopping_timing)
 
 
-def set_cycle_position(settings: Settings, today: date, dish: int) -> Settings:
+def set_cycle_position(
+    catalog: Catalog, settings: Settings, today: date, dish: int
+) -> Settings:
     """«Сегодня — блюдо №dish» (0 — сегодня день 0): сервер сам выбирает якорь."""
+    # Каталог нужен: какие блюда достижимы, зависит от рыбы в слотах (6.6).
     options = today_position(
-        today, settings.meal_anchor_date, cook_weekdays(settings)
+        catalog, today, settings.meal_anchor_date, cook_weekdays(settings)
     ).options
     anchor = next((o.anchor for o in options if o.dish == dish), None)
     if anchor is None:

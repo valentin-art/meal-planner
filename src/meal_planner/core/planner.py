@@ -5,15 +5,13 @@ from datetime import date, timedelta
 from meal_planner.core.actions import skip_next_cook_error
 from meal_planner.core.models import (
     AppState,
+    Catalog,
     CookItem,
     Settings,
     ShoppingTrip,
     SkippedCook,
 )
-from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.scheduling import (
-    DINNER_IDS,
-    LUNCH_IDS,
     build_schedule,
     cook_weekdays,
     nearest_cook_date,
@@ -22,12 +20,14 @@ from meal_planner.core.scheduling import (
     today_position,
     trip_cook_date,
 )
-from meal_planner.core.shopping import count_portions, extract_shopping_list
+from meal_planner.core.shopping import extract_shopping_list
 
 SCHEDULE_DAYS = 14  # JS PAGE_SIZE
 
 
-def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
+def next_shopping_trip(
+    catalog: Catalog, settings: Settings, today: date
+) -> ShoppingTrip:
     # JS ShoppingTab: едим со следующего дня после готовки по следующую готовку
     # включительно. Окно может закончиться через 13 дней после today, поэтому
     # дни строим здесь, а не берём из запрошенного расписания.
@@ -35,15 +35,21 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
     cook_date = trip_cook_date(settings, today)
     window_start = cook_date + timedelta(days=1)
     window_end = nearest_cook_date(weekdays, window_start)
-    days = build_schedule(settings, window_start, window_end)
+    days = build_schedule(catalog, settings, window_start, window_end)
+    # Готовится по позициям ротации в порядке первого появления; обед и ужин —
+    # из слота (JS брал ужин по позиции обеда — то же, пока обеды в слотах
+    # разные; с 5.3 один рецепт может стоять в нескольких слотах).
+    portions: dict[int, int] = {}
+    for d in days:
+        if d.cycle_index is not None:
+            portions[d.cycle_index] = portions.get(d.cycle_index, 0) + 1
     cook_items = tuple(
-        # Ужин — по позиции обеда в ротации, как в JS, а не из дня.
         CookItem(
-            lunch=lunch,
-            dinner=ALL_RECIPES[DINNER_IDS[LUNCH_IDS.index(lunch.id)]],
-            portions=portions,
+            lunch=catalog.recipes[catalog.slot(k).lunch_id],
+            dinner=catalog.recipes[catalog.slot(k).dinner_id],
+            portions=n,
         )
-        for lunch, portions in count_portions(d.lunch for d in days).items()
+        for k, n in portions.items()
     )
     if settings.shopping_timing == "before":
         shopping_date = cook_date - timedelta(days=1)
@@ -55,7 +61,7 @@ def next_shopping_trip(settings: Settings, today: date) -> ShoppingTrip:
         window_start=window_start,
         window_end=window_end,
         cook_items=cook_items,
-        shopping_groups=extract_shopping_list(days),
+        shopping_groups=extract_shopping_list(catalog, days),
     )
 
 
@@ -72,6 +78,7 @@ def skipped_cook(settings: Settings, today: date) -> SkippedCook | None:
 
 
 def recompute(
+    catalog: Catalog,
     settings: Settings,
     today: date,
     date_from: date | None = None,
@@ -79,18 +86,19 @@ def recompute(
     version: int = 0,
 ) -> AppState:
     """Расписание на date_from..date_to (по умолчанию 14 дней с today, как
-    PAGE_SIZE в JS); поездка в магазин — всегда от today. version приходит
-    снаружи (из SQLite в API) — в core нет состояния."""
+    PAGE_SIZE в JS); поездка в магазин — всегда от today. version и каталог
+    приходят снаружи (из SQLite в API) — в core нет состояния."""
     date_from = date_from or today
     date_to = date_to or date_from + timedelta(days=SCHEDULE_DAYS - 1)
     settings = settle_skip(settings, today)
     return AppState(
         today=today,
         settings=settings,
-        schedule=build_schedule(settings, date_from, date_to),
-        next_shopping_trip=next_shopping_trip(settings, today),
+        schedule=build_schedule(catalog, settings, date_from, date_to),
+        next_shopping_trip=next_shopping_trip(catalog, settings, today),
         version=version,
         today_position=today_position(
+            catalog,
             today,
             settings.meal_anchor_date,
             cook_weekdays(settings),

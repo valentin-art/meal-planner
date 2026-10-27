@@ -5,13 +5,13 @@ from cycle_start import CLIPPED_DAYS, before_anchor
 from golden_scheduling import SCENARIOS
 from scenario_settings import settings_of
 
-from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.scheduling import (
     build_schedule,
     cook_weekdays,
     day_totals,
     meals_for_date,
 )
+from meal_planner.core.seed import SEED_CATALOG
 
 SWEEPS = [s for s in SCENARIOS if all("sweep" in c["tags"] for c in s["cases"])]
 
@@ -50,7 +50,9 @@ def expected(scenario, case) -> dict:
     }
     # С 6.9 ккал/белок рецептов считаются из ингредиентов: суммы дня — по
     # текущим рецептам тех же блюд, а не числа из JSX.
-    recipes = [ALL_RECIPES[day[slot]] for slot in ("breakfast", "lunch", "dinner")]
+    recipes = [
+        SEED_CATALOG.recipes[day[slot]] for slot in ("breakfast", "lunch", "dinner")
+    ]
     day["kcal_total"] = sum(r.kcal for r in recipes)
     day["protein_total"] = sum(r.protein for r in recipes)
     return day
@@ -62,7 +64,10 @@ def test_meals_for_date_matches_golden(scenario):
     weekdays = cook_weekdays(settings)
     for case in scenario["cases"]:
         day = meals_for_date(
-            date.fromisoformat(case["date"]), settings.meal_anchor_date, weekdays
+            SEED_CATALOG,
+            date.fromisoformat(case["date"]),
+            settings.meal_anchor_date,
+            weekdays,
         )
         assert as_case(day) == expected(scenario, case), case["tags"]
 
@@ -71,6 +76,7 @@ def test_meals_for_date_matches_golden(scenario):
 def test_build_schedule_matches_golden(scenario):
     cases = scenario["cases"]
     schedule = build_schedule(
+        SEED_CATALOG,
         settings_of(scenario),
         date.fromisoformat(cases[0]["date"]),
         date.fromisoformat(cases[-1]["date"]),
@@ -81,13 +87,17 @@ def test_build_schedule_matches_golden(scenario):
 def test_build_schedule_bounds():
     settings = settings_of(SCENARIOS[0])
     d = date(2026, 11, 9)
-    assert [day.date for day in build_schedule(settings, d, d)] == [d]
-    assert build_schedule(settings, d, date(2026, 11, 8)) == ()
+    assert [day.date for day in build_schedule(SEED_CATALOG, settings, d, d)] == [d]
+    assert build_schedule(SEED_CATALOG, settings, d, date(2026, 11, 8)) == ()
 
 
 def test_day_totals():
     # default_2x, 2026-11-07: b1 + l1 + d1 (540 + 700 + 620, 33 + 54 + 47)
-    assert day_totals(ALL_RECIPES["b1"], ALL_RECIPES["l1"], ALL_RECIPES["d1"]) == (
+    assert day_totals(
+        SEED_CATALOG.recipes["b1"],
+        SEED_CATALOG.recipes["l1"],
+        SEED_CATALOG.recipes["d1"],
+    ) == (
         1860,
         134,
     )

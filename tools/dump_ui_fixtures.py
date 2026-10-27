@@ -12,7 +12,7 @@ from datetime import date, timedelta
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
 from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
-from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.seed import SEED_CATALOG
 
 PAGE_SIZE = 14  # как PAGE_SIZE/LOAD_STEP во фронтенде
 
@@ -54,7 +54,9 @@ SCENARIOS = [
 def state_json(
     settings: Settings, today: date, version: int, date_from=None, date_to=None
 ) -> dict:
-    out = to_app_state_out(recompute(settings, today, date_from, date_to, version))
+    out = to_app_state_out(
+        recompute(SEED_CATALOG, settings, today, date_from, date_to, version)
+    )
     return out.model_dump(mode="json")
 
 
@@ -78,7 +80,8 @@ def build() -> dict:
         )
     # Ответ GET /api/recipes — один на все сценарии.
     recipes = {
-        rid: r.model_dump(mode="json") for rid, r in to_recipes_out(ALL_RECIPES).items()
+        rid: r.model_dump(mode="json")
+        for rid, r in to_recipes_out(SEED_CATALOG.recipes).items()
     }
     return {"recipes": recipes, "scenarios": scenarios}
 

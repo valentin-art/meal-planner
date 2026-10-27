@@ -4,14 +4,17 @@
 «fdc <fdc_id> <описание>», с 5.2 он попадает в справочник ингредиентов в БД).
 Чешский греческий йогурт 10% в USDA нет — по этикетке Mevgal 10%.
 Ингредиенты-«или» считаются по первому варианту. Количество переводится в
-граммы через GRAMS_PER_UNIT (г и мл — 1:1).
+граммы через вес единицы (г и мл — 1:1).
+
+PER_100G и GRAMS_PER_UNIT — сид справочника (core/seed.py); считают
+nutrition/grams по справочнику из каталога (5.3).
 """
 
 from collections.abc import Iterable, Mapping
 from decimal import ROUND_HALF_UP, Decimal
 from types import MappingProxyType
 
-from meal_planner.core.models import Ingredient
+from meal_planner.core.models import CatalogIngredient, Ingredient
 
 # название ингредиента → (ккал, белок г, источник) на 100 г
 PER_100G: Mapping[str, tuple[float, float, str]] = MappingProxyType(
@@ -80,22 +83,26 @@ GRAMS_PER_UNIT: Mapping[tuple[str, str], float] = MappingProxyType(
 )
 
 
-def grams(ingredient: Ingredient) -> Decimal:
-    if ingredient.unit in ("г", "мл"):
+def grams(ingredients: Mapping[str, CatalogIngredient], line: Ingredient) -> Decimal:
+    if line.unit in ("г", "мл"):
         per_unit = 1.0
     else:
-        per_unit = GRAMS_PER_UNIT[(ingredient.name, ingredient.unit)]
-    return Decimal(str(ingredient.qty)) * Decimal(str(per_unit))
+        per_unit = ingredients[line.name].grams_per_unit
+        if per_unit is None:
+            raise ValueError(f"{line.name}: не задан вес единицы «{line.unit}»")
+    return Decimal(str(line.qty)) * Decimal(str(per_unit))
 
 
-def nutrition(ingredients: Iterable[Ingredient]) -> tuple[int, int]:
+def nutrition(
+    ingredients: Mapping[str, CatalogIngredient], lines: Iterable[Ingredient]
+) -> tuple[int, int]:
     """(ккал, белок г) порции: ккал — до 5, белок — до 1 (как в рецептах JSX)."""
     kcal = protein = Decimal(0)
-    for ingredient in ingredients:
-        per_kcal, per_protein, _ = PER_100G[ingredient.name]
-        g = grams(ingredient)
-        kcal += g * Decimal(str(per_kcal)) / 100
-        protein += g * Decimal(str(per_protein)) / 100
+    for line in lines:
+        ingredient = ingredients[line.name]
+        g = grams(ingredients, line)
+        kcal += g * Decimal(str(ingredient.kcal_100g)) / 100
+        protein += g * Decimal(str(ingredient.protein_100g)) / 100
     return (
         int((kcal / 5).quantize(Decimal(1), ROUND_HALF_UP)) * 5,
         int(protein.quantize(Decimal(1), ROUND_HALF_UP)),

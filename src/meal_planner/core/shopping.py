@@ -8,8 +8,14 @@
 from collections.abc import Iterable, Sequence
 from decimal import ROUND_CEILING, Decimal
 
-from meal_planner.core.models import DayMeals, Recipe, ShoppingGroup, ShoppingItem
-from meal_planner.core.recipes_data import STORE_PIECES
+from meal_planner.core.models import (
+    Catalog,
+    CatalogIngredient,
+    DayMeals,
+    Recipe,
+    ShoppingGroup,
+    ShoppingItem,
+)
 
 CATEGORY_ORDER = ("Белок", "Крупы", "Овощи", "Яйца и молочное", "Прочее")
 
@@ -26,7 +32,9 @@ def count_portions(recipes: Iterable[Recipe | None]) -> dict[Recipe, int]:
     return counts
 
 
-def aggregate(entries: Iterable[tuple[Recipe, int]]) -> list[ShoppingItem]:
+def aggregate(
+    catalog: Catalog, entries: Iterable[tuple[Recipe, int]]
+) -> list[ShoppingItem]:
     # Суммы точные (Decimal): в float 0.1 * 3 = 0.30000000000000004, и ceil дал бы 0.4.
     totals: dict[tuple[str, str, str], Decimal] = {}
     for recipe, portions in entries:
@@ -39,7 +47,7 @@ def aggregate(entries: Iterable[tuple[Recipe, int]]) -> list[ShoppingItem]:
             qty=float(total.quantize(Decimal("0.1"), rounding=ROUND_CEILING)),
             unit=unit,
             category=category,
-            pieces=store_pieces(name, unit, total),
+            pieces=store_pieces(catalog.ingredients[name], total),
         )
         for (name, unit, category), total in totals.items()
     ]
@@ -47,9 +55,10 @@ def aggregate(entries: Iterable[tuple[Recipe, int]]) -> list[ShoppingItem]:
     return sorted(items, key=lambda item: item.name)
 
 
-def store_pieces(name: str, unit: str, total: Decimal) -> int | None:
+def store_pieces(ingredient: CatalogIngredient, total: Decimal) -> int | None:
     # Сколько штук купить (6.7): вверх — часть штуки в магазине не купишь.
-    per_piece = STORE_PIECES.get((name, unit))
+    # Вес штуки — в единице ингредиента, она у ингредиента одна (5.1).
+    per_piece = ingredient.store_piece
     if per_piece is None:
         return None
     return int((total / Decimal(str(per_piece))).to_integral_value(ROUND_CEILING))
@@ -66,7 +75,9 @@ def group_by_category(items: Iterable[ShoppingItem]) -> tuple[ShoppingGroup, ...
     )
 
 
-def extract_shopping_list(days: Sequence[DayMeals]) -> tuple[ShoppingGroup, ...]:
+def extract_shopping_list(
+    catalog: Catalog, days: Sequence[DayMeals]
+) -> tuple[ShoppingGroup, ...]:
     # JS ShoppingTab: сначала все обеды, потом ужины, потом завтраки.
     # Дни без блюд (до старта цикла, 6.5) count_portions пропускает.
     entries = [
@@ -74,7 +85,7 @@ def extract_shopping_list(days: Sequence[DayMeals]) -> tuple[ShoppingGroup, ...]
         *count_portions(d.dinner for d in days).items(),
         *count_portions(d.breakfast for d in days).items(),
     ]
-    return group_by_category(aggregate(entries))
+    return group_by_category(aggregate(catalog, entries))
 
 
 def format_qty(qty: float) -> str:

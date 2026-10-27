@@ -10,7 +10,7 @@ from meal_planner.api.main import create_app, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
 from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
-from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.core.shopping import format_qty
 from meal_planner.db.repository import SettingsRepository, StoredSettings
 
@@ -75,7 +75,7 @@ def test_state_with_bad_range_saves_nothing(client, repo):
 def test_state_with_saved_settings_matches_recompute(client, repo):
     repo.save_settings(DEFAULT_2X)
     body = client.get("/api/state").json()
-    expected = to_app_state_out(recompute(DEFAULT_2X, TODAY, version=1))
+    expected = to_app_state_out(recompute(SEED_CATALOG, DEFAULT_2X, TODAY, version=1))
     assert body == expected.model_dump(mode="json")
     assert body["version"] == 1
 
@@ -135,10 +135,10 @@ def test_recipes_endpoint(client):
     r = client.get("/api/recipes")
     assert r.status_code == 200
     body = r.json()
-    assert list(body) == list(ALL_RECIPES)
+    assert list(body) == list(SEED_CATALOG.recipes)
     assert body == {
         rid: out.model_dump(mode="json")
-        for rid, out in to_recipes_out(ALL_RECIPES).items()
+        for rid, out in to_recipes_out(SEED_CATALOG.recipes).items()
     }
     assert len(body) == 13  # 12 из JSX + бенедикт b3 (5.1a)
 
@@ -150,11 +150,26 @@ class ExplodingRepository:
     def init_settings(self, defaults):
         raise AssertionError("/api/recipes не должен писать настройки")
 
+    def get_catalog(self):
+        return SEED_CATALOG
 
-def test_recipes_endpoint_does_not_touch_db(tmp_path, monkeypatch):
+
+def test_recipes_endpoint_reads_only_catalog(tmp_path, monkeypatch):
     monkeypatch.setenv("MEALPLAN_STATIC_DIR", str(tmp_path / "no-static"))
     client = make_client(ExplodingRepository())
     assert client.get("/api/recipes").status_code == 200
+
+
+def test_state_and_recipes_come_from_db_catalog(client, repo):
+    # 5.3: каталог читается из БД — правка в ней видна в плане и рецептах.
+    repo.save_settings(DEFAULT_2X)
+    with repo._connect() as conn:
+        conn.execute("UPDATE recipes SET name = 'Своя курица' WHERE id = 'l1'")
+        conn.execute("UPDATE cycle_slots SET lunch_id = 'l2' WHERE slot = 1")
+    assert client.get("/api/recipes").json()["l1"]["name"] == "Своя курица"
+    state = client.get("/api/state").json()
+    lunches = {d["cycle_index"]: d["lunch_id"] for d in state["schedule"]}
+    assert lunches[1] == lunches[2] == "l2"
 
 
 def test_summary_reshapes_state_for_today_and_tomorrow(client, repo):
@@ -162,7 +177,9 @@ def test_summary_reshapes_state_for_today_and_tomorrow(client, repo):
     r = client.get("/api/summary")
     assert r.status_code == 200
     body = r.json()
-    state = recompute(DEFAULT_2X, TODAY, TODAY, TODAY + timedelta(days=1), 1)
+    state = recompute(
+        SEED_CATALOG, DEFAULT_2X, TODAY, TODAY, TODAY + timedelta(days=1), 1
+    )
     assert body["today"] == TODAY.isoformat()
     assert body["version"] == 1
     for key, day in zip(("today", "tomorrow"), state.schedule, strict=True):
@@ -337,7 +354,7 @@ def test_set_anchor_date_matches_recompute(client, repo):
     repo.save_settings(DEFAULT_2X)
     body = post(client, "set-anchor-date", {"meal_anchor_date": "2026-11-12"}).json()
     moved = dataclasses.replace(DEFAULT_2X, meal_anchor_date=date(2026, 11, 12))
-    expected = to_app_state_out(recompute(moved, TODAY, version=2))
+    expected = to_app_state_out(recompute(SEED_CATALOG, moved, TODAY, version=2))
     assert body == expected.model_dump(mode="json")
     # день 0 — накануне нового якоря, и он единственный в окне
     assert [d["date"] for d in body["schedule"] if d["is_day_zero"]] == ["2026-11-11"]

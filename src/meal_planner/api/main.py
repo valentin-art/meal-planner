@@ -28,9 +28,8 @@ from meal_planner.api.schemas import (
     to_summary_out,
 )
 from meal_planner.core import actions
-from meal_planner.core.models import Settings, default_settings
+from meal_planner.core.models import Catalog, Settings, default_settings
 from meal_planner.core.planner import recompute
-from meal_planner.core.recipes_data import ALL_RECIPES
 from meal_planner.core.validation import settings_errors, usable_settings
 from meal_planner.db.repository import (
     SettingsRepository,
@@ -54,6 +53,15 @@ def get_today() -> date:
 
 
 Repo = Annotated[SettingsRepository, Depends(get_repository)]
+
+
+def get_catalog(repo: Repo) -> Catalog:
+    # Каталог — из БД на каждый запрос (5.3): маленький, а кэш пришлось бы
+    # сбрасывать при правке рецептов.
+    return repo.get_catalog()
+
+
+CatalogDep = Annotated[Catalog, Depends(get_catalog)]
 Today = Annotated[date, Depends(get_today)]
 DateFrom = Annotated[date | None, Query(alias="from")]
 DateTo = Annotated[date | None, Query(alias="to")]
@@ -87,13 +95,16 @@ def stored_or_initial(repo: SettingsRepository, today: date) -> tuple[Settings, 
 
 
 def state_response(
+    catalog: Catalog,
     settings: Settings,
     version: int,
     today: date,
     date_from: date | None,
     date_to: date | None,
 ) -> AppStateOut:
-    return to_app_state_out(recompute(settings, today, date_from, date_to, version))
+    return to_app_state_out(
+        recompute(catalog, settings, today, date_from, date_to, version)
+    )
 
 
 def unprocessable(*errors: tuple[list[str], str]) -> HTTPException:
@@ -121,6 +132,7 @@ def check_range(today: date, date_from: date | None, date_to: date | None) -> No
 
 def apply_action(
     repo: SettingsRepository,
+    catalog: Catalog,
     today: date,
     date_from: date | None,
     date_to: date | None,
@@ -140,7 +152,7 @@ def apply_action(
     if errors:
         raise unprocessable(*((["body", e.field], e.message) for e in errors))
     version = repo.save_settings(settings)
-    return state_response(settings, version, today, date_from, date_to)
+    return state_response(catalog, settings, version, today, date_from, date_to)
 
 
 def create_app() -> FastAPI:
@@ -155,36 +167,44 @@ def create_app() -> FastAPI:
 
     @app.get("/api/state", response_model=AppStateOut)
     def get_state(
-        repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
     ) -> AppStateOut:
         check_range(today, date_from, date_to)
         settings, version = stored_or_initial(repo, today)
-        return state_response(settings, version, today, date_from, date_to)
+        return state_response(catalog, settings, version, today, date_from, date_to)
 
     @app.get("/api/summary", response_model=SummaryOut)
-    def get_summary(repo: Repo, today: Today) -> SummaryOut:
+    def get_summary(repo: Repo, catalog: CatalogDep, today: Today) -> SummaryOut:
         # Для HA: сегодня и завтра + ближайшая закупка. Первый запрос, как и
         # GET /api/state, сохраняет дефолты — иначе якорь плыл бы (6.4).
         settings, version = stored_or_initial(repo, today)
         return to_summary_out(
-            recompute(settings, today, today, today + timedelta(days=1), version)
+            recompute(
+                catalog, settings, today, today, today + timedelta(days=1), version
+            )
         )
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
-    def get_recipes() -> dict[str, RecipeOut]:
-        # Справочник статичен: ни настройки, ни БД не нужны.
-        return to_recipes_out(ALL_RECIPES)
+    def get_recipes(catalog: CatalogDep) -> dict[str, RecipeOut]:
+        # Только каталог: настройки не нужны и не пишутся.
+        return to_recipes_out(catalog.recipes)
 
     @app.post("/api/actions/set-cook-schedule", response_model=AppStateOut)
     def set_cook_schedule(
         body: SetCookScheduleIn,
         repo: Repo,
+        catalog: CatalogDep,
         today: Today,
         date_from: DateFrom = None,
         date_to: DateTo = None,
     ) -> AppStateOut:
         return apply_action(
             repo,
+            catalog,
             today,
             date_from,
             date_to,
@@ -197,12 +217,14 @@ def create_app() -> FastAPI:
     def set_shopping_timing(
         body: SetShoppingTimingIn,
         repo: Repo,
+        catalog: CatalogDep,
         today: Today,
         date_from: DateFrom = None,
         date_to: DateTo = None,
     ) -> AppStateOut:
         return apply_action(
             repo,
+            catalog,
             today,
             date_from,
             date_to,
@@ -213,12 +235,14 @@ def create_app() -> FastAPI:
     def set_anchor_date(
         body: SetAnchorDateIn,
         repo: Repo,
+        catalog: CatalogDep,
         today: Today,
         date_from: DateFrom = None,
         date_to: DateTo = None,
     ) -> AppStateOut:
         return apply_action(
             repo,
+            catalog,
             today,
             date_from,
             date_to,
@@ -229,24 +253,31 @@ def create_app() -> FastAPI:
     def set_cycle_position(
         body: SetCyclePositionIn,
         repo: Repo,
+        catalog: CatalogDep,
         today: Today,
         date_from: DateFrom = None,
         date_to: DateTo = None,
     ) -> AppStateOut:
         return apply_action(
             repo,
+            catalog,
             today,
             date_from,
             date_to,
-            lambda s: actions.set_cycle_position(s, today, body.dish),
+            lambda s: actions.set_cycle_position(catalog, s, today, body.dish),
         )
 
     @app.post("/api/actions/skip-next-cook", response_model=AppStateOut)
     def skip_next_cook(
-        repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
     ) -> AppStateOut:
         return apply_action(
             repo,
+            catalog,
             today,
             date_from,
             date_to,
@@ -255,10 +286,15 @@ def create_app() -> FastAPI:
 
     @app.post("/api/actions/unskip-cook", response_model=AppStateOut)
     def unskip_cook(
-        repo: Repo, today: Today, date_from: DateFrom = None, date_to: DateTo = None
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
     ) -> AppStateOut:
         return apply_action(
             repo,
+            catalog,
             today,
             date_from,
             date_to,

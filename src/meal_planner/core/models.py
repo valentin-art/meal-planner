@@ -1,5 +1,6 @@
 """Доменные структуры данных. Поля повторяют meal-plan.jsx 1:1."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import date, timedelta
 from enum import StrEnum
@@ -29,6 +30,19 @@ class RecipeStorage:
     pan: str
     micro: str
     after: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class RecipeSpec:
+    """Рецепт как хранится (5.3): без ккал и белка — их считает catalog."""
+
+    id: str
+    name: str
+    kind: MealKind
+    ingredients: tuple[Ingredient, ...]
+    steps: tuple[str, ...]
+    storage: RecipeStorage | None = None  # у завтраков нет
+    is_fish: bool = False
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,6 +77,21 @@ class CycleSlot:
     slot: int  # 1..5 — позиция ротации (cycle_index)
     lunch_id: str
     dinner_id: str
+
+
+@dataclass(frozen=True, slots=True)
+class Catalog:
+    """Рецепты, справочник ингредиентов и слоты цикла (5.3).
+
+    В API — из БД, в тестах — сид (core/seed.py). Собирает build_catalog.
+    """
+
+    recipes: Mapping[str, Recipe]  # завтраки, обеды, ужины; внутри — по номеру id
+    ingredients: Mapping[str, CatalogIngredient]  # по названию
+    slots: tuple[CycleSlot, ...]  # slots[k - 1] — позиция ротации k
+
+    def slot(self, k: int) -> CycleSlot:
+        return self.slots[k - 1]
 
 
 @dataclass(frozen=True, slots=True)

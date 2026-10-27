@@ -1,8 +1,7 @@
-"""SQLite-хранилище настроек: одна строка settings.
+"""SQLite-хранилище: строка settings и каталог рецептов (фаза 5).
 
-Схема и миграции — db/schema.py; с 5.2 там же каталог рецептов (читать его
-начнёт 5.3). Расписание и список покупок не хранятся — их всегда считает
-planner.recompute.
+Схема и миграции — db/schema.py. Расписание и список покупок не хранятся —
+их всегда считает planner.recompute.
 """
 
 import os
@@ -13,7 +12,17 @@ from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from meal_planner.core.models import Settings
+from meal_planner.core.catalog import build_catalog
+from meal_planner.core.models import (
+    Catalog,
+    CatalogIngredient,
+    CycleSlot,
+    Ingredient,
+    MealKind,
+    RecipeSpec,
+    RecipeStorage,
+    Settings,
+)
 from meal_planner.db.schema import migrate
 
 DEFAULT_DB_PATH = Path("data/mealplan.db")
@@ -83,6 +92,49 @@ def _read(conn: sqlite3.Connection) -> StoredSettings | None:
     return StoredSettings(settings=settings, version=version)
 
 
+def _read_catalog(conn: sqlite3.Connection) -> Catalog:
+    ingredients = [
+        CatalogIngredient(*row)
+        for row in conn.execute(
+            "SELECT name, unit, category, kcal_100g, protein_100g, source,"
+            " grams_per_unit, store_piece FROM ingredients ORDER BY id"
+        )
+    ]
+    lines: dict[str, list[Ingredient]] = {}
+    for recipe_id, name, qty, unit, category in conn.execute(
+        "SELECT ri.recipe_id, i.name, ri.qty, i.unit, i.category"
+        " FROM recipe_ingredients ri JOIN ingredients i ON i.id = ri.ingredient_id"
+        " ORDER BY ri.recipe_id, ri.position"
+    ):
+        lines.setdefault(recipe_id, []).append(Ingredient(name, qty, unit, category))
+    steps: dict[str, list[str]] = {}
+    for recipe_id, text in conn.execute(
+        "SELECT recipe_id, text FROM recipe_steps ORDER BY recipe_id, position"
+    ):
+        steps.setdefault(recipe_id, []).append(text)
+    recipes = [
+        RecipeSpec(
+            id=rid,
+            name=name,
+            kind=MealKind(kind),
+            ingredients=tuple(lines.get(rid, ())),
+            steps=tuple(steps.get(rid, ())),
+            storage=None if keep is None else RecipeStorage(keep, pan, micro, after),
+            is_fish=bool(is_fish),
+        )
+        for rid, name, kind, is_fish, keep, pan, micro, after in conn.execute(
+            "SELECT id, name, kind, is_fish, storage_keep, storage_pan,"
+            " storage_micro, storage_after FROM recipes"
+        )
+    ]
+    slots = [
+        CycleSlot(*row)
+        for row in conn.execute("SELECT slot, lunch_id, dinner_id FROM cycle_slots")
+    ]
+    # Порядок рецептов задаёт build_catalog, не rowid (его меняет VACUUM).
+    return build_catalog(ingredients, recipes, slots)
+
+
 class SettingsRepository:
     def __init__(self, db_path: Path):
         self.db_path = db_path
@@ -117,6 +169,11 @@ class SettingsRepository:
             stored = _read(conn)
         assert stored is not None
         return stored
+
+    def get_catalog(self) -> Catalog:
+        """Рецепты, справочник и слоты — для recompute (5.3)."""
+        with self._connect() as conn:
+            return _read_catalog(conn)
 
     def save_settings(self, settings: Settings) -> int:
         """Сохраняет настройки целиком и возвращает новую версию (1, 2, ...)."""

@@ -9,14 +9,15 @@
 import json
 from dataclasses import asdict
 
-from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.seed import SEED_CATALOG
 
 
 def build() -> dict:
     # Через JSON: кортежи → списки, как при чтении снапшота.
     return json.loads(
         json.dumps(
-            {rid: asdict(r) for rid, r in ALL_RECIPES.items()}, ensure_ascii=False
+            {rid: asdict(r) for rid, r in SEED_CATALOG.recipes.items()},
+            ensure_ascii=False,
         )
     )
 

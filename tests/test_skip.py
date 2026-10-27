@@ -25,6 +25,7 @@ from meal_planner.core.scheduling import (
     dish_index_for_date,
     meals_for_date,
 )
+from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.core.validation import settings_errors
 
 DAY = timedelta(days=1)
@@ -55,7 +56,7 @@ def dates(start: date, end: date):
 
 @pytest.mark.parametrize(("name", "settings", "today", "c", "n"), LAYOUTS, ids=IDS)
 def test_skip_targets_next_trip_cook(name, settings, today, c, n):
-    assert recompute(settings, today).next_shopping_trip.cook_date == c
+    assert recompute(SEED_CATALOG, settings, today).next_shopping_trip.cook_date == c
     assert skip_next_cook(settings, today).skipped_cook_date == c
 
 
@@ -66,31 +67,37 @@ def test_pause_keeps_cooked_days_and_resumes_with_same_dish(
     anchor, wd = settings.meal_anchor_date, cook_weekdays(settings)
     # До пропущенной готовки — всё как было, сварено уже по этому плану.
     for d in dates(anchor, c - DAY):
-        assert meals_for_date(d, anchor, wd, c) == meals_for_date(d, anchor, wd)
+        assert meals_for_date(SEED_CATALOG, d, anchor, wd, c) == meals_for_date(
+            SEED_CATALOG, d, anchor, wd
+        )
     # В день C едим старую партию, но не готовим.
-    on_c = meals_for_date(c, anchor, wd, c)
-    assert on_c == replace(meals_for_date(c, anchor, wd), is_cook_day=False)
+    on_c = meals_for_date(SEED_CATALOG, c, anchor, wd, c)
+    assert on_c == replace(
+        meals_for_date(SEED_CATALOG, c, anchor, wd), is_cook_day=False
+    )
     # Пауза: блюд нет; в её последний день — снова готовка.
     for d in dates(c + DAY, n):
-        day = meals_for_date(d, anchor, wd, c)
+        day = meals_for_date(SEED_CATALOG, d, anchor, wd, c)
         assert (day.lunch, day.dinner, day.breakfast) == (None, None, None)
         assert day.is_skipped and day.is_cook_day == (d == n)
     # После паузы — тот же цикл, сдвинутый на её длину: с блюда, на котором встал.
     shifted = anchor + (n - c)
     assert dish_index_for_date(n + DAY, shifted) == dish_index_for_date(c + DAY, anchor)
     for d in dates(n + DAY, n + 21 * DAY):
-        assert meals_for_date(d, anchor, wd, c) == meals_for_date(d, shifted, wd)
+        assert meals_for_date(SEED_CATALOG, d, anchor, wd, c) == meals_for_date(
+            SEED_CATALOG, d, shifted, wd
+        )
 
 
 @pytest.mark.parametrize(("name", "settings", "today", "c", "n"), LAYOUTS, ids=IDS)
 def test_trip_goes_to_cook_after_pause(name, settings, today, c, n):
     skipped = skip_next_cook(settings, today)
-    trip = recompute(skipped, today).next_shopping_trip
+    trip = recompute(SEED_CATALOG, skipped, today).next_shopping_trip
     assert (trip.shopping_date, trip.cook_date) == (n, n)
     assert trip.window_start == n + DAY
     assert trip.cook_items  # в окне после паузы снова есть блюда
 
-    before = recompute(set_shopping_timing(skipped, "before"), today)
+    before = recompute(SEED_CATALOG, set_shopping_timing(skipped, "before"), today)
     assert before.next_shopping_trip.cook_date == n
     assert before.next_shopping_trip.shopping_date == n - DAY
 
@@ -99,25 +106,25 @@ def test_trip_goes_to_cook_after_pause(name, settings, today, c, n):
 def test_past_pause_settles_into_anchor(name, settings, today, c, n):
     skipped = skip_next_cook(settings, today)
     later = n + DAY
-    state = recompute(skipped, later, later, later + 13 * DAY)
+    state = recompute(SEED_CATALOG, skipped, later, later, later + 13 * DAY)
     assert state.settings.skipped_cook_date is None
     assert state.settings.meal_anchor_date == settings.meal_anchor_date + (n - c)
     assert state.skipped_cook is None
     # Блюда после паузы не поменялись от того, что пропуск ушёл в якорь.
-    with_skip = recompute(skipped, n, later, later + 13 * DAY).schedule
+    with_skip = recompute(SEED_CATALOG, skipped, n, later, later + 13 * DAY).schedule
     assert state.schedule == with_skip
 
 
 def test_state_shows_skip_and_pause():
-    state = recompute(skip_next_cook(SETTINGS, TODAY), TODAY)
+    state = recompute(SEED_CATALOG, skip_next_cook(SETTINGS, TODAY), TODAY)
     assert state.skipped_cook is not None
     assert (state.skipped_cook.cook_date, state.skipped_cook.pause_end) == (C, N)
     assert state.skipped_cook.pause_start == C + DAY
     assert state.skipped_cook.can_undo
     assert not state.can_skip_next_cook
-    assert recompute(SETTINGS, TODAY).can_skip_next_cook
+    assert recompute(SEED_CATALOG, SETTINGS, TODAY).can_skip_next_cook
 
-    in_pause = recompute(skip_next_cook(SETTINGS, TODAY), C + DAY)
+    in_pause = recompute(SEED_CATALOG, skip_next_cook(SETTINGS, TODAY), C + DAY)
     assert not in_pause.skipped_cook.can_undo
     assert in_pause.today_position.current is None  # сегодня блюд нет
 
@@ -130,7 +137,7 @@ def test_only_one_skip_and_not_before_start():
     not_started = replace(SETTINGS, meal_anchor_date=TODAY + 3 * DAY)
     with pytest.raises(ActionError, match="Цикл ещё не начался"):
         skip_next_cook(not_started, TODAY)
-    assert not recompute(not_started, TODAY).can_skip_next_cook
+    assert not recompute(SEED_CATALOG, not_started, TODAY).can_skip_next_cook
 
 
 def test_unskip_until_the_cook_day():
@@ -147,9 +154,9 @@ def test_position_and_anchor_changes_drop_the_skip():
     skipped = skip_next_cook(SETTINGS, TODAY)
     assert set_anchor_date(skipped, TODAY).skipped_cook_date is None
     # Из паузы возвращаются раньше, выбрав блюдо на сегодня.
-    back = set_cycle_position(skipped, C + DAY, 0)
+    back = set_cycle_position(SEED_CATALOG, skipped, C + DAY, 0)
     assert back.skipped_cook_date is None
-    assert recompute(back, C + DAY).today_position.current == 0
+    assert recompute(SEED_CATALOG, back, C + DAY).today_position.current == 0
 
 
 def test_cook_schedule_change_drops_the_skip():

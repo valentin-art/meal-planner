@@ -6,7 +6,7 @@ from datetime import date, datetime, timedelta
 import pytest
 
 from meal_planner.core.models import Settings
-from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.recipes_data import RECIPE_SPECS
 from meal_planner.db import backup as backup_mod
 from meal_planner.db.backup import BackupError, backup, main
 from meal_planner.db.repository import SettingsRepository, StoredSettings
@@ -38,7 +38,7 @@ def test_restore_from_scratch(db, tmp_path):
     with closing(sqlite3.connect(fresh)) as conn:
         assert user_version(conn) == len(MIGRATIONS)
         assert conn.execute("SELECT count(*) FROM recipes").fetchone() == (
-            len(ALL_RECIPES),
+            len(RECIPE_SPECS),
         )
         assert conn.execute("SELECT count(*) FROM cycle_slots").fetchone() == (5,)
 

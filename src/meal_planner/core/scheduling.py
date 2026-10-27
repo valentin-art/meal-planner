@@ -8,17 +8,16 @@ from dataclasses import replace
 from datetime import date, timedelta
 
 from meal_planner.core.models import (
+    Catalog,
     CyclePosition,
     DayMeals,
     Recipe,
     Settings,
     TodayPosition,
 )
-from meal_planner.core.recipes_data import ALL_RECIPES
 
-# Порядок 5-дневной ротации: позиция k (1..5) → обед/ужин LUNCH_IDS[k-1]/DINNER_IDS[k-1].
-LUNCH_IDS = ("l1", "l2", "l3", "l4", "l5")
-DINNER_IDS = ("d1", "d2", "d3", "d4", "d5")
+# Позиция ротации k (1..5) → обед и ужин слота k каталога (5.3); завтраки
+# чередуются b1/b2 и в слоты не входят (5.1).
 
 
 def cook_weekdays(settings: Settings) -> tuple[int, ...]:
@@ -41,12 +40,13 @@ def breakfast_for_date(d: date, anchor: date) -> str:
     return "b1" if (d - anchor).days % 2 == 0 else "b2"
 
 
-def fish_priority(k: int) -> int:
+def fish_priority(catalog: Catalog, k: int) -> int:
     # 0, 1 или 2 — чем выше, тем раньше в партии блюдо съедается.
+    slot = catalog.slot(k)
     p = 0
-    if ALL_RECIPES[LUNCH_IDS[k - 1]].is_fish:
+    if catalog.recipes[slot.lunch_id].is_fish:
         p += 1
-    if ALL_RECIPES[DINNER_IDS[k - 1]].is_fish:
+    if catalog.recipes[slot.dinner_id].is_fish:
         p += 1
     return p
 
@@ -98,6 +98,7 @@ def pause_end(skipped: date, cook_weekdays: tuple[int, ...]) -> date:
 
 
 def meals_for_date(
+    catalog: Catalog,
     d: date,
     anchor: date,
     cook_weekdays: tuple[int, ...],
@@ -153,15 +154,17 @@ def meals_for_date(
     ]
     # JS: sort((a, b) => fishPriority(b) - fishPriority(a) || a - b)
     order = sorted(
-        range(len(natural_ks)), key=lambda i: (-fish_priority(natural_ks[i]), i)
+        range(len(natural_ks)),
+        key=lambda i: (-fish_priority(catalog, natural_ks[i]), i),
     )
     sorted_ks = [natural_ks[i] for i in order]
     pos = (d - window_start).days
     k = sorted_ks[max(0, min(pos, len(sorted_ks) - 1))]
 
-    breakfast = ALL_RECIPES[breakfast_for_date(d, anchor)]
-    lunch = ALL_RECIPES[LUNCH_IDS[k - 1]]
-    dinner = ALL_RECIPES[DINNER_IDS[k - 1]]
+    slot = catalog.slot(k)
+    breakfast = catalog.recipes[breakfast_for_date(d, anchor)]
+    lunch = catalog.recipes[slot.lunch_id]
+    dinner = catalog.recipes[slot.dinner_id]
     kcal, protein = day_totals(breakfast, lunch, dinner)
     return DayMeals(
         date=d,
@@ -178,7 +181,7 @@ def meals_for_date(
 
 
 def build_schedule(
-    settings: Settings, date_from: date, date_to: date
+    catalog: Catalog, settings: Settings, date_from: date, date_to: date
 ) -> tuple[DayMeals, ...]:
     """Расписание на date_from..date_to включительно."""
     anchor = settings.meal_anchor_date
@@ -186,7 +189,9 @@ def build_schedule(
     skipped = settings.skipped_cook_date
     days = (date_to - date_from).days + 1
     return tuple(
-        meals_for_date(date_from + timedelta(days=i), anchor, weekdays, skipped)
+        meals_for_date(
+            catalog, date_from + timedelta(days=i), anchor, weekdays, skipped
+        )
         for i in range(max(days, 0))
     )
 
@@ -233,6 +238,7 @@ def without_skip(settings: Settings) -> Settings:
 
 
 def today_position(
+    catalog: Catalog,
     today: date,
     anchor: date,
     cook_weekdays: tuple[int, ...],
@@ -255,19 +261,19 @@ def today_position(
     ]
     anchors = {0: today + timedelta(days=1)}  # сегодня день 0: готовка, цикл с завтра
     for candidate in candidates:
-        dish = meals_for_date(today, candidate, cook_weekdays).cycle_index
+        dish = meals_for_date(catalog, today, candidate, cook_weekdays).cycle_index
         if dish is not None:  # всегда: кандидаты не позже сегодня
             anchors.setdefault(dish, candidate)
 
-    current = meals_for_date(today, anchor, cook_weekdays, skipped)
+    current = meals_for_date(catalog, today, anchor, cook_weekdays, skipped)
     return TodayPosition(
         current=0 if current.is_day_zero else current.cycle_index,
         options=tuple(
             CyclePosition(
                 dish=dish,
                 anchor=anchors[dish],
-                lunch=ALL_RECIPES[LUNCH_IDS[dish - 1]] if dish else None,
-                dinner=ALL_RECIPES[DINNER_IDS[dish - 1]] if dish else None,
+                lunch=catalog.recipes[catalog.slot(dish).lunch_id] if dish else None,
+                dinner=catalog.recipes[catalog.slot(dish).dinner_id] if dish else None,
             )
             for dish in sorted(anchors)
         ),

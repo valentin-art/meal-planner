@@ -8,7 +8,14 @@ import json
 from dataclasses import replace
 from pathlib import Path
 
-from meal_planner.core.models import Ingredient, MealKind, Recipe
+from meal_planner.core.models import (
+    Catalog,
+    CatalogIngredient,
+    Ingredient,
+    MealKind,
+    Recipe,
+)
+from meal_planner.core.seed import SEED_CATALOG
 
 GOLDEN = json.loads((Path(__file__).parent / "golden_recipes.json").read_text("utf-8"))
 JS_KIND = {
@@ -33,6 +40,19 @@ JSX_RECIPES = {
     )
     for rid, js in GOLDEN["recipes"].items()
 }
+
+# Каталог для сверки агрегации с JS (5.3): названия ингредиентов из JSX, без
+# «≈ N шт» — в JSX этой подсказки не было. У «цукини» в JSX две единицы (шт и
+# г), в справочнике остаётся одна — агрегация берёт единицу из строки рецепта.
+JSX_CATALOG = Catalog(
+    recipes=JSX_RECIPES,
+    ingredients={
+        i.name: CatalogIngredient(i.name, i.unit, i.category, 0, 0, None, None, None)
+        for r in JSX_RECIPES.values()
+        for i in r.ingredients
+    },
+    slots=SEED_CATALOG.slots,
+)
 
 
 def as_jsx(day):

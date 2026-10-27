@@ -4,9 +4,11 @@ import pytest
 
 from meal_planner.core.models import Ingredient
 from meal_planner.core.nutrition import GRAMS_PER_UNIT, PER_100G, nutrition
-from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.seed import SEED_CATALOG
 
-INGREDIENTS = {(i.name, i.unit) for r in ALL_RECIPES.values() for i in r.ingredients}
+INGREDIENTS = {
+    (i.name, i.unit) for r in SEED_CATALOG.recipes.values() for i in r.ingredients
+}
 
 
 def test_every_ingredient_has_nutrition():
@@ -21,8 +23,8 @@ def test_recipe_is_sum_of_ingredients():
     # b1: яйца 4 × 50 г, масло 1 ст.л. = 14.2 г, хлеб 60 г.
     kcal = 200 * 1.43 + 14.2 * 7.17 + 60 * 2.52  # 539.0
     protein = 200 * 0.1256 + 14.2 * 0.0085 + 60 * 0.1245  # 32.7
-    assert ALL_RECIPES["b1"].kcal == 540 == round(kcal / 5) * 5
-    assert ALL_RECIPES["b1"].protein == 33 == round(protein)
+    assert SEED_CATALOG.recipes["b1"].kcal == 540 == round(kcal / 5) * 5
+    assert SEED_CATALOG.recipes["b1"].protein == 33 == round(protein)
 
 
 @pytest.mark.parametrize(
@@ -35,4 +37,7 @@ def test_recipe_is_sum_of_ingredients():
     ],
 )
 def test_rounding_kcal_to_5_protein_to_1(name, grams, expected):
-    assert nutrition([Ingredient(name, grams, "г", "Овощи")]) == expected
+    assert (
+        nutrition(SEED_CATALOG.ingredients, [Ingredient(name, grams, "г", "Овощи")])
+        == expected
+    )

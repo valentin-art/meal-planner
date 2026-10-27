@@ -9,7 +9,7 @@
 import sqlite3
 from collections.abc import Callable
 
-from meal_planner.core.recipes_data import ALL_RECIPES
+from meal_planner.core.recipes_data import RECIPE_SPECS
 from meal_planner.core.seed import seed_ingredients, seed_slots
 
 _SETTINGS = """
@@ -115,7 +115,7 @@ def _seed(conn: sqlite3.Connection) -> None:
                 i.store_piece,
             ),
         ).lastrowid
-    for recipe in ALL_RECIPES.values():
+    for recipe in RECIPE_SPECS.values():
         storage = recipe.storage
         conn.execute(
             "INSERT INTO recipes (id, name, kind, is_fish, storage_keep, storage_pan,"

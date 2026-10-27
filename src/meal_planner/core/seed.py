@@ -1,21 +1,25 @@
-"""Сид каталога (5.2): справочник ингредиентов и слоты цикла из констант.
+"""Сид каталога (5.2): справочник ингредиентов, рецепты и слоты из констант.
 
-recipes_data.py, nutrition.py и порядок ротации в scheduling.py остаются
-источником: из них один раз заполняется БД (db/schema.py), на них же
-держатся golden.
+recipes_data.py, nutrition.py и порядок ротации ниже остаются источником:
+из них один раз заполняется БД (db/schema.py), на SEED_CATALOG держатся
+golden и тесты core/ (5.3).
 """
 
+from meal_planner.core.catalog import build_catalog
 from meal_planner.core.models import CatalogIngredient, CycleSlot, Ingredient
 from meal_planner.core.nutrition import GRAMS_PER_UNIT, PER_100G
-from meal_planner.core.recipes_data import ALL_RECIPES, STORE_PIECES
-from meal_planner.core.scheduling import DINNER_IDS, LUNCH_IDS
+from meal_planner.core.recipes_data import RECIPE_SPECS, STORE_PIECES
+
+# Порядок 5-дневной ротации: позиция k (1..5) → обед/ужин LUNCH_IDS[k-1]/DINNER_IDS[k-1].
+LUNCH_IDS = ("l1", "l2", "l3", "l4", "l5")
+DINNER_IDS = ("d1", "d2", "d3", "d4", "d5")
 
 
 def seed_ingredients() -> tuple[CatalogIngredient, ...]:
     """Справочник в порядке первого появления в рецептах."""
     # Единица и категория — из рецептов: у каждого ингредиента они одни (5.1).
     found: dict[str, Ingredient] = {}
-    for recipe in ALL_RECIPES.values():
+    for recipe in RECIPE_SPECS.values():
         for ingredient in recipe.ingredients:
             first = found.setdefault(ingredient.name, ingredient)
             if (first.unit, first.category) != (ingredient.unit, ingredient.category):
@@ -46,3 +50,6 @@ def seed_slots() -> tuple[CycleSlot, ...]:
         CycleSlot(slot=k, lunch_id=lunch, dinner_id=dinner)
         for k, (lunch, dinner) in enumerate(zip(LUNCH_IDS, DINNER_IDS), start=1)
     )
+
+
+SEED_CATALOG = build_catalog(seed_ingredients(), RECIPE_SPECS.values(), seed_slots())

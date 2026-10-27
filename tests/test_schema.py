@@ -11,9 +11,8 @@ import pytest
 
 from meal_planner.core.models import Settings
 from meal_planner.core.nutrition import GRAMS_PER_UNIT, PER_100G
-from meal_planner.core.recipes_data import ALL_RECIPES, STORE_PIECES
-from meal_planner.core.scheduling import DINNER_IDS, LUNCH_IDS
-from meal_planner.core.seed import seed_ingredients
+from meal_planner.core.recipes_data import RECIPE_SPECS, STORE_PIECES
+from meal_planner.core.seed import DINNER_IDS, LUNCH_IDS, seed_ingredients
 from meal_planner.db import schema
 from meal_planner.db.repository import SettingsRepository, StoredSettings
 from meal_planner.db.schema import MIGRATIONS, SchemaTooNewError, user_version
@@ -122,7 +121,7 @@ def test_seeded_slots_and_statuses(db):
         statuses = dict(conn.execute("SELECT id, status FROM recipes"))
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
     assert slots == [(k, LUNCH_IDS[k - 1], DINNER_IDS[k - 1]) for k in range(1, 6)]
-    assert statuses == dict.fromkeys(ALL_RECIPES, "active")
+    assert statuses == dict.fromkeys(RECIPE_SPECS, "active")
 
 
 def test_seed_runs_once(db):
@@ -135,7 +134,7 @@ def test_seed_runs_once(db):
             "Своё",
         )
         assert conn.execute("SELECT count(*) FROM recipes").fetchone() == (
-            len(ALL_RECIPES),
+            len(RECIPE_SPECS),
         )
 
 
@@ -150,7 +149,7 @@ def test_migrates_live_db_before_phase_5(tmp_path):
     repo = SettingsRepository(path)
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
     assert tables(path) == {"settings"} | CATALOG_TABLES
-    assert len(dump_recipes(path)) == len(ALL_RECIPES)
+    assert len(dump_recipes(path)) == len(RECIPE_SPECS)
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):

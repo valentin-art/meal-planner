@@ -119,3 +119,15 @@ def test_script_references_resolve():
 def test_items_key_is_not_an_attribute():
     # В Jinja x.items — метод dict, а не поле «items»: только x['items'].
     assert not re.search(r"(next_shopping|\])\.items\b", TEXT)
+
+
+def test_sync_targets_only_lists_with_item_description():
+    # Свои пункты to-do помечаются описанием «meal-planner <дата>»: список
+    # без описания (Shopping List) ломал todo.add_item (8.2).
+    script = PACKAGE["script"]["meal_planner_sync_shopping_list"]
+    (entity_filter,) = script["fields"]["todo_list"]["selector"]["entity"]["filter"]
+    assert entity_filter == {
+        "domain": "todo",
+        "supported_features": ["todo.TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM"],
+    }
+    assert "bitwise_and(64)" in json.dumps(script["sequence"], ensure_ascii=False)

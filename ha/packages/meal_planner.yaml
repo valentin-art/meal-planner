@@ -394,15 +394,36 @@ script:
     fields:
       todo_list:
         name: Список дел
-        description: Куда переносить; по умолчанию «Покупки» (todo.pokupki)
+        description: >-
+          Куда переносить; по умолчанию «Покупки» (todo.pokupki). Только
+          список, где у пункта есть описание (Local To-do), — не «Список
+          покупок» (Shopping List)
         required: false
         selector:
           entity:
-            domain: todo
+            # Свои пункты помечаются описанием — списки без него не годятся.
+            filter:
+              - domain: todo
+                supported_features:
+                  - todo.TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
     sequence:
       - variables:
           todo_entity: "{{ todo_list | default('todo.pokupki', true) }}"
           stock: *stock
+      # Список могли передать не из формы (LLM): без описания пунктов
+      # (SET_DESCRIPTION_ON_ITEM = 64) свои пункты не отличить от чужих.
+      - if: >-
+          {{ not ((state_attr(todo_entity, 'supported_features') | int(0))
+                  | bitwise_and(64)) }}
+        then:
+          - variables:
+              result:
+                ok: false
+                error: >-
+                  Список {{ todo_entity }} не найден или не поддерживает
+                  описание пункта — переносить можно в «Покупки» (todo.pokupki)
+          - stop: Ошибка
+            response_variable: result
       - action: rest_command.meal_planner_shopping_remaining
         data:
           stock: "{{ stock }}"

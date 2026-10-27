@@ -515,11 +515,15 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка блюда
-      # (атрибут last_error сенсора партии).
+      # (атрибут last_error сенсора партии) — 3 секунды, снимает
+      # meal_planner_clear_dish_error, не задерживая ответ.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
           error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
       - stop: Ошибка
         response_variable: result
 
@@ -568,11 +572,15 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка блюда
-      # (атрибут last_error сенсора партии).
+      # (атрибут last_error сенсора партии) — 3 секунды, снимает
+      # meal_planner_clear_dish_error, не задерживая ответ.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
           error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
       - stop: Ошибка
         response_variable: result
 
@@ -626,13 +634,29 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка блюда
-      # (атрибут last_error сенсора партии).
+      # (атрибут last_error сенсора партии) — 3 секунды, снимает
+      # meal_planner_clear_dish_error, не задерживая ответ.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
           error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
       - stop: Ошибка
         response_variable: result
+
+  # Служебный: через 3 с снимает «⚠ …» с плитки блюда (last_error сенсора
+  # партии). restart — новый отказ заново отсчитывает 3 с.
+  meal_planner_clear_dish_error:
+    alias: Питание — убрать ошибку с плитки блюда
+    description: >-
+      Служебный скрипт дашборда: через 3 секунды убирает сообщение об отказе
+      с плитки блюда. Вызывать не нужно.
+    mode: restart
+    sequence:
+      - delay: 3
+      - event: meal_planner_changed
 
   # Список покупок в to-do (7.8): пункты помечены в описании
   # «meal-planner <дата закупки>» — так видно свои пункты и их закупку.

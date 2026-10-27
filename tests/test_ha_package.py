@@ -138,6 +138,11 @@ def test_actions_refresh_the_cook_batch():
         assert '"event": "meal_planner_changed"' in script, name
         # Отказ — тоже событие: причину показывает плитка (last_error).
         assert '"error": "{{ result.error }}"' in script, name
+        # …и через 3 с сообщение снимается, не задерживая ответ скрипта.
+        assert "script.meal_planner_clear_dish_error" in script, name
+    clear = PACKAGE["script"]["meal_planner_clear_dish_error"]
+    assert clear["mode"] == "restart"
+    assert clear["sequence"] == [{"delay": 3}, {"event": "meal_planner_changed"}]
 
 
 def test_scripts_describe_their_fields_for_the_llm():

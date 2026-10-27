@@ -24,6 +24,8 @@
 # приготовленными по одному (скрипты meal_planner_mark_cooked / _unmark_).
 # Сколько списать и новые значения счётчиков считает приложение, скрипт их
 # только выставляет; повторная отметка отклоняется — дважды не списать.
+# Скрипты действий шлют событие meal_planner_changed — по нему сразу
+# обновляется сенсор партии sensor.meal_planner_cook_batch.
 
 homeassistant:
   customize:
@@ -35,7 +37,7 @@ homeassistant:
       friendly_name: Ближайшая закупка
     sensor.meal_planner_today_kcal:
       friendly_name: Ккал сегодня
-    sensor.meal_planner_cooking:
+    sensor.meal_planner_cook_batch:
       friendly_name: Готовка
 
 rest:
@@ -86,18 +88,44 @@ rest:
         value_template: "{{ value_json.days.today.kcal }}"
         json_attributes_path: "$.days.today"
         json_attributes: [protein, kcal_delta, protein_delta, nutrition]
-      # Что можно отметить приготовленным (8.3b): состояние — дата готовки
-      # текущей партии; до дня 0 и после пропущенной готовки — unavailable.
-      # dishes: [{recipe_id, name, kind, portions, cooked}], breakfast — то же
-      # для сегодняшнего завтрака. Плитки вкладки «Готовка» дашборда «Кухня».
-      - name: Meal planner cooking
-        unique_id: meal_planner_cooking
+
+# Партия готовки (8.3b) — сенсор-шаблон, а не REST: REST-сенсоры обновляются
+# через координатор, и повторное обновление в течение 10 с откладывается —
+# плитка «Готовки» менялась с задержкой. Этот сенсор сам запрашивает summary
+# по событию meal_planner_changed (его шлют скрипты действий), при старте HA,
+# после перезагрузки шаблонов и раз в 15 минут.
+# Состояние — дата готовки текущей партии; до дня 0 и после пропущенной
+# готовки — unavailable. dishes: [{recipe_id, name, kind, portions, cooked}],
+# breakfast — то же для сегодняшнего завтрака. Плитки вкладки «Готовка»
+# дашборда «Кухня».
+template:
+  - triggers:
+      - trigger: homeassistant
+        event: start
+      - trigger: event
+        event_type: event_template_reloaded
+      - trigger: time_pattern
+        minutes: /15
+      - trigger: event
+        event_type: meal_planner_changed
+    actions:
+      - action: rest_command.meal_planner_summary
+        response_variable: resp
+        continue_on_error: true
+      - variables:
+          cooking: >-
+            {{ resp.content.cooking
+               if resp is defined and resp.status == 200 else none }}
+    sensor:
+      - name: Meal planner cook batch
+        unique_id: meal_planner_cook_batch
         icon: mdi:pot-steam
         device_class: date
-        availability: "{{ value_json.cooking.cook_date is not none }}"
-        value_template: "{{ value_json.cooking.cook_date }}"
-        json_attributes_path: "$.cooking"
-        json_attributes: [dishes, breakfast]
+        availability: "{{ cooking is not none and cooking.cook_date is not none }}"
+        state: "{{ cooking.cook_date if cooking else none }}"
+        attributes:
+          dishes: "{{ cooking.dishes if cooking else [] }}"
+          breakfast: "{{ cooking.breakfast if cooking else none }}"
 
 rest_command:
   meal_planner_summary:
@@ -236,6 +264,7 @@ script:
           - action: homeassistant.update_entity
             target:
               entity_id: sensor.meal_planner_today
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true
@@ -280,6 +309,7 @@ script:
           - action: homeassistant.update_entity
             target:
               entity_id: sensor.meal_planner_today
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true
@@ -343,6 +373,7 @@ script:
           - action: homeassistant.update_entity
             target:
               entity_id: sensor.meal_planner_today
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true
@@ -372,6 +403,7 @@ script:
           - action: homeassistant.update_entity
             target:
               entity_id: sensor.meal_planner_today
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true
@@ -399,6 +431,7 @@ script:
           - action: homeassistant.update_entity
             target:
               entity_id: sensor.meal_planner_today
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true
@@ -450,9 +483,7 @@ script:
                       {{ [repeat.item.value,
                           state_attr(repeat.item.entity_id, 'max') | float(repeat.item.value)]
                          | min }}
-          - action: homeassistant.update_entity
-            target:
-              entity_id: sensor.meal_planner_cooking
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true
@@ -504,9 +535,7 @@ script:
                       {{ [repeat.item.value,
                           state_attr(repeat.item.entity_id, 'max') | float(repeat.item.value)]
                          | min }}
-          - action: homeassistant.update_entity
-            target:
-              entity_id: sensor.meal_planner_cooking
+          - event: meal_planner_changed
           - variables:
               result:
                 ok: true

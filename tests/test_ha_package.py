@@ -78,6 +78,10 @@ def sensors():
     return PACKAGE["rest"][0]["sensor"]
 
 
+def template_sensors():
+    return [s for block in PACKAGE["template"] for s in block["sensor"]]
+
+
 def entity_id(sensor: dict) -> str:
     return "sensor." + sensor["name"].lower().replace(" ", "_")
 
@@ -94,10 +98,38 @@ def test_sensor_templates_use_summary_fields(sensor):
 def test_references_resolve():
     used_commands = set(re.findall(r"rest_command\.(\w+)", TEXT))
     assert used_commands == set(PACKAGE["rest_command"])
-    declared = {entity_id(s) for s in sensors()}
+    declared = {entity_id(s) for s in sensors() + template_sensors()}
     assert set(re.findall(r"sensor\.meal_planner_\w+", TEXT)) == declared
     assert set(PACKAGE["homeassistant"]["customize"]) == declared
     assert set(PACKAGE["conversation"]["intents"]) == set(PACKAGE["intent_script"])
+
+
+def test_cook_batch_sensor_uses_summary_fields():
+    # Сенсор-шаблон (8.3b) сам запрашивает summary и берёт из него cooking.
+    (block,) = PACKAGE["template"]
+    (call, variables) = block["actions"]
+    assert call["action"] == "rest_command.meal_planner_summary"
+    assert call["response_variable"] == "resp"
+    for path in re.findall(
+        r"resp\.content((?:\.\w+)+)", variables["variables"]["cooking"]
+    ):
+        schema_at(path.split(".")[1:])
+    cooking = schema_at(["cooking"])["properties"]
+    (sensor,) = block["sensor"]
+    templates = json.dumps(sensor, ensure_ascii=False)
+    for field in re.findall(r"cooking\.(\w+)", templates):
+        assert field in cooking, field
+    assert set(sensor["attributes"]) <= set(cooking)
+
+
+def test_actions_refresh_the_cook_batch():
+    # Сенсор партии обновляется по событию: его шлют скрипты действий.
+    (block,) = PACKAGE["template"]
+    events = {t.get("event_type") for t in block["triggers"]}
+    assert "meal_planner_changed" in events
+    for name in ("meal_planner_mark_cooked", "meal_planner_unmark_cooked"):
+        script = json.dumps(PACKAGE["script"][name], ensure_ascii=False)
+        assert '"event": "meal_planner_changed"' in script, name
 
 
 def test_scripts_describe_their_fields_for_the_llm():

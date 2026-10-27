@@ -119,7 +119,9 @@ def test_cook_batch_sensor_uses_summary_fields():
     templates = json.dumps(sensor, ensure_ascii=False)
     for field in re.findall(r"cooking\.(\w+)", templates):
         assert field in cooking, field
-    assert set(sensor["attributes"]) <= set(cooking)
+    # Атрибуты — поля cooking, кроме last_error: его приносит событие отказа.
+    assert set(sensor["attributes"]) - {"last_error"} <= set(cooking)
+    assert "trigger.event.data" in sensor["attributes"]["last_error"]
 
 
 def test_actions_refresh_the_cook_batch():
@@ -127,9 +129,15 @@ def test_actions_refresh_the_cook_batch():
     (block,) = PACKAGE["template"]
     events = {t.get("event_type") for t in block["triggers"]}
     assert "meal_planner_changed" in events
-    for name in ("meal_planner_mark_cooked", "meal_planner_unmark_cooked"):
+    for name in (
+        "meal_planner_mark_cooked",
+        "meal_planner_unmark_cooked",
+        "meal_planner_set_dish_portions",
+    ):
         script = json.dumps(PACKAGE["script"][name], ensure_ascii=False)
         assert '"event": "meal_planner_changed"' in script, name
+        # Отказ — тоже событие: причину показывает плитка (last_error).
+        assert '"error": "{{ result.error }}"' in script, name
 
 
 def test_scripts_describe_their_fields_for_the_llm():

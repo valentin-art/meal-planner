@@ -94,6 +94,8 @@ rest:
 # плитка «Готовки» менялась с задержкой. Этот сенсор сам запрашивает summary
 # по событию meal_planner_changed (его шлют скрипты действий), при старте HA,
 # после перезагрузки шаблонов и раз в 15 минут.
+# Скрипты блюд при отказе шлют то же событие с {recipe_id, error} —
+# на дашборде ответа скрипта не видно, причину показывает плитка.
 # Состояние — дата готовки текущей партии; до дня 0 и после пропущенной
 # готовки — unavailable. dishes: [{recipe_id, name, kind, portions, cooked}],
 # breakfast — то же для сегодняшнего завтрака. Плитки вкладки «Готовка»
@@ -126,6 +128,15 @@ template:
         attributes:
           dishes: "{{ cooking.dishes if cooking else [] }}"
           breakfast: "{{ cooking.breakfast if cooking else none }}"
+          # Отказ последнего действия с блюдом ({recipe_id, error}, например
+          # «Не хватает продуктов: …») — плитка показывает его вместо
+          # названия; следующее действие или обновление его снимает.
+          last_error: >-
+            {{ trigger.event.data
+               if trigger.platform == 'event'
+                  and trigger.event.event_type == 'meal_planner_changed'
+                  and trigger.event.data.error is defined
+               else none }}
 
 rest_command:
   meal_planner_summary:
@@ -503,13 +514,12 @@ script:
           result:
             ok: false
             error: *error
-      # На дашборде ответа скрипта не видно: причину (например, «Не хватает
-      # продуктов: …») показываем уведомлением; следующая ошибка его заменит.
-      - action: persistent_notification.create
-        data:
-          notification_id: meal_planner_cooking
-          title: Блюдо не отмечено
-          message: "{{ result.error }}"
+      # На дашборде ответа скрипта не видно: причину показывает плитка блюда
+      # (атрибут last_error сенсора партии).
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
       - stop: Ошибка
         response_variable: result
 
@@ -557,6 +567,12 @@ script:
           result:
             ok: false
             error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка блюда
+      # (атрибут last_error сенсора партии).
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
       - stop: Ошибка
         response_variable: result
 
@@ -609,6 +625,12 @@ script:
           result:
             ok: false
             error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка блюда
+      # (атрибут last_error сенсора партии).
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
       - stop: Ошибка
         response_variable: result
 

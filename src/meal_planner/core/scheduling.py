@@ -18,6 +18,7 @@ from meal_planner.core.models import (
 
 # Позиция ротации k (1..5) → обед и ужин слота k каталога (5.3); завтраки
 # чередуются b1/b2 и в слоты не входят (5.1).
+ROTATION_BREAKFASTS = ("b1", "b2")
 
 
 def cook_weekdays(settings: Settings) -> tuple[int, ...]:
@@ -37,7 +38,7 @@ def dish_index_for_date(d: date, anchor: date) -> int:
 
 
 def breakfast_for_date(d: date, anchor: date) -> str:
-    return "b1" if (d - anchor).days % 2 == 0 else "b2"
+    return ROTATION_BREAKFASTS[(d - anchor).days % 2]
 
 
 def fish_priority(catalog: Catalog, k: int) -> int:

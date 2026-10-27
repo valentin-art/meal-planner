@@ -102,9 +102,11 @@ def _seed(conn: sqlite3.Connection) -> None:
     ids = {}
     for i in seed_ingredients():
         ids[i.name] = conn.execute(
-            "INSERT INTO ingredients (name, unit, category, kcal_100g, protein_100g,"
-            " source, grams_per_unit, store_piece) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO ingredients (id, name, unit, category, kcal_100g,"
+            " protein_100g, source, grams_per_unit, store_piece)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
             (
+                i.id,
                 i.name,
                 i.unit,
                 i.category,

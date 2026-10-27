@@ -14,6 +14,12 @@ class MealKind(StrEnum):
 
 
 ShoppingTiming = Literal["same", "before"]
+# Архивный рецепт не удаляется: на него могли ссылаться слоты (5.1). В 8.6
+# добавится "draft".
+RecipeStatus = Literal["active", "archived"]
+# Рецепт в плане (5.1): "bought" — съедается до окна ближайшей закупки,
+# продукты уже куплены; "next_trip" — в окне ближайшей закупки.
+PlanUse = Literal["bought", "next_trip"]
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,6 +49,7 @@ class RecipeSpec:
     steps: tuple[str, ...]
     storage: RecipeStorage | None = None  # у завтраков нет
     is_fish: bool = False
+    status: RecipeStatus = "active"
 
 
 @dataclass(frozen=True, slots=True)
@@ -56,12 +63,14 @@ class Recipe:
     steps: tuple[str, ...]
     storage: RecipeStorage | None = None  # у завтраков нет
     is_fish: bool = False  # заменяет FISH_LUNCH_IDS/FISH_DINNER_IDS
+    status: RecipeStatus = "active"
 
 
 @dataclass(frozen=True, slots=True)
 class CatalogIngredient:
     """Ингредиент справочника (фаза 5): одна единица и одна категория."""
 
+    id: int  # рецепты ссылаются по id — переименование их не ломает
     name: str
     unit: str
     category: str
@@ -205,3 +214,4 @@ class AppState:
     today_position: TodayPosition
     skipped_cook: SkippedCook | None
     can_skip_next_cook: bool
+    plan_use: Mapping[str, PlanUse]  # только рецепты с признаком (5.4)

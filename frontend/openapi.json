@@ -127,6 +127,28 @@
         }
       }
     },
+    "/api/ingredients": {
+      "get": {
+        "summary": "Get Ingredients",
+        "operationId": "get_ingredients_api_ingredients_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogIngredientOut"
+                  },
+                  "type": "array",
+                  "title": "Response Get Ingredients Api Ingredients Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/set-cook-schedule": {
       "post": {
         "summary": "Set Cook Schedule",
@@ -550,6 +572,376 @@
           }
         }
       }
+    },
+    "/api/actions/save-recipe": {
+      "post": {
+        "summary": "Save Recipe",
+        "operationId": "save_recipe_api_actions_save_recipe_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRecipeIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/archive-recipe": {
+      "post": {
+        "summary": "Archive Recipe",
+        "operationId": "archive_recipe_api_actions_archive_recipe_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeIdIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/restore-recipe": {
+      "post": {
+        "summary": "Restore Recipe",
+        "operationId": "restore_recipe_api_actions_restore_recipe_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeIdIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/set-cycle-slot": {
+      "post": {
+        "summary": "Set Cycle Slot",
+        "operationId": "set_cycle_slot_api_actions_set_cycle_slot_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetCycleSlotIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/save-ingredient": {
+      "post": {
+        "summary": "Save Ingredient",
+        "operationId": "save_ingredient_api_actions_save_ingredient_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveIngredientIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -594,6 +986,17 @@
           "can_skip_next_cook": {
             "type": "boolean",
             "title": "Can Skip Next Cook"
+          },
+          "recipe_plan_use": {
+            "additionalProperties": {
+              "type": "string",
+              "enum": [
+                "bought",
+                "next_trip"
+              ]
+            },
+            "type": "object",
+            "title": "Recipe Plan Use"
           }
         },
         "type": "object",
@@ -605,9 +1008,93 @@
           "version",
           "today_position",
           "skipped_cook",
-          "can_skip_next_cook"
+          "can_skip_next_cook",
+          "recipe_plan_use"
         ],
         "title": "AppStateOut"
+      },
+      "CatalogIngredientOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "kcal_100g": {
+            "type": "number",
+            "title": "Kcal 100G"
+          },
+          "protein_100g": {
+            "type": "number",
+            "title": "Protein 100G"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "grams_per_unit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams Per Unit"
+          },
+          "store_piece": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Piece"
+          },
+          "used_in": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Used In"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "category",
+          "kcal_100g",
+          "protein_100g",
+          "source",
+          "grams_per_unit",
+          "store_piece",
+          "used_in"
+        ],
+        "title": "CatalogIngredientOut",
+        "description": "Ингредиент справочника (5.4) — GET /api/ingredients, save-ingredient."
       },
       "CookItemOut": {
         "properties": {
@@ -794,6 +1281,22 @@
         ],
         "title": "HealthOut"
       },
+      "IngredientActionOut": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/AppStateOut"
+          },
+          "ingredient": {
+            "$ref": "#/components/schemas/CatalogIngredientOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "ingredient"
+        ],
+        "title": "IngredientActionOut"
+      },
       "IngredientOut": {
         "properties": {
           "name": {
@@ -826,6 +1329,63 @@
           "category"
         ],
         "title": "IngredientOut"
+      },
+      "MealKind": {
+        "type": "string",
+        "enum": [
+          "breakfast",
+          "lunch",
+          "dinner"
+        ],
+        "title": "MealKind"
+      },
+      "RecipeActionOut": {
+        "properties": {
+          "state": {
+            "$ref": "#/components/schemas/AppStateOut"
+          },
+          "recipe": {
+            "$ref": "#/components/schemas/RecipeOut"
+          }
+        },
+        "type": "object",
+        "required": [
+          "state",
+          "recipe"
+        ],
+        "title": "RecipeActionOut"
+      },
+      "RecipeIdIn": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id"
+        ],
+        "title": "RecipeIdIn"
+      },
+      "RecipeLineIn": {
+        "properties": {
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          },
+          "qty": {
+            "type": "number",
+            "exclusiveMinimum": 0.0,
+            "title": "Qty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient_id",
+          "qty"
+        ],
+        "title": "RecipeLineIn"
       },
       "RecipeOut": {
         "properties": {
@@ -876,6 +1436,14 @@
           "is_fish": {
             "type": "boolean",
             "title": "Is Fish"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "archived"
+            ],
+            "title": "Status"
           }
         },
         "type": "object",
@@ -888,9 +1456,44 @@
           "ingredients",
           "steps",
           "storage",
-          "is_fish"
+          "is_fish",
+          "status"
         ],
         "title": "RecipeOut"
+      },
+      "RecipeStorageIn": {
+        "properties": {
+          "keep": {
+            "type": "string",
+            "title": "Keep"
+          },
+          "pan": {
+            "type": "string",
+            "title": "Pan"
+          },
+          "micro": {
+            "type": "string",
+            "title": "Micro"
+          },
+          "after": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "After"
+          }
+        },
+        "type": "object",
+        "required": [
+          "keep",
+          "pan",
+          "micro"
+        ],
+        "title": "RecipeStorageIn"
       },
       "RecipeStorageOut": {
         "properties": {
@@ -926,6 +1529,142 @@
           "after"
         ],
         "title": "RecipeStorageOut"
+      },
+      "SaveIngredientIn": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "kcal_100g": {
+            "type": "number",
+            "title": "Kcal 100G"
+          },
+          "protein_100g": {
+            "type": "number",
+            "title": "Protein 100G"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "grams_per_unit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams Per Unit"
+          },
+          "store_piece": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Piece"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "unit",
+          "category",
+          "kcal_100g",
+          "protein_100g"
+        ],
+        "title": "SaveIngredientIn"
+      },
+      "SaveRecipeIn": {
+        "properties": {
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MealKind"
+          },
+          "is_fish": {
+            "type": "boolean",
+            "title": "Is Fish",
+            "default": false
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipeLineIn"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStorageIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "ingredients",
+          "steps"
+        ],
+        "title": "SaveRecipeIn"
       },
       "SetAnchorDateIn": {
         "properties": {
@@ -992,6 +1731,31 @@
           "dish"
         ],
         "title": "SetCyclePositionIn"
+      },
+      "SetCycleSlotIn": {
+        "properties": {
+          "slot": {
+            "type": "integer",
+            "maximum": 5.0,
+            "minimum": 1.0,
+            "title": "Slot"
+          },
+          "lunch_id": {
+            "type": "string",
+            "title": "Lunch Id"
+          },
+          "dinner_id": {
+            "type": "string",
+            "title": "Dinner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "lunch_id",
+          "dinner_id"
+        ],
+        "title": "SetCycleSlotIn"
       },
       "SetShoppingTimingIn": {
         "properties": {

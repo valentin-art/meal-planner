@@ -96,7 +96,7 @@ def _read_catalog(conn: sqlite3.Connection) -> Catalog:
     ingredients = [
         CatalogIngredient(*row)
         for row in conn.execute(
-            "SELECT name, unit, category, kcal_100g, protein_100g, source,"
+            "SELECT id, name, unit, category, kcal_100g, protein_100g, source,"
             " grams_per_unit, store_piece FROM ingredients ORDER BY id"
         )
     ]
@@ -121,9 +121,10 @@ def _read_catalog(conn: sqlite3.Connection) -> Catalog:
             steps=tuple(steps.get(rid, ())),
             storage=None if keep is None else RecipeStorage(keep, pan, micro, after),
             is_fish=bool(is_fish),
+            status=status,
         )
-        for rid, name, kind, is_fish, keep, pan, micro, after in conn.execute(
-            "SELECT id, name, kind, is_fish, storage_keep, storage_pan,"
+        for rid, name, kind, is_fish, status, keep, pan, micro, after in conn.execute(
+            "SELECT id, name, kind, is_fish, status, storage_keep, storage_pan,"
             " storage_micro, storage_after FROM recipes"
         )
     ]
@@ -135,7 +136,51 @@ def _read_catalog(conn: sqlite3.Connection) -> Catalog:
     return build_catalog(ingredients, recipes, slots)
 
 
-class SettingsRepository:
+_SAVE_RECIPE = """
+INSERT INTO recipes
+    (id, name, kind, is_fish, status, storage_keep, storage_pan, storage_micro,
+     storage_after)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    kind = excluded.kind,
+    is_fish = excluded.is_fish,
+    status = excluded.status,
+    storage_keep = excluded.storage_keep,
+    storage_pan = excluded.storage_pan,
+    storage_micro = excluded.storage_micro,
+    storage_after = excluded.storage_after
+"""
+
+_SAVE_INGREDIENT = """
+INSERT INTO ingredients
+    (id, name, unit, category, kcal_100g, protein_100g, source, grams_per_unit,
+     store_piece)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+ON CONFLICT(id) DO UPDATE SET
+    name = excluded.name,
+    unit = excluded.unit,
+    category = excluded.category,
+    kcal_100g = excluded.kcal_100g,
+    protein_100g = excluded.protein_100g,
+    source = excluded.source,
+    grams_per_unit = excluded.grams_per_unit,
+    store_piece = excluded.store_piece
+"""
+
+
+def _bump_version(conn: sqlite3.Connection) -> int:
+    # Правка каталога меняет план — версия общая с настройками (5.1).
+    # Строку настроек API создаёт заранее (stored_or_initial).
+    row = conn.execute(
+        "UPDATE settings SET version = version + 1 WHERE id = 1 RETURNING version"
+    ).fetchone()
+    if row is None:
+        raise RuntimeError("Настройки ещё не сохранены — версию не увеличить")
+    return row[0]
+
+
+class Repository:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         db_path.parent.mkdir(parents=True, exist_ok=True)
@@ -180,3 +225,71 @@ class SettingsRepository:
         with self._connect() as conn:
             (version,) = conn.execute(_UPSERT, _row(settings)).fetchone()
         return version
+
+    # Запись каталога (5.4): проверено в core/catalog_actions; каждая — одна
+    # транзакция вместе с версией и возвращает новую версию.
+
+    def save_recipe(self, recipe: RecipeSpec) -> int:
+        """Рецепт целиком: ингредиенты и шаги заменяются; статус — тоже здесь."""
+        storage = recipe.storage
+        with self._connect() as conn:
+            conn.execute(
+                _SAVE_RECIPE,
+                (
+                    recipe.id,
+                    recipe.name,
+                    recipe.kind.value,
+                    recipe.is_fish,
+                    recipe.status,
+                    storage and storage.keep,
+                    storage and storage.pan,
+                    storage and storage.micro,
+                    storage and storage.after,
+                ),
+            )
+            conn.execute(
+                "DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe.id,)
+            )
+            conn.executemany(
+                "INSERT INTO recipe_ingredients (recipe_id, position, ingredient_id,"
+                " qty) VALUES (?, ?, (SELECT id FROM ingredients WHERE name = ?), ?)",
+                [
+                    (recipe.id, position, i.name, i.qty)
+                    for position, i in enumerate(recipe.ingredients, start=1)
+                ],
+            )
+            conn.execute("DELETE FROM recipe_steps WHERE recipe_id = ?", (recipe.id,))
+            conn.executemany(
+                "INSERT INTO recipe_steps (recipe_id, position, text) VALUES (?, ?, ?)",
+                [
+                    (recipe.id, position, text)
+                    for position, text in enumerate(recipe.steps, start=1)
+                ],
+            )
+            return _bump_version(conn)
+
+    def set_cycle_slot(self, slot: CycleSlot) -> int:
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE cycle_slots SET lunch_id = ?, dinner_id = ? WHERE slot = ?",
+                (slot.lunch_id, slot.dinner_id, slot.slot),
+            )
+            return _bump_version(conn)
+
+    def save_ingredient(self, ingredient: CatalogIngredient) -> int:
+        with self._connect() as conn:
+            conn.execute(
+                _SAVE_INGREDIENT,
+                (
+                    ingredient.id,
+                    ingredient.name,
+                    ingredient.unit,
+                    ingredient.category,
+                    ingredient.kcal_100g,
+                    ingredient.protein_100g,
+                    ingredient.source,
+                    ingredient.grams_per_unit,
+                    ingredient.store_piece,
+                ),
+            )
+            return _bump_version(conn)

@@ -12,7 +12,7 @@ from meal_planner.core.planner import next_shopping_trip
 from meal_planner.core.recipes_data import RECIPE_SPECS
 from meal_planner.core.scheduling import build_schedule
 from meal_planner.core.seed import SEED_CATALOG, seed_ingredients, seed_slots
-from meal_planner.db.repository import SettingsRepository
+from meal_planner.db.repository import Repository
 
 DEFAULT_2X = settings_of(next(s for s in SCENARIOS if s["name"] == "default_2x"))
 
@@ -27,7 +27,7 @@ def with_slots(slots: list[tuple[str, str]]):
 
 def test_db_catalog_equals_seed(tmp_path):
     # Без правок в БД план и покупки те же, что на константах (готовность фазы).
-    assert SettingsRepository(tmp_path / "db.sqlite").get_catalog() == SEED_CATALOG
+    assert Repository(tmp_path / "db.sqlite").get_catalog() == SEED_CATALOG
 
 
 def test_order_is_kind_then_number():

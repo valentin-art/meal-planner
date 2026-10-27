@@ -1,12 +1,17 @@
 import sqlite3
 from contextlib import closing
+from dataclasses import replace
 from datetime import date
 from pathlib import Path
 
-from meal_planner.core.models import Settings
+import pytest
+
+from meal_planner.core.catalog import spec_of
+from meal_planner.core.models import CycleSlot, Settings
+from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.db.repository import (
     DEFAULT_DB_PATH,
-    SettingsRepository,
+    Repository,
     StoredSettings,
     db_path_from_env,
 )
@@ -16,33 +21,33 @@ SETTINGS = Settings(date(2026, 11, 5), 2, 3, 6, "same")
 
 def test_creates_directory_and_file_on_first_use(tmp_path):
     path = tmp_path / "nested" / "dir" / "mealplan.db"
-    repo = SettingsRepository(path)
+    repo = Repository(path)
     assert path.is_file()
     assert repo.get_settings() is None
 
 
 def test_save_and_get_roundtrip(tmp_path):
-    repo = SettingsRepository(tmp_path / "db.sqlite")
+    repo = Repository(tmp_path / "db.sqlite")
     single = Settings(date(2027, 3, 25), 1, 7, None, "before")
     assert repo.save_settings(single) == 1
     assert repo.get_settings() == StoredSettings(settings=single, version=1)
 
 
 def test_version_increments_on_every_save(tmp_path):
-    repo = SettingsRepository(tmp_path / "db.sqlite")
+    repo = Repository(tmp_path / "db.sqlite")
     assert [repo.save_settings(SETTINGS) for _ in range(3)] == [1, 2, 3]
     assert repo.get_settings().version == 3
 
 
 def test_survives_restart(tmp_path):
     path = tmp_path / "db.sqlite"
-    SettingsRepository(path).save_settings(SETTINGS)
-    assert SettingsRepository(path).get_settings() == StoredSettings(SETTINGS, 1)
+    Repository(path).save_settings(SETTINGS)
+    assert Repository(path).get_settings() == StoredSettings(SETTINGS, 1)
 
 
 def test_single_row(tmp_path):
     path = tmp_path / "db.sqlite"
-    repo = SettingsRepository(path)
+    repo = Repository(path)
     repo.save_settings(SETTINGS)
     repo.save_settings(Settings(date(2026, 12, 1), 1, 7, None, "before"))
     with closing(sqlite3.connect(path)) as conn:
@@ -50,7 +55,7 @@ def test_single_row(tmp_path):
 
 
 def test_init_settings_writes_only_into_empty_db(tmp_path):
-    repo = SettingsRepository(tmp_path / "db.sqlite")
+    repo = Repository(tmp_path / "db.sqlite")
     assert repo.init_settings(SETTINGS) == StoredSettings(SETTINGS, 1)
     other = Settings(date(2026, 12, 1), 1, 7, None, "before")
     assert repo.init_settings(other) == StoredSettings(SETTINGS, 1)  # не тронуто
@@ -58,7 +63,7 @@ def test_init_settings_writes_only_into_empty_db(tmp_path):
 
 
 def test_init_settings_keeps_saved(tmp_path):
-    repo = SettingsRepository(tmp_path / "db.sqlite")
+    repo = Repository(tmp_path / "db.sqlite")
     repo.save_settings(SETTINGS)
     repo.save_settings(SETTINGS)
     other = Settings(date(2026, 12, 1), 1, 7, None, "before")
@@ -73,7 +78,7 @@ def test_db_path_from_env(monkeypatch, tmp_path):
 
 
 def test_skipped_cook_roundtrip(tmp_path):
-    repo = SettingsRepository(tmp_path / "db.sqlite")
+    repo = Repository(tmp_path / "db.sqlite")
     skipped = Settings(date(2026, 11, 5), 2, 3, 6, "same", date(2026, 11, 11))
     repo.save_settings(skipped)
     assert repo.get_settings() == StoredSettings(skipped, 1)
@@ -94,7 +99,51 @@ def test_migrates_db_from_before_skip(tmp_path):
         conn.execute(
             "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 4)"
         )
-    repo = SettingsRepository(path)
+    repo = Repository(path)
     assert repo.get_settings() == StoredSettings(SETTINGS, 4)
     assert repo.save_settings(SETTINGS) == 5
-    SettingsRepository(path)  # повторное открытие — колонка уже есть
+    Repository(path)  # повторное открытие — колонка уже есть
+
+
+# --- Запись каталога (5.4) ---
+
+
+def test_catalog_writes_bump_version(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    l1 = SEED_CATALOG.recipes["l1"]
+    spec = replace(
+        spec_of(l1),
+        id="l6",
+        name="Копия",
+        ingredients=l1.ingredients[:2],
+        steps=("Один",),
+    )
+    assert repo.save_recipe(spec) == 2
+    assert repo.set_cycle_slot(CycleSlot(1, "l6", "d1")) == 3
+    eggs = SEED_CATALOG.ingredients["яйца"]
+    assert repo.save_ingredient(replace(eggs, name="яйца куриные")) == 4
+
+    catalog = repo.get_catalog()
+    copy = catalog.recipes["l6"]
+    assert (copy.name, copy.steps, copy.ingredients) == (
+        "Копия",
+        ("Один",),
+        l1.ingredients[:2],
+    )
+    assert catalog.slots[0] == CycleSlot(1, "l6", "d1")
+    # Рецепты ссылаются на ингредиент по id — переименование видно в них.
+    assert "яйца куриные" in {i.name for i in catalog.recipes["b1"].ingredients}
+
+    # Правка заменяет строки и шаги целиком.
+    repo.save_recipe(replace(spec, ingredients=l1.ingredients[:1], status="archived"))
+    copy = repo.get_catalog().recipes["l6"]
+    assert (copy.ingredients, copy.status) == (l1.ingredients[:1], "archived")
+
+
+def test_catalog_write_without_settings_writes_nothing(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    renamed = replace(spec_of(SEED_CATALOG.recipes["l1"]), name="Другое")
+    with pytest.raises(RuntimeError, match="версию"):
+        repo.save_recipe(renamed)
+    assert repo.get_catalog().recipes["l1"].name == SEED_CATALOG.recipes["l1"].name

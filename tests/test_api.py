@@ -12,7 +12,7 @@ from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.core.shopping import format_qty
-from meal_planner.db.repository import SettingsRepository, StoredSettings
+from meal_planner.db.repository import Repository, StoredSettings
 
 TODAY = date(2026, 11, 9)
 DEFAULT_2X = settings_of(next(s for s in SCENARIOS if s["name"] == "default_2x"))
@@ -20,7 +20,7 @@ DEFAULT_2X = settings_of(next(s for s in SCENARIOS if s["name"] == "default_2x")
 
 @pytest.fixture
 def repo(tmp_path):
-    return SettingsRepository(tmp_path / "db.sqlite")
+    return Repository(tmp_path / "db.sqlite")
 
 
 def make_client(repo, today: date = TODAY) -> TestClient:
@@ -538,3 +538,114 @@ def test_action_heals_invalid_saved_settings(client, repo):
     assert stored.version == 2
     assert stored.settings == Settings(date(2026, 11, 5), 2, 3, 6, "before")
     assert body["settings"]["cook_weekday2"] == 6
+
+
+# --- Каталог (5.4) ---
+
+ING = {i.name: i.id for i in SEED_CATALOG.ingredients.values()}
+NEW_LUNCH = {
+    "name": "Курица с булгуром",
+    "kind": "lunch",
+    "ingredients": [
+        {"ingredient_id": ING["куриное филе"], "qty": 180},
+        {"ingredient_id": ING["булгур"], "qty": 80},
+    ],
+    "steps": ["Отварите булгур.", "Обжарьте курицу."],
+    "storage": {"keep": "До 3 дней", "pan": "Уровень 4", "micro": "2 мин"},
+}
+
+
+def test_save_recipe_creates_and_edits(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(client, "save-recipe", NEW_LUNCH).json()
+    recipe = body["recipe"]
+    # Ккал — сервер: 180 г × 1.20 + 80 г × 3.42 = 489.6 → 490.
+    assert (recipe["id"], recipe["status"], recipe["kcal"]) == ("l6", "active", 490)
+    assert body["state"]["version"] == 2
+    assert client.get("/api/recipes").json()["l6"] == recipe
+
+    edited = post(client, "save-recipe", {**NEW_LUNCH, "id": "l6", "name": "Новое"})
+    assert edited.json()["recipe"]["name"] == "Новое"
+    assert edited.json()["state"]["version"] == 3
+
+
+def test_save_recipe_errors_write_nothing(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    bad = {**NEW_LUNCH, "ingredients": [{"ingredient_id": 999, "qty": 10}]}
+    r = post(client, "save-recipe", bad)
+    assert r.status_code == 422
+    assert r.json()["detail"] == [
+        {
+            "type": "value_error",
+            "loc": ["body", "ingredients", 0, "ingredient_id"],
+            "msg": "Такого ингредиента нет в справочнике",
+        }
+    ]
+    assert repo.get_settings().version == 1
+    assert "l6" not in repo.get_catalog().recipes
+
+
+def test_first_catalog_action_saves_defaults(client, repo):
+    body = post(client, "save-recipe", NEW_LUNCH).json()
+    assert body["state"]["version"] == 2  # дефолты — 1, рецепт — 2
+    assert repo.get_settings().settings == default_settings(TODAY)
+
+
+def test_archive_and_restore(client, repo):
+    r = post(client, "archive-recipe", {"id": "d3"})
+    assert r.status_code == 422
+    assert "стоит в цикле, позиция 3" in r.json()["detail"][0]["msg"]
+    assert repo.get_settings() is None  # невалидное действие ничего не пишет
+
+    archived = post(client, "archive-recipe", {"id": "b3"}).json()
+    assert archived["recipe"]["status"] == "archived"
+    restored = post(client, "restore-recipe", {"id": "b3"}).json()
+    assert restored["recipe"]["status"] == "active"
+    assert restored["state"]["version"] == 3
+
+
+def test_set_cycle_slot(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(
+        client, "set-cycle-slot", {"slot": 1, "lunch_id": "l2", "dinner_id": "d1"}
+    )
+    state = body.json()
+    assert state["version"] == 2
+    lunches = {d["cycle_index"]: d["lunch_id"] for d in state["schedule"]}
+    assert lunches[1] == "l2"
+    r = post(client, "set-cycle-slot", {"slot": 1, "lunch_id": "d1", "dinner_id": "d1"})
+    assert r.json()["detail"][0]["loc"] == ["body", "lunch_id"]
+
+
+def test_ingredients_and_save_ingredient(client, repo):
+    listed = client.get("/api/ingredients").json()
+    assert [i["name"] for i in listed] == list(SEED_CATALOG.ingredients)
+    eggs = next(i for i in listed if i["name"] == "яйца")
+    assert (eggs["unit"], eggs["grams_per_unit"], eggs["used_in"]) == (
+        "шт",
+        50,
+        ["b1", "b3", "d5"],
+    )
+
+    tofu = {
+        "name": "тофу",
+        "unit": "г",
+        "category": "Белок",
+        "kcal_100g": 76,
+        "protein_100g": 8.08,
+    }
+    body = post(client, "save-ingredient", tofu).json()
+    assert body["ingredient"]["id"] == len(listed) + 1
+    assert body["ingredient"]["used_in"] == []
+    assert body["state"]["version"] == 2
+
+    r = post(client, "save-ingredient", {**eggs, "unit": "г"})
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["loc"] == ["body", "unit"]
+
+
+def test_state_marks_recipes_in_plan(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    plan_use = client.get("/api/state").json()["recipe_plan_use"]
+    assert plan_use == dict(recompute(SEED_CATALOG, DEFAULT_2X, TODAY).plan_use)
+    assert set(plan_use.values()) == {"bought", "next_trip"}

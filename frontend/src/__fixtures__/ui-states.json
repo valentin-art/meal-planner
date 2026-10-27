@@ -38,7 +38,8 @@
     "Тост: сухую сковороду без масла разогрейте на уровне 4-5 в течение 40 секунд, выложите хлеб, жарьте 1.5-2 минуты с каждой стороны до золотисто-коричневого цвета (не тёмно-коричневого)."
    ],
    "storage": null,
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "b2": {
    "id": "b2",
@@ -92,7 +93,8 @@
     "В миску выложите 250 г йогурта, сверху — 30 г гранолы или рубленых орехов. Подавайте с тостом."
    ],
    "storage": null,
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "b3": {
    "id": "b3",
@@ -123,7 +125,8 @@
     "Достаньте шумовкой, промокните бумажным полотенцем 5 секунд, выложите на тост."
    ],
    "storage": null,
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "l1": {
    "id": "l1",
@@ -184,7 +187,8 @@
     "micro": "Средняя мощность (50-60%), 1 ст.л. воды, накрыть крышкой или тарелкой. 1 минута → перемешать → ещё 1-1.5 минуты, пока вся порция не станет горячей насквозь. Брокколи при разогреве мягчеет, поэтому не греть дольше.",
     "after": null
    },
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "l2": {
    "id": "l2",
@@ -245,7 +249,8 @@
     "micro": "Средняя мощность (50-60%), 1-2 ст.л. воды, накрыть. 1.5 минуты → перемешать, передвинув кусочки мяса из центра к краям → ещё 1-1.5 минуты.",
     "after": null
    },
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "l3": {
    "id": "l3",
@@ -314,7 +319,8 @@
     "micro": "Средняя мощность (50-60%), 2 ст.л. воды, накрыть. 1 минута → перемешать → ещё 45-60 секунд. Креветки варёные: на упаковке написано «řádně tepelně upravte», то есть прогревать полностью, а не просто согреть.",
     "after": "Авокадо (35 г, ¼ плода): нарезать кубиками 1×1 см и вмешать уже после разогрева, когда паста тёплая, но не кипящая. Так он не превратится в пюре и не потемнеет. Если хотите свежий шпинат, положите 40 г за 30 секунд до конца разогрева."
    },
-   "is_fish": true
+   "is_fish": true,
+   "status": "active"
   },
   "l4": {
    "id": "l4",
@@ -373,7 +379,8 @@
     "micro": "Средняя мощность (50-60%), 1 ст.л. воды, накрыть. 1 минута → перемешать → ещё 1-1.5 минуты, пока куриные кусочки не станут горячими в центре.",
     "after": null
    },
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "l5": {
    "id": "l5",
@@ -427,7 +434,8 @@
     "micro": "Средняя мощность (50%), 1 ст.л. воды, накрыть; лосось положить сверху на рис. 1 минута → перемешать рис, лосось не трогать → ещё 30-40 секунд. Лосось должен быть горячим в центре, но не сухим по краям.",
     "after": "Сок лимона (15 мл) выжать после разогрева: от нагрева он теряет свежесть."
    },
-   "is_fish": true
+   "is_fish": true,
+   "status": "active"
   },
   "d1": {
    "id": "d1",
@@ -517,7 +525,8 @@
     "micro": "Только белок, по желанию: средняя мощность (50-60%), накрыть, 40-50 секунд, перемешать, ещё 20-30 секунд. Перед укладкой на листья дайте остыть 2 минуты, иначе зелень завянет.",
     "after": "Зелень, помидор и авокадо нарезать в день ужина, перед едой. Заправка — в самый последний момент. Орехи — сверху."
    },
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "d2": {
    "id": "d2",
@@ -585,7 +594,8 @@
     "micro": "Только белок, по желанию: средняя или низкая мощность (50%), накрыть, 30-40 секунд, больше — пересохнет. Дайте остыть 3-5 минут перед укладкой на листья.",
     "after": "Авокадо (65 г, ½ плода) нарезать кубиками 1.5×1.5 см перед едой. Семечки и заправка — в самый последний момент."
    },
-   "is_fish": true
+   "is_fish": true,
+   "status": "active"
   },
   "d3": {
    "id": "d3",
@@ -662,7 +672,8 @@
     "micro": "Средняя мощность (50-60%), 1 ст.л. воды, накрыть. 1 минута → перемешать → ещё 45-60 секунд. Баклажан и цукини станут мягче и водянистее, это ожидаемо. Креветки, купленные варёными, прогревать полностью (на упаковке: «řádně tepelně upravte»).",
     "after": null
    },
-   "is_fish": true
+   "is_fish": true,
+   "status": "active"
   },
   "d4": {
    "id": "d4",
@@ -736,7 +747,8 @@
     "micro": "Только белок, по желанию: средняя мощность (50-60%), накрыть, 40-50 секунд, перемешать, ещё 20-30 секунд. Перед укладкой на листья дайте остыть 2 минуты, иначе зелень завянет.",
     "after": "Всё собирается перед едой. Фету и авокадо добавляйте последними и перемешивайте бережно, чтобы не размять."
    },
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   },
   "d5": {
    "id": "d5",
@@ -819,7 +831,8 @@
     "micro": "Только курица, по желанию: средняя мощность (50-60%), накрыть, 40-50 секунд, перемешать, ещё 20-30 секунд. Перед укладкой на листья дайте остыть 2 минуты, иначе зелень завянет. Яйца в микроволновке не греть: они могут лопнуть.",
     "after": "Собирайте перед едой: листья, помидоры, яйцо, нут и курица, сверху пармезан. Яйца и нут в салате едят холодными, разогревать их не нужно. Заправку (масло + сок лимона) — в самый последний момент."
    },
-   "is_fish": false
+   "is_fish": false,
+   "status": "active"
   }
  },
  "scenarios": [
@@ -1290,7 +1303,15 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": false
+     "can_skip_next_cook": false,
+     "recipe_plan_use": {
+      "b1": "next_trip",
+      "l2": "next_trip",
+      "d2": "next_trip",
+      "b2": "next_trip",
+      "l1": "next_trip",
+      "d1": "next_trip"
+     }
     },
     "api/state?from=2026-11-09&to=2026-12-06": {
      "today": "2026-11-09",
@@ -1937,7 +1958,15 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": false
+     "can_skip_next_cook": false,
+     "recipe_plan_use": {
+      "b1": "next_trip",
+      "l2": "next_trip",
+      "d2": "next_trip",
+      "b2": "next_trip",
+      "l1": "next_trip",
+      "d1": "next_trip"
+     }
     }
    }
   },
@@ -2447,7 +2476,19 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "b2": "next_trip",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip",
+      "l4": "next_trip",
+      "d4": "next_trip"
+     }
     },
     "api/state?from=2026-11-11&to=2026-12-08": {
      "today": "2026-11-11",
@@ -3133,7 +3174,19 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "b2": "next_trip",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip",
+      "l4": "next_trip",
+      "d4": "next_trip"
+     }
     }
    }
   },
@@ -3655,7 +3708,19 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b2": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "b1": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip"
+     }
     },
     "api/state?from=2026-11-10&to=2026-12-07": {
      "today": "2026-11-10",
@@ -4353,7 +4418,19 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b2": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "b1": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip"
+     }
     }
    }
   },
@@ -4943,7 +5020,21 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l5": "bought",
+      "d5": "bought",
+      "b2": "bought",
+      "l2": "bought",
+      "d2": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip"
+     }
     },
     "api/state?from=2026-11-04&to=2026-12-01": {
      "today": "2026-11-04",
@@ -5709,7 +5800,21 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l5": "bought",
+      "d5": "bought",
+      "b2": "bought",
+      "l2": "bought",
+      "d2": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip"
+     }
     }
    }
   },
@@ -6293,7 +6398,21 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "b2": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l2": "next_trip",
+      "d2": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip"
+     }
     },
     "api/state?from=2027-03-29&to=2027-04-25": {
      "today": "2027-03-29",
@@ -7053,7 +7172,21 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": true
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "b2": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l2": "next_trip",
+      "d2": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip"
+     }
     }
    }
   },
@@ -7593,7 +7726,17 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": false
+     "can_skip_next_cook": false,
+     "recipe_plan_use": {
+      "b1": "next_trip",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "b2": "next_trip",
+      "l2": "next_trip",
+      "d2": "next_trip",
+      "l1": "next_trip",
+      "d1": "next_trip"
+     }
     },
     "api/state?from=2026-11-06&to=2026-12-03": {
      "today": "2026-11-06",
@@ -8309,7 +8452,17 @@
       ]
      },
      "skipped_cook": null,
-     "can_skip_next_cook": false
+     "can_skip_next_cook": false,
+     "recipe_plan_use": {
+      "b1": "next_trip",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "b2": "next_trip",
+      "l2": "next_trip",
+      "d2": "next_trip",
+      "l1": "next_trip",
+      "d1": "next_trip"
+     }
     }
    }
   },
@@ -8851,7 +9004,21 @@
       "pause_end": "2026-11-14",
       "can_undo": true
      },
-     "can_skip_next_cook": false
+     "can_skip_next_cook": false,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l2": "bought",
+      "d2": "bought",
+      "b2": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip"
+     }
     },
     "api/state?from=2026-11-09&to=2026-12-06": {
      "today": "2026-11-09",
@@ -9569,7 +9736,21 @@
       "pause_end": "2026-11-14",
       "can_undo": true
      },
-     "can_skip_next_cook": false
+     "can_skip_next_cook": false,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l2": "bought",
+      "d2": "bought",
+      "b2": "bought",
+      "l4": "bought",
+      "d4": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip"
+     }
     }
    }
   }

@@ -47,7 +47,7 @@ JSX_RECIPES = {
 JSX_CATALOG = Catalog(
     recipes=JSX_RECIPES,
     ingredients={
-        i.name: CatalogIngredient(i.name, i.unit, i.category, 0, 0, None, None, None)
+        i.name: CatalogIngredient(0, i.name, i.unit, i.category, 0, 0, None, None, None)
         for r in JSX_RECIPES.values()
         for i in r.ingredients
     },

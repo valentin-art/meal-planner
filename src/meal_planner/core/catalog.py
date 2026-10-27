@@ -25,6 +25,20 @@ def catalog_order(spec: RecipeSpec) -> tuple[int, int]:
     return KIND_ORDER.index(spec.kind), int(spec.id[1:])
 
 
+def spec_of(recipe: Recipe) -> RecipeSpec:
+    """Рецепт каталога → как хранится: без ккал и белка."""
+    return RecipeSpec(
+        id=recipe.id,
+        name=recipe.name,
+        kind=recipe.kind,
+        ingredients=recipe.ingredients,
+        steps=recipe.steps,
+        storage=recipe.storage,
+        is_fish=recipe.is_fish,
+        status=recipe.status,
+    )
+
+
 def build_catalog(
     ingredients: Iterable[CatalogIngredient],
     recipes: Iterable[RecipeSpec],
@@ -45,6 +59,7 @@ def build_catalog(
             steps=spec.steps,
             storage=spec.storage,
             is_fish=spec.is_fish,
+            status=spec.status,
         )
     return Catalog(
         recipes=MappingProxyType(built),

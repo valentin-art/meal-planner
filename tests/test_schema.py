@@ -14,7 +14,7 @@ from meal_planner.core.nutrition import GRAMS_PER_UNIT, PER_100G
 from meal_planner.core.recipes_data import RECIPE_SPECS, STORE_PIECES
 from meal_planner.core.seed import DINNER_IDS, LUNCH_IDS, seed_ingredients
 from meal_planner.db import schema
-from meal_planner.db.repository import SettingsRepository, StoredSettings
+from meal_planner.db.repository import Repository, StoredSettings
 from meal_planner.db.schema import MIGRATIONS, SchemaTooNewError, user_version
 
 SNAPSHOT = Path(__file__).parent / "recipes_snapshot.json"
@@ -43,10 +43,10 @@ def dump_recipes(path: Path) -> dict:
     with connect(path) as conn:
         recipes = {}
         for row in conn.execute(
-            "SELECT id, name, kind, is_fish, storage_keep, storage_pan,"
+            "SELECT id, name, kind, is_fish, status, storage_keep, storage_pan,"
             " storage_micro, storage_after FROM recipes"
         ):
-            rid, name, kind, is_fish, keep, pan, micro, after = row
+            rid, name, kind, is_fish, status, keep, pan, micro, after = row
             ingredients = conn.execute(
                 "SELECT i.name, ri.qty, i.unit, i.category FROM recipe_ingredients ri"
                 " JOIN ingredients i ON i.id = ri.ingredient_id"
@@ -73,6 +73,7 @@ def dump_recipes(path: Path) -> dict:
                 "steps": [text for (text,) in steps],
                 "storage": storage,
                 "is_fish": bool(is_fish),
+                "status": status,
             }
         return recipes
 
@@ -80,7 +81,7 @@ def dump_recipes(path: Path) -> dict:
 @pytest.fixture
 def db(tmp_path):
     path = tmp_path / "mealplan.db"
-    SettingsRepository(path)
+    Repository(path)
     return path
 
 
@@ -101,12 +102,12 @@ def test_seeded_recipes_match_snapshot(db):
 def test_seeded_ingredients_match_constants(db):
     with connect(db) as conn:
         rows = conn.execute(
-            "SELECT name, unit, category, kcal_100g, protein_100g, source,"
+            "SELECT id, name, unit, category, kcal_100g, protein_100g, source,"
             " grams_per_unit, store_piece FROM ingredients ORDER BY id"
         ).fetchall()
     assert rows == [astuple(i) for i in seed_ingredients()]
-    assert [name for name, *_ in rows] == list(PER_100G)
-    for name, unit, _, kcal, protein, source, grams, piece in rows:
+    assert [name for _, name, *_ in rows] == list(PER_100G)
+    for _, name, unit, _, kcal, protein, source, grams, piece in rows:
         assert (kcal, protein, source) == PER_100G[name]
         assert grams == GRAMS_PER_UNIT.get((name, unit))
         assert piece == STORE_PIECES.get((name, unit))
@@ -128,7 +129,7 @@ def test_seed_runs_once(db):
     # Правка пользователя не перезатирается при следующем запуске.
     with connect(db) as conn, conn:
         conn.execute("UPDATE recipes SET name = 'Своё' WHERE id = 'l1'")
-    SettingsRepository(db)
+    Repository(db)
     with connect(db) as conn:
         assert conn.execute("SELECT name FROM recipes WHERE id = 'l1'").fetchone() == (
             "Своё",
@@ -146,7 +147,7 @@ def test_migrates_live_db_before_phase_5(tmp_path):
         conn.execute(
             "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 7, NULL)"
         )
-    repo = SettingsRepository(path)
+    repo = Repository(path)
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
     assert tables(path) == {"settings"} | CATALOG_TABLES
     assert len(dump_recipes(path)) == len(RECIPE_SPECS)
@@ -160,14 +161,14 @@ def test_failed_migration_rolls_back(tmp_path, monkeypatch):
     monkeypatch.setattr(schema, "MIGRATIONS", (schema._settings, broken))
     path = tmp_path / "mealplan.db"
     with pytest.raises(RuntimeError, match="сбой"):
-        SettingsRepository(path)
+        Repository(path)
     # Первая миграция осталась, от второй — ничего.
     with connect(path) as conn:
         assert user_version(conn) == 1
     assert tables(path) == {"settings"}
 
     monkeypatch.undo()
-    SettingsRepository(path)
+    Repository(path)
     assert tables(path) == {"settings"} | CATALOG_TABLES
 
 
@@ -175,11 +176,11 @@ def test_db_from_newer_app_is_refused(db):
     with connect(db) as conn:
         conn.execute(f"PRAGMA user_version = {len(MIGRATIONS) + 1}")
     with pytest.raises(SchemaTooNewError, match="новее приложения"):
-        SettingsRepository(db)
+        Repository(db)
 
 
 def test_foreign_keys_are_enforced(db):
-    repo = SettingsRepository(db)
+    repo = Repository(db)
     with pytest.raises(sqlite3.IntegrityError), repo._connect() as conn:
         conn.execute(
             "INSERT INTO cycle_slots (slot, lunch_id, dinner_id)"

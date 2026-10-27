@@ -16,23 +16,38 @@ from fastapi.staticfiles import StaticFiles
 
 from meal_planner.api.schemas import (
     AppStateOut,
+    CatalogIngredientOut,
     HealthOut,
+    IngredientActionOut,
+    RecipeActionOut,
+    RecipeIdIn,
     RecipeOut,
+    SaveIngredientIn,
+    SaveRecipeIn,
     SetAnchorDateIn,
     SetCookScheduleIn,
     SetCyclePositionIn,
+    SetCycleSlotIn,
     SetShoppingTimingIn,
     SummaryOut,
     to_app_state_out,
+    to_catalog_ingredient_out,
+    to_recipe_out,
     to_recipes_out,
     to_summary_out,
 )
-from meal_planner.core import actions
-from meal_planner.core.models import Catalog, Settings, default_settings
+from meal_planner.core import actions, catalog_actions
+from meal_planner.core.catalog_actions import CatalogError
+from meal_planner.core.models import (
+    Catalog,
+    RecipeSpec,
+    Settings,
+    default_settings,
+)
 from meal_planner.core.planner import recompute
 from meal_planner.core.validation import settings_errors, usable_settings
 from meal_planner.db.repository import (
-    SettingsRepository,
+    Repository,
     StoredSettings,
     db_path_from_env,
 )
@@ -44,15 +59,15 @@ MAX_RANGE_DAYS = 366  # ограничение API (?from=&to=), не бизне
 
 
 @lru_cache
-def get_repository() -> SettingsRepository:
-    return SettingsRepository(db_path_from_env())
+def get_repository() -> Repository:
+    return Repository(db_path_from_env())
 
 
 def get_today() -> date:
     return date.today()
 
 
-Repo = Annotated[SettingsRepository, Depends(get_repository)]
+Repo = Annotated[Repository, Depends(get_repository)]
 
 
 def get_catalog(repo: Repo) -> Catalog:
@@ -78,7 +93,7 @@ def checked(stored: StoredSettings, today: date) -> Settings:
     return settings
 
 
-def current_settings(repo: SettingsRepository, today: date) -> tuple[Settings, int]:
+def current_settings(repo: Repository, today: date) -> tuple[Settings, int]:
     stored = repo.get_settings()
     if stored is None:
         # Для действий: дефолты в памяти, пишутся вместе с изменением, а
@@ -87,7 +102,7 @@ def current_settings(repo: SettingsRepository, today: date) -> tuple[Settings, i
     return checked(stored, today), stored.version
 
 
-def stored_or_initial(repo: SettingsRepository, today: date) -> tuple[Settings, int]:
+def stored_or_initial(repo: Repository, today: date) -> tuple[Settings, int]:
     # Первый GET сохраняет дефолты: иначе якорь («завтра») пересчитывался бы
     # от каждого нового «сегодня» и цикл начинался заново (6.4).
     stored = repo.get_settings() or repo.init_settings(default_settings(today))
@@ -107,7 +122,7 @@ def state_response(
     )
 
 
-def unprocessable(*errors: tuple[list[str], str]) -> HTTPException:
+def unprocessable(*errors: tuple[list[str | int], str]) -> HTTPException:
     # Тот же формат detail, что у ошибок валидации Pydantic/FastAPI.
     return HTTPException(
         422,
@@ -131,7 +146,7 @@ def check_range(today: date, date_from: date | None, date_to: date | None) -> No
 
 
 def apply_action(
-    repo: SettingsRepository,
+    repo: Repository,
     catalog: Catalog,
     today: date,
     date_from: date | None,
@@ -153,6 +168,50 @@ def apply_action(
         raise unprocessable(*((["body", e.field], e.message) for e in errors))
     version = repo.save_settings(settings)
     return state_response(catalog, settings, version, today, date_from, date_to)
+
+
+def apply_catalog_action[T](
+    repo: Repository,
+    catalog: Catalog,
+    today: date,
+    date_from: date | None,
+    date_to: date | None,
+    change: Callable[[Catalog], T],
+    write: Callable[[T], int],
+) -> tuple[AppStateOut, Catalog, T]:
+    """Правка каталога (5.4): core проверяет, репозиторий пишет с версией.
+
+    Возвращает новое состояние, перечитанный каталог (ккал пересчитаны) и
+    то, что записано.
+    """
+    check_range(today, date_from, date_to)
+    try:
+        result = change(catalog)
+    except CatalogError as e:
+        raise unprocessable(
+            *((["body", *err.loc], err.message) for err in e.errors)
+        ) from e
+    # Версия — в строке настроек: до первой записи её создаёт первый GET,
+    # здесь — то же самое, но только для валидного запроса.
+    settings, _ = stored_or_initial(repo, today)
+    version = write(result)
+    updated = repo.get_catalog()
+    state = state_response(updated, settings, version, today, date_from, date_to)
+    return state, updated, result
+
+
+def recipe_action(
+    repo: Repository,
+    catalog: Catalog,
+    today: date,
+    date_from: date | None,
+    date_to: date | None,
+    change: Callable[[Catalog], RecipeSpec],
+) -> RecipeActionOut:
+    state, updated, spec = apply_catalog_action(
+        repo, catalog, today, date_from, date_to, change, repo.save_recipe
+    )
+    return RecipeActionOut(state=state, recipe=to_recipe_out(updated.recipes[spec.id]))
 
 
 def create_app() -> FastAPI:
@@ -192,6 +251,12 @@ def create_app() -> FastAPI:
     def get_recipes(catalog: CatalogDep) -> dict[str, RecipeOut]:
         # Только каталог: настройки не нужны и не пишутся.
         return to_recipes_out(catalog.recipes)
+
+    @app.get("/api/ingredients", response_model=list[CatalogIngredientOut])
+    def get_ingredients(catalog: CatalogDep) -> list[CatalogIngredientOut]:
+        return [
+            to_catalog_ingredient_out(catalog, i) for i in catalog.ingredients.values()
+        ]
 
     @app.post("/api/actions/set-cook-schedule", response_model=AppStateOut)
     def set_cook_schedule(
@@ -299,6 +364,105 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.unskip_cook(s, today),
+        )
+
+    @app.post("/api/actions/save-recipe", response_model=RecipeActionOut)
+    def save_recipe(
+        body: SaveRecipeIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> RecipeActionOut:
+        return recipe_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.save_recipe(c, body.to_input()),
+        )
+
+    @app.post("/api/actions/archive-recipe", response_model=RecipeActionOut)
+    def archive_recipe(
+        body: RecipeIdIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> RecipeActionOut:
+        return recipe_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.archive_recipe(c, body.id),
+        )
+
+    @app.post("/api/actions/restore-recipe", response_model=RecipeActionOut)
+    def restore_recipe(
+        body: RecipeIdIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> RecipeActionOut:
+        return recipe_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.restore_recipe(c, body.id),
+        )
+
+    @app.post("/api/actions/set-cycle-slot", response_model=AppStateOut)
+    def set_cycle_slot(
+        body: SetCycleSlotIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        state, _, _ = apply_catalog_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.set_cycle_slot(
+                c, body.slot, body.lunch_id, body.dinner_id
+            ),
+            repo.set_cycle_slot,
+        )
+        return state
+
+    @app.post("/api/actions/save-ingredient", response_model=IngredientActionOut)
+    def save_ingredient(
+        body: SaveIngredientIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> IngredientActionOut:
+        state, updated, saved = apply_catalog_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.save_ingredient(c, body.to_input()),
+            repo.save_ingredient,
+        )
+        ingredient = next(i for i in updated.ingredients.values() if i.id == saved.id)
+        return IngredientActionOut(
+            state=state, ingredient=to_catalog_ingredient_out(updated, ingredient)
         )
 
     # Монтируется последним, чтобы не перекрывать /api.

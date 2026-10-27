@@ -1,12 +1,14 @@
 """Оркестрация: Settings + сегодняшняя дата → полный AppState."""
 
 from datetime import date, timedelta
+from types import MappingProxyType
 
 from meal_planner.core.actions import skip_next_cook_error
 from meal_planner.core.models import (
     AppState,
     Catalog,
     CookItem,
+    PlanUse,
     Settings,
     ShoppingTrip,
     SkippedCook,
@@ -65,6 +67,27 @@ def next_shopping_trip(
     )
 
 
+def plan_use(
+    catalog: Catalog, settings: Settings, today: date, trip: ShoppingTrip
+) -> dict[str, PlanUse]:
+    """Какие рецепты уже в плане (5.1): правка их меняет купленное или список.
+
+    "bought" — съедаются с сегодня до окна ближайшей закупки: продукты уже
+    куплены; "next_trip" — в окне ближайшей закупки. "bought" важнее.
+    """
+    result: dict[str, PlanUse] = {}
+    eaten = build_schedule(
+        catalog, settings, today, trip.window_start - timedelta(days=1)
+    )
+    window = build_schedule(catalog, settings, trip.window_start, trip.window_end)
+    for use, days in (("bought", eaten), ("next_trip", window)):
+        for day in days:
+            for recipe in (day.breakfast, day.lunch, day.dinner):
+                if recipe is not None:
+                    result.setdefault(recipe.id, use)
+    return result
+
+
 def skipped_cook(settings: Settings, today: date) -> SkippedCook | None:
     skipped = settings.skipped_cook_date
     if skipped is None:
@@ -91,11 +114,12 @@ def recompute(
     date_from = date_from or today
     date_to = date_to or date_from + timedelta(days=SCHEDULE_DAYS - 1)
     settings = settle_skip(settings, today)
+    trip = next_shopping_trip(catalog, settings, today)
     return AppState(
         today=today,
         settings=settings,
         schedule=build_schedule(catalog, settings, date_from, date_to),
-        next_shopping_trip=next_shopping_trip(catalog, settings, today),
+        next_shopping_trip=trip,
         version=version,
         today_position=today_position(
             catalog,
@@ -106,4 +130,5 @@ def recompute(
         ),
         skipped_cook=skipped_cook(settings, today),
         can_skip_next_cook=skip_next_cook_error(settings, today) is None,
+        plan_use=MappingProxyType(plan_use(catalog, settings, today, trip)),
     )

@@ -9,7 +9,7 @@ from meal_planner.core.models import Settings
 from meal_planner.core.recipes_data import RECIPE_SPECS
 from meal_planner.db import backup as backup_mod
 from meal_planner.db.backup import BackupError, backup, main
-from meal_planner.db.repository import SettingsRepository, StoredSettings
+from meal_planner.db.repository import Repository, StoredSettings
 from meal_planner.db.schema import MIGRATIONS, user_version
 
 SETTINGS = Settings(date(2026, 11, 5), 2, 3, 6, "same")
@@ -19,7 +19,7 @@ NOW = datetime(2026, 10, 26, 3, 30, 0)
 @pytest.fixture
 def db(tmp_path):
     path = tmp_path / "data" / "mealplan.db"
-    repo = SettingsRepository(path)
+    repo = Repository(path)
     repo.save_settings(SETTINGS)
     repo.save_settings(SETTINGS)  # version 2 — проверяется, что версия тоже на месте
     return path
@@ -33,7 +33,7 @@ def test_restore_from_scratch(db, tmp_path):
     fresh = tmp_path / "fresh" / "mealplan.db"
     fresh.parent.mkdir()
     shutil.copy(copy, fresh)
-    assert SettingsRepository(fresh).get_settings() == StoredSettings(SETTINGS, 2)
+    assert Repository(fresh).get_settings() == StoredSettings(SETTINGS, 2)
     # Каталог (5.2) и версия схемы тоже в копии: миграции не перезапускаются.
     with closing(sqlite3.connect(fresh)) as conn:
         assert user_version(conn) == len(MIGRATIONS)

@@ -11,12 +11,24 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from meal_planner.core.catalog_actions import (
+    IngredientInput,
+    RecipeInput,
+    RecipeLineInput,
+    used_in,
+)
 from meal_planner.core.models import (
     AppState,
+    Catalog,
+    CatalogIngredient,
     CookItem,
     DayMeals,
     Ingredient,
+    MealKind,
+    PlanUse,
     Recipe,
+    RecipeStatus,
+    RecipeStorage,
     Settings,
     ShoppingGroup,
     ShoppingItem,
@@ -62,6 +74,22 @@ class RecipeOut(BaseModel):
     steps: list[str]
     storage: RecipeStorageOut | None
     is_fish: bool
+    status: RecipeStatus  # архивный — не в пуле, но не удалён (5.1)
+
+
+class CatalogIngredientOut(BaseModel):
+    """Ингредиент справочника (5.4) — GET /api/ingredients, save-ingredient."""
+
+    id: int
+    name: str
+    unit: str
+    category: str
+    kcal_100g: float
+    protein_100g: float
+    source: str | None
+    grams_per_unit: float | None  # для единиц не г/мл
+    store_piece: float | None  # штука в магазине, в unit — «≈ N шт»
+    used_in: list[str]  # id рецептов: единицу при них не поменять
 
 
 class DayOut(BaseModel):
@@ -123,6 +151,70 @@ class SetShoppingTimingIn(BaseModel):
 
 class SetAnchorDateIn(BaseModel):
     meal_anchor_date: date  # "" или кривая дата → 422, ничего не сохраняется
+
+
+class RecipeLineIn(BaseModel):
+    ingredient_id: int
+    qty: float = Field(gt=0)  # в единице ингредиента
+
+
+class RecipeStorageIn(BaseModel):
+    keep: str
+    pan: str
+    micro: str
+    after: str | None = None
+
+
+class SaveRecipeIn(BaseModel):
+    # Ккал и белка нет — их считает сервер из ингредиентов (5.1).
+    id: str | None = None  # None — новый рецепт, id выдаёт сервер
+    name: str
+    kind: MealKind  # при правке не меняется
+    is_fish: bool = False
+    ingredients: list[RecipeLineIn]
+    steps: list[str]
+    storage: RecipeStorageIn | None = None  # у завтрака нет
+
+    def to_input(self) -> RecipeInput:
+        storage = self.storage
+        return RecipeInput(
+            id=self.id,
+            name=self.name,
+            kind=self.kind,
+            ingredients=tuple(
+                RecipeLineInput(i.ingredient_id, i.qty) for i in self.ingredients
+            ),
+            steps=tuple(self.steps),
+            storage=None
+            if storage is None
+            else RecipeStorage(storage.keep, storage.pan, storage.micro, storage.after),
+            is_fish=self.is_fish,
+        )
+
+
+class RecipeIdIn(BaseModel):
+    id: str
+
+
+class SetCycleSlotIn(BaseModel):
+    slot: int = Field(ge=1, le=5)
+    lunch_id: str
+    dinner_id: str
+
+
+class SaveIngredientIn(BaseModel):
+    id: int | None = None  # None — новый ингредиент
+    name: str
+    unit: str  # г, мл, шт, ст.л., зубчик — проверяет core
+    category: str  # из категорий списка покупок — проверяет core
+    kcal_100g: float
+    protein_100g: float
+    source: str | None = None
+    grams_per_unit: float | None = None  # обязательно для единиц не г/мл
+    store_piece: float | None = None
+
+    def to_input(self) -> IngredientInput:
+        return IngredientInput(**self.model_dump())
 
 
 class SetCyclePositionIn(BaseModel):
@@ -201,6 +293,19 @@ class AppStateOut(BaseModel):
     today_position: TodayPositionOut
     skipped_cook: SkippedCookOut | None  # пропущенная готовка и пауза (7.7)
     can_skip_next_cook: bool
+    # Рецепты в плане (5.1): "bought" — продукты уже куплены, "next_trip" — в
+    # ближайшей закупке; остальных нет. Правка такого рецепта меняет план.
+    recipe_plan_use: dict[str, PlanUse]
+
+
+class RecipeActionOut(BaseModel):
+    state: AppStateOut
+    recipe: RecipeOut
+
+
+class IngredientActionOut(BaseModel):
+    state: AppStateOut
+    ingredient: CatalogIngredientOut
 
 
 def to_settings_out(s: Settings) -> SettingsOut:
@@ -240,6 +345,24 @@ def to_recipe_out(r: Recipe) -> RecipeOut:
             keep=storage.keep, pan=storage.pan, micro=storage.micro, after=storage.after
         ),
         is_fish=r.is_fish,
+        status=r.status,
+    )
+
+
+def to_catalog_ingredient_out(
+    catalog: Catalog, i: CatalogIngredient
+) -> CatalogIngredientOut:
+    return CatalogIngredientOut(
+        id=i.id,
+        name=i.name,
+        unit=i.unit,
+        category=i.category,
+        kcal_100g=i.kcal_100g,
+        protein_100g=i.protein_100g,
+        source=i.source,
+        grams_per_unit=i.grams_per_unit,
+        store_piece=i.store_piece,
+        used_in=used_in(catalog, i.name),
     )
 
 
@@ -332,6 +455,7 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         today_position=to_today_position_out(s.today_position),
         skipped_cook=to_skipped_cook_out(s.skipped_cook),
         can_skip_next_cook=s.can_skip_next_cook,
+        recipe_plan_use=dict(s.plan_use),
     )
 
 

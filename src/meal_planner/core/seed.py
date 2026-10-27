@@ -16,7 +16,8 @@ DINNER_IDS = ("d1", "d2", "d3", "d4", "d5")
 
 
 def seed_ingredients() -> tuple[CatalogIngredient, ...]:
-    """Справочник в порядке первого появления в рецептах."""
+    """Справочник в порядке первого появления в рецептах; id — 1..N, как
+    autoincrement при заполнении пустой таблицы."""
     # Единица и категория — из рецептов: у каждого ингредиента они одни (5.1).
     found: dict[str, Ingredient] = {}
     for recipe in RECIPE_SPECS.values():
@@ -27,11 +28,12 @@ def seed_ingredients() -> tuple[CatalogIngredient, ...]:
                     f"{ingredient.name}: разные единицы или категории в рецептах"
                 )
     result = []
-    for name, ingredient in found.items():
+    for i, (name, ingredient) in enumerate(found.items(), start=1):
         kcal, protein, source = PER_100G[name]
         key = (name, ingredient.unit)
         result.append(
             CatalogIngredient(
+                id=i,
                 name=name,
                 unit=ingredient.unit,
                 category=ingredient.category,

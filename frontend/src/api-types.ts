@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Ingredients */
+        get: operations["get_ingredients_api_ingredients_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/set-cook-schedule": {
         parameters: {
             query?: never;
@@ -174,6 +191,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/save-recipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Recipe */
+        post: operations["save_recipe_api_actions_save_recipe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/archive-recipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Archive Recipe */
+        post: operations["archive_recipe_api_actions_archive_recipe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/restore-recipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Restore Recipe */
+        post: operations["restore_recipe_api_actions_restore_recipe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/set-cycle-slot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Cycle Slot */
+        post: operations["set_cycle_slot_api_actions_set_cycle_slot_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/save-ingredient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save Ingredient */
+        post: operations["save_ingredient_api_actions_save_ingredient_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -195,6 +297,36 @@ export interface components {
             skipped_cook: components["schemas"]["SkippedCookOut"] | null;
             /** Can Skip Next Cook */
             can_skip_next_cook: boolean;
+            /** Recipe Plan Use */
+            recipe_plan_use: {
+                [key: string]: "bought" | "next_trip";
+            };
+        };
+        /**
+         * CatalogIngredientOut
+         * @description Ингредиент справочника (5.4) — GET /api/ingredients, save-ingredient.
+         */
+        CatalogIngredientOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category: string;
+            /** Kcal 100G */
+            kcal_100g: number;
+            /** Protein 100G */
+            protein_100g: number;
+            /** Source */
+            source: string | null;
+            /** Grams Per Unit */
+            grams_per_unit: number | null;
+            /** Store Piece */
+            store_piece: number | null;
+            /** Used In */
+            used_in: string[];
         };
         /** CookItemOut */
         CookItemOut: {
@@ -260,6 +392,11 @@ export interface components {
              */
             status: "ok";
         };
+        /** IngredientActionOut */
+        IngredientActionOut: {
+            state: components["schemas"]["AppStateOut"];
+            ingredient: components["schemas"]["CatalogIngredientOut"];
+        };
         /** IngredientOut */
         IngredientOut: {
             /** Name */
@@ -272,6 +409,28 @@ export interface components {
             unit: string;
             /** Category */
             category: string;
+        };
+        /**
+         * MealKind
+         * @enum {string}
+         */
+        MealKind: "breakfast" | "lunch" | "dinner";
+        /** RecipeActionOut */
+        RecipeActionOut: {
+            state: components["schemas"]["AppStateOut"];
+            recipe: components["schemas"]["RecipeOut"];
+        };
+        /** RecipeIdIn */
+        RecipeIdIn: {
+            /** Id */
+            id: string;
+        };
+        /** RecipeLineIn */
+        RecipeLineIn: {
+            /** Ingredient Id */
+            ingredient_id: number;
+            /** Qty */
+            qty: number;
         };
         /** RecipeOut */
         RecipeOut: {
@@ -292,6 +451,22 @@ export interface components {
             storage: components["schemas"]["RecipeStorageOut"] | null;
             /** Is Fish */
             is_fish: boolean;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "active" | "archived";
+        };
+        /** RecipeStorageIn */
+        RecipeStorageIn: {
+            /** Keep */
+            keep: string;
+            /** Pan */
+            pan: string;
+            /** Micro */
+            micro: string;
+            /** After */
+            after?: string | null;
         };
         /** RecipeStorageOut */
         RecipeStorageOut: {
@@ -303,6 +478,45 @@ export interface components {
             micro: string;
             /** After */
             after: string | null;
+        };
+        /** SaveIngredientIn */
+        SaveIngredientIn: {
+            /** Id */
+            id?: number | null;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category: string;
+            /** Kcal 100G */
+            kcal_100g: number;
+            /** Protein 100G */
+            protein_100g: number;
+            /** Source */
+            source?: string | null;
+            /** Grams Per Unit */
+            grams_per_unit?: number | null;
+            /** Store Piece */
+            store_piece?: number | null;
+        };
+        /** SaveRecipeIn */
+        SaveRecipeIn: {
+            /** Id */
+            id?: string | null;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["MealKind"];
+            /**
+             * Is Fish
+             * @default false
+             */
+            is_fish: boolean;
+            /** Ingredients */
+            ingredients: components["schemas"]["RecipeLineIn"][];
+            /** Steps */
+            steps: string[];
+            storage?: components["schemas"]["RecipeStorageIn"] | null;
         };
         /** SetAnchorDateIn */
         SetAnchorDateIn: {
@@ -328,6 +542,15 @@ export interface components {
         SetCyclePositionIn: {
             /** Dish */
             dish: number;
+        };
+        /** SetCycleSlotIn */
+        SetCycleSlotIn: {
+            /** Slot */
+            slot: number;
+            /** Lunch Id */
+            lunch_id: string;
+            /** Dinner Id */
+            dinner_id: string;
         };
         /** SetShoppingTimingIn */
         SetShoppingTimingIn: {
@@ -626,6 +849,26 @@ export interface operations {
             };
         };
     };
+    get_ingredients_api_ingredients_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogIngredientOut"][];
+                };
+            };
+        };
+    };
     set_cook_schedule_api_actions_set_cook_schedule_post: {
         parameters: {
             query?: {
@@ -821,6 +1064,186 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_recipe_api_actions_save_recipe_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveRecipeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    archive_recipe_api_actions_archive_recipe_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeIdIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    restore_recipe_api_actions_restore_recipe_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeIdIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_cycle_slot_api_actions_set_cycle_slot_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetCycleSlotIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_ingredient_api_actions_save_ingredient_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveIngredientIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientActionOut"];
                 };
             };
             /** @description Validation Error */

@@ -325,3 +325,25 @@ def test_plan_use_before_start_has_nothing_bought():
     assert set(state.plan_use) == {
         r.id for c in trip.cook_items for r in (c.lunch, c.dinner)
     } | {"b1", "b2"}
+
+
+# --- предпросмотр ккал (5.5) ---
+
+
+def test_preview_matches_saved_recipe():
+    l1 = SEED_CATALOG.recipes["l1"]
+    lines = [RecipeLineInput(ID[i.name], i.qty) for i in l1.ingredients]
+    assert ca.preview_nutrition(SEED_CATALOG, lines) == (l1.kcal, l1.protein)
+
+
+def test_preview_skips_unfinished_lines():
+    lines = [
+        RecipeLineInput(ID["куриное филе"], 180),
+        RecipeLineInput(ID["булгур"], 0),  # количество ещё не введено
+        RecipeLineInput(9999, 100),  # ингредиент не выбран
+    ]
+    only_chicken = [RecipeLineInput(ID["куриное филе"], 180)]
+    assert ca.preview_nutrition(SEED_CATALOG, lines) == ca.preview_nutrition(
+        SEED_CATALOG, only_chicken
+    )
+    assert ca.preview_nutrition(SEED_CATALOG, []) == (0, 0)

@@ -6,7 +6,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AppState } from './api-client';
 import MealPlanApp from './MealPlanApp';
-import { RECIPES, SCENARIOS, buttons, change, click, flush, fullState, jsonResponse, render } from './__fixtures__/harness';
+import { act } from 'react';
+
+import { INGREDIENTS, RECIPES, SCENARIOS, buttons, change, click, flush, fullState, jsonResponse, render } from './__fixtures__/harness';
 
 const scenario = SCENARIOS.find((s) => s.name === 'default_2x')!; // сегодня Ср 2026-11-11
 const BASE = fullState(scenario);
@@ -41,7 +43,9 @@ beforeEach(() => {
         method: init?.method ?? 'GET',
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       });
-      return url === 'api/recipes' ? recipesResponse() : handler(url, init);
+      if (url === 'api/recipes') return recipesResponse();
+      if (url === 'api/ingredients') return jsonResponse(INGREDIENTS);
+      return handler(url, init);
     }),
   );
 });
@@ -304,4 +308,227 @@ it('медленный GET не затирает более свежий отв�
   const before = buttons(ui.container, 'За день до')[0];
   expect(before.style.color).toBe('rgb(255, 255, 255)'); // выбрано — значит, ответ действия
   ui.unmount();
+});
+
+// ---------- Рецепты в «Блюдах» (5.5) ----------
+
+type Rendered = Awaited<ReturnType<typeof render>>;
+type Recipe = (typeof RECIPES)[string];
+
+function findRow(ui: Rendered, name: string): HTMLLIElement | undefined {
+  return [...ui.container.querySelectorAll('li')].find((li) => li.firstChild?.textContent?.trim() === name);
+}
+
+/** Строка рецепта в «Блюдах» — по названию. */
+function dishRow(ui: Rendered, name: string): HTMLLIElement {
+  const row = findRow(ui, name);
+  if (!row) throw new Error(`Нет рецепта «${name}» в «Блюдах»`);
+  return row;
+}
+
+async function openEditor(ui: Rendered, name: string) {
+  await click(buttons(ui.container, 'Настройки')[0]);
+  await click(buttons(dishRow(ui, name), 'Изменить')[0]);
+}
+
+/** Поле формы по началу подписи или по aria-label. */
+function field<T extends HTMLElement = HTMLInputElement>(ui: Rendered, label: string): T {
+  const byAria = ui.container.querySelector<T>(`[aria-label="${label}"]`);
+  if (byAria) return byAria;
+  const wrap = [...ui.container.querySelectorAll('label')].find((l) => l.textContent?.startsWith(label));
+  const control = wrap?.querySelector<T>('input, textarea, select');
+  if (!control) throw new Error(`Нет поля «${label}»`);
+  return control;
+}
+
+async function type(element: HTMLInputElement | HTMLTextAreaElement, value: string) {
+  const proto = element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  Object.getOwnPropertyDescriptor(proto, 'value')!.set!.call(element, value);
+  await act(async () => {
+    element.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  await flush();
+}
+
+/** Задержка предпросмотра ккал в редакторе — 300 мс. */
+async function waitPreview() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  });
+}
+
+function saved(recipe: Recipe, state: AppState = BASE) {
+  return jsonResponse({ state, recipe });
+}
+
+describe('редактор рецепта', () => {
+  const l1 = RECIPES.l1;
+
+  it('правка уходит в save-recipe целиком, ответ — в справочник', async () => {
+    handler = (url) => (url === 'api/actions/save-recipe' ? saved({ ...l1, name: 'Курица по-новому' }) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await openEditor(ui, l1.name);
+    expect(field(ui, 'Название').value).toBe(l1.name);
+
+    await type(field(ui, 'Название'), 'Курица по-новому');
+    await type(field(ui, 'Количество 1'), '200,5');
+    await click(buttons(ui.container, 'Сохранить')[0]);
+
+    expect(calls.find((c) => c.url === 'api/actions/save-recipe')).toEqual({
+      url: 'api/actions/save-recipe',
+      method: 'POST',
+      body: {
+        id: 'l1',
+        name: 'Курица по-новому',
+        kind: 'lunch',
+        is_fish: false,
+        ingredients: l1.ingredients.map((i, n) => ({ ingredient_id: i.ingredient_id, qty: n === 0 ? 200.5 : i.qty })),
+        steps: l1.steps,
+        storage: { ...l1.storage, after: l1.storage!.after ?? null },
+      },
+    });
+    // редактор закрыт, в «Блюдах» — рецепт из ответа сервера
+    expect(buttons(ui.container, 'Сохранить')).toHaveLength(0);
+    expect(dishRow(ui, 'Курица по-новому')).toBeTruthy();
+    ui.unmount();
+  });
+
+  it('ошибки 422 — у своих полей, форма остаётся открытой', async () => {
+    handler = (url) =>
+      url === 'api/actions/save-recipe'
+        ? jsonResponse(
+            {
+              detail: [
+                { type: 'value_error', loc: ['body', 'ingredients', 0, 'qty'], msg: 'Количество должно быть больше нуля' },
+                { type: 'value_error', loc: ['body', 'name'], msg: 'Название не может быть пустым' },
+              ],
+            },
+            422,
+          )
+        : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await openEditor(ui, l1.name);
+    await type(field(ui, 'Количество 1'), '');
+    await click(buttons(ui.container, 'Сохранить')[0]);
+
+    const qtyLine = field(ui, 'Количество 1').closest('div')!.parentElement!;
+    expect(qtyLine.textContent).toContain('Количество должно быть больше нуля');
+    expect(field(ui, 'Название').closest('section')!.textContent).toContain('Название не может быть пустым');
+    expect(buttons(ui.container, 'Сохранить')).toHaveLength(1);
+    expect(calls.find((c) => c.url === 'api/actions/save-recipe')!.body).toMatchObject({
+      ingredients: expect.arrayContaining([{ ingredient_id: l1.ingredients[0].ingredient_id, qty: 0 }]),
+    });
+    ui.unmount();
+  });
+
+  it('новый ужин — без id, тип из кнопки', async () => {
+    handler = (url) =>
+      url === 'api/actions/save-recipe' ? saved({ ...RECIPES.d1, id: 'd6', name: 'Тофу с рисом' }) : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    await click(buttons(ui.container, 'Новый ужин')[0]);
+    expect(ui.text()).toContain('Ужин: новый рецепт');
+    expect(ui.text()).toContain('— ккал');
+
+    await type(field(ui, 'Название'), 'Тофу с рисом');
+    await change(field<HTMLSelectElement>(ui, 'Ингредиент 1'), String(INGREDIENTS[0].id));
+    await type(field(ui, 'Количество 1'), '2');
+    await type(field<HTMLTextAreaElement>(ui, 'Шаг 1'), 'Обжарьте.');
+    await click(buttons(ui.container, 'Сохранить')[0]);
+
+    expect(calls.find((c) => c.url === 'api/actions/save-recipe')!.body).toEqual({
+      name: 'Тофу с рисом',
+      kind: 'dinner',
+      is_fish: false,
+      ingredients: [{ ingredient_id: INGREDIENTS[0].id, qty: 2 }],
+      steps: ['Обжарьте.'],
+      storage: { keep: '', pan: '', micro: '', after: null },
+    });
+    expect(dishRow(ui, 'Тофу с рисом')).toBeTruthy();
+    ui.unmount();
+  });
+
+  it('ккал — живой предпросмотр сервера, один запрос на серию правок', async () => {
+    handler = (url) => (url === 'api/recipes/preview' ? jsonResponse({ kcal: 1234, protein: 99 }) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await openEditor(ui, l1.name);
+    expect(ui.text()).toContain(`≈${l1.kcal} ккал · ${l1.protein}г белка`);
+
+    for (const qty of ['1', '15', '150']) await type(field(ui, 'Количество 1'), qty);
+    await waitPreview();
+    const previews = calls.filter((c) => c.url === 'api/recipes/preview');
+    expect(previews).toEqual([
+      {
+        url: 'api/recipes/preview',
+        method: 'POST',
+        body: { ingredients: l1.ingredients.map((i, n) => ({ ingredient_id: i.ingredient_id, qty: n === 0 ? 150 : i.qty })) },
+      },
+    ]);
+    expect(ui.text()).toContain('≈1234 ккал · 99г белка');
+    ui.unmount();
+  });
+
+  it('предупреждает, если блюдо уже куплено или в ближайшей закупке', async () => {
+    const ui = await render(<MealPlanApp />);
+    await openEditor(ui, RECIPES.l1.name); // bought в default_2x
+    expect(ui.text()).toContain('Продукты на это блюдо уже куплены');
+
+    await click(buttons(ui.container, 'Назад')[0]);
+    await click(buttons(dishRow(ui, RECIPES.l3.name), 'Изменить')[0]); // next_trip
+    expect(ui.text()).toContain('Блюдо в ближайшей закупке: список покупок изменится');
+
+    await click(buttons(ui.container, 'Назад')[0]);
+    await click(buttons(dishRow(ui, RECIPES.l2.name), 'Изменить')[0]); // не в плане
+    expect(ui.container.querySelector('[role=status]')).toBeNull();
+    ui.unmount();
+  });
+});
+
+describe('архив рецептов', () => {
+  const b3 = RECIPES.b3;
+
+  it('«В архив» и «Вернуть» — действия, ответ сервера двигает рецепт', async () => {
+    handler = (url) =>
+      url === 'api/actions/archive-recipe'
+        ? saved({ ...b3, status: 'archived' })
+        : url === 'api/actions/restore-recipe'
+          ? saved(b3)
+          : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    expect(buttons(ui.container, 'Архив (')).toHaveLength(0);
+
+    await click(buttons(dishRow(ui, b3.name), 'В архив')[0]);
+    expect(calls.at(-1)).toEqual({ url: 'api/actions/archive-recipe', method: 'POST', body: { id: 'b3' } });
+    expect(findRow(ui, b3.name)).toBeUndefined(); // в свёрнутом архиве
+
+    await click(buttons(ui.container, 'Архив (1)')[0]);
+    await click(buttons(dishRow(ui, b3.name), 'Вернуть')[0]);
+    expect(calls.at(-1)).toEqual({ url: 'api/actions/restore-recipe', method: 'POST', body: { id: 'b3' } });
+    expect(buttons(dishRow(ui, b3.name), 'Изменить')).toHaveLength(1);
+    ui.unmount();
+  });
+
+  it('ошибка архива — у своего рецепта', async () => {
+    const msg = '«Тёплый салат с креветками» стоит в цикле, позиция 3 — сначала замените его';
+    handler = (url) =>
+      url === 'api/actions/archive-recipe'
+        ? jsonResponse({ detail: [{ type: 'value_error', loc: ['body', 'id'], msg }] }, 422)
+        : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    await click(buttons(dishRow(ui, RECIPES.d3.name), 'В архив')[0]);
+    expect(dishRow(ui, RECIPES.d3.name).textContent).toContain(msg);
+    ui.unmount();
+  });
+
+  it('архивного рецепта нет в «Меню»', async () => {
+    recipesResponse = () => jsonResponse({ ...RECIPES, b3: { ...b3, status: 'archived' } });
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Меню')[0]);
+    expect(ui.text()).not.toContain(b3.name);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    expect(buttons(ui.container, 'Архив (1)')).toHaveLength(1);
+    ui.unmount();
+  });
 });

@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import MealPlanApp from './MealPlanApp';
-import { SCENARIOS, type Scenario, buttons, click, lines, mockFetchFromScenario, render } from './__fixtures__/harness';
+import { SCENARIOS, type Scenario, buttons, click, formLines, lines, mockFetchFromScenario, render } from './__fixtures__/harness';
 
 type Rendered = Awaited<ReturnType<typeof render>>;
 
@@ -69,4 +69,21 @@ it('рецепты: ингредиенты, шаги, хранение', async (
   ui.unmount();
 
   expect(recipes).toMatchSnapshot();
+});
+
+// Редактор рецепта (5.5): существующий обед в ближайшей закупке и новый ужин.
+it('редактор рецепта', async () => {
+  const ui = await renderApp(SCENARIOS.find((s) => s.name === 'default_2x')!);
+  await click(buttons(ui.container, 'Настройки')[0]);
+  const row = [...ui.container.querySelectorAll('li')].find((li) => li.textContent?.startsWith('Рис басмати с лососем'))!;
+
+  const forms: Record<string, string> = {};
+  await click(buttons(row, 'Изменить')[0]);
+  forms['правка обеда'] = formLines(ui.container);
+  await click(buttons(ui.container, 'Назад')[0]);
+  await click(buttons(ui.container, 'Новый ужин')[0]);
+  forms['новый ужин'] = formLines(ui.container);
+  ui.unmount();
+
+  expect(forms).toMatchSnapshot();
 });

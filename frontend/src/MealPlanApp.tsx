@@ -1,4 +1,4 @@
-import { type CSSProperties, useCallback, useState } from 'react';
+import { type CSSProperties, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Calendar,
   UtensilsCrossed,
@@ -10,11 +10,25 @@ import {
   Flame,
   Plus,
   Settings as SettingsIcon,
+  ArrowLeft,
+  X,
 } from 'lucide-react';
 
-import type { ActionName, ActionPayloads, AppState, Recipe, Recipes } from './api-client';
+import {
+  type ActionName,
+  type ActionPayloads,
+  type AppState,
+  type CatalogIngredient,
+  type Nutrition,
+  type Recipe,
+  type RecipeActionName,
+  type RecipeActionPayloads,
+  type RecipePayload,
+  type Recipes,
+  previewRecipe,
+} from './api-client';
 import { WEEKDAY_FULL, fmtDate, weekdayFull, weekdayShort } from './format';
-import { type SaveError, useAppState } from './useAppState';
+import { type FieldErrors, type SaveError, useAppState } from './useAppState';
 
 // Презентационный слой: всё, что показано, — поля AppState от сервера.
 // Расписание, дни готовки, суммы ккал/белка, поездка в магазин и количества
@@ -45,11 +59,26 @@ type Trip = AppState['next_shopping_trip'];
 type SkippedCook = NonNullable<AppState['skipped_cook']>;
 type MealDay = Day & { cycle_index: number; breakfast_id: string; lunch_id: string; dinner_id: string };
 type RunAction = <N extends ActionName>(name: N, payload: ActionPayloads[N]) => Promise<void>;
+type RecipeAction = <N extends RecipeActionName>(name: N, payload: RecipeActionPayloads[N]) => Promise<FieldErrors | null>;
+type Kind = Recipe['kind'];
+type PlanUse = AppState['recipe_plan_use'][string];
+/** Что открыто в редакторе рецепта: id — правка, null — новый рецепт. */
+type Editing = { id: string | null; kind: Kind };
 type Tab = 'schedule' | 'menu' | 'shopping' | 'settings';
 
+const KINDS = [
+  { kind: 'lunch', title: 'Обеды', one: 'Обед', add: 'Новый обед' },
+  { kind: 'dinner', title: 'Ужины', one: 'Ужин', add: 'Новый ужин' },
+  { kind: 'breakfast', title: 'Завтраки', one: 'Завтрак', add: 'Новый завтрак' },
+] as const;
+const KIND_NAME: Record<Kind, string> = { lunch: 'Обед', dinner: 'Ужин', breakfast: 'Завтрак' };
+
 export default function MealPlanApp() {
-  const { state, recipes, range, loadError, saveError, showRange, runAction, retry } = useAppState();
+  const { state, recipes, ingredients, loadIngredients, recipeAction, range, loadError, saveError, showRange, runAction, retry } =
+    useAppState();
   const [tab, setTab] = useState<Tab>('schedule');
+  // Редактор рецепта (5.5) — на весь экран вместо вкладки; другая вкладка его закрывает.
+  const [editing, setEditing] = useState<Editing | null>(null);
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [openRecipe, setOpenRecipe] = useState<string | null>(null);
 
@@ -110,7 +139,10 @@ export default function MealPlanApp() {
         ).map(({ id, label, Icon }) => (
           <button
             key={id}
-            onClick={() => setTab(id)}
+            onClick={() => {
+              setTab(id);
+              setEditing(null);
+            }}
             style={{
               flex: 1,
               display: 'flex',
@@ -142,6 +174,17 @@ export default function MealPlanApp() {
           ) : (
             <p style={{ color: COLORS.inkSoft, textAlign: 'center', marginTop: 40 }}>Загрузка…</p>
           )
+        ) : editing ? (
+          <RecipeEditor
+            key={editing.id ?? `new-${editing.kind}`}
+            editing={editing}
+            recipe={editing.id ? recipes[editing.id] : undefined}
+            planUse={editing.id ? state.recipe_plan_use[editing.id] : undefined}
+            ingredients={ingredients}
+            loadIngredients={loadIngredients}
+            recipeAction={recipeAction}
+            onClose={() => setEditing(null)}
+          />
         ) : tab === 'schedule' ? (
           <ScheduleTab
             state={state}
@@ -177,6 +220,8 @@ export default function MealPlanApp() {
             recipes={recipes}
             saveError={saveError}
             runAction={runAction}
+            onEdit={setEditing}
+            recipeAction={recipeAction}
           />
         )}
         {state && loadError && (
@@ -506,8 +551,9 @@ function MenuTab({ state, recipes, selectedDateStr, goToDate, openRecipe, setOpe
   );
 }
 
-function recipesOfKind(recipes: Recipes, kind: Recipe['kind']): Recipe[] {
-  return Object.values(recipes).filter((r) => r.kind === kind);
+/** Рецепты типа с этим статусом; архивные — только в «Блюдах» (5.5). */
+function recipesOfKind(recipes: Recipes, kind: Kind, status: Recipe['status'] = 'active'): Recipe[] {
+  return Object.values(recipes).filter((r) => r.kind === kind && r.status === status);
 }
 
 type RecipeToggleProps = {
@@ -667,9 +713,11 @@ type SettingsTabProps = {
   recipes: Recipes;
   saveError: SaveError | null;
   runAction: RunAction;
+  onEdit: (editing: Editing) => void;
+  recipeAction: RecipeAction;
 };
 
-function SettingsTab({ settings, position, skipped, recipes, saveError, runAction }: SettingsTabProps) {
+function SettingsTab({ settings, position, skipped, recipes, saveError, runAction, onEdit, recipeAction }: SettingsTabProps) {
   const setCookSchedule = (change: Partial<ActionPayloads['set-cook-schedule']>) =>
     runAction('set-cook-schedule', {
       cook_count: settings.cook_count === 1 ? 1 : 2,
@@ -803,29 +851,409 @@ function SettingsTab({ settings, position, skipped, recipes, saveError, runActio
         <FieldError error={saveError} action="set-shopping-timing" />
       </section>
 
-      <section style={cardStyle}>
-        {/* Заготовка под фазу 5: пока только список, без редактирования. */}
-        <h2 style={{ ...sectionHeading, marginTop: 0 }}>Блюда</h2>
-        {(
-          [
-            { kind: 'lunch', title: 'Обеды' },
-            { kind: 'dinner', title: 'Ужины' },
-            { kind: 'breakfast', title: 'Завтраки' },
-          ] as const
-        ).map(({ kind, title }) => (
-          <div key={kind} style={{ marginBottom: 8 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 2 }}>{title}</div>
-            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
-              {recipesOfKind(recipes, kind).map((r) => (
-                <li key={r.id}>
-                  {r.name} <span style={{ fontSize: 12, color: COLORS.inkSoft }}>≈{r.kcal} ккал · {r.protein}г белка</span>
-                </li>
-              ))}
+      <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
+    </div>
+  );
+}
+
+// ---------- Блюда: список рецептов, архив (5.5) ----------
+type DishesSectionProps = {
+  recipes: Recipes;
+  onEdit: (editing: Editing) => void;
+  recipeAction: RecipeAction;
+};
+
+function DishesSection({ recipes, onEdit, recipeAction }: DishesSectionProps) {
+  // Ошибка архива — у своего рецепта (например, «стоит в цикле, позиция 3»).
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [archiveOpen, setArchiveOpen] = useState(false);
+  const archived = KINDS.flatMap(({ kind }) => recipesOfKind(recipes, kind, 'archived'));
+
+  const run = async (name: 'archive-recipe' | 'restore-recipe', id: string) => {
+    const result = await recipeAction(name, { id });
+    setErrors((all) => ({ ...all, [id]: result ? Object.values(result).join('; ') : '' }));
+  };
+
+  const row = (r: Recipe, actions: React.ReactNode) => (
+    <li key={r.id} style={{ marginBottom: 6 }}>
+      {r.name} <span style={{ fontSize: 12, color: COLORS.inkSoft }}>≈{r.kcal} ккал · {r.protein}г белка</span>
+      <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>{actions}</div>
+      {errors[r.id] && (
+        <p role="alert" style={errorTextStyle}>
+          {errors[r.id]}
+        </p>
+      )}
+    </li>
+  );
+
+  return (
+    <section style={cardStyle}>
+      <h2 style={{ ...sectionHeading, marginTop: 0 }}>Блюда</h2>
+      {KINDS.map(({ kind, title, add }) => (
+        <div key={kind} style={{ marginBottom: 12 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 4 }}>{title}</div>
+          <ul style={{ margin: '0 0 6px', paddingLeft: 18, fontSize: 13 }}>
+            {recipesOfKind(recipes, kind).map((r) =>
+              row(
+                r,
+                <>
+                  <button onClick={() => onEdit({ id: r.id, kind })} style={smallBtnStyle}>
+                    Изменить
+                  </button>
+                  <button onClick={() => run('archive-recipe', r.id)} style={smallBtnStyle}>
+                    В архив
+                  </button>
+                </>,
+              ),
+            )}
+          </ul>
+          <button onClick={() => onEdit({ id: null, kind })} style={{ ...smallBtnStyle, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+            <Plus size={14} /> {add}
+          </button>
+        </div>
+      ))}
+      {archived.length > 0 && (
+        <div>
+          <button
+            onClick={() => setArchiveOpen(!archiveOpen)}
+            style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 12, fontWeight: 700, color: COLORS.primarySoft }}
+          >
+            {archiveOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Архив ({archived.length})
+          </button>
+          {archiveOpen && (
+            <ul style={{ margin: '6px 0 0', paddingLeft: 18, fontSize: 13, color: COLORS.inkSoft }}>
+              {archived.map((r) =>
+                row(
+                  r,
+                  <button onClick={() => run('restore-recipe', r.id)} style={smallBtnStyle}>
+                    Вернуть
+                  </button>,
+                ),
+              )}
             </ul>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ---------- Редактор рецепта (5.5) ----------
+// Форма хранит то, что ввёл пользователь, строками; в числа — только при
+// отправке. Ккал и белок черновика считает сервер (api/recipes/preview).
+
+type DraftLine = { ingredient_id: string; qty: string };
+type Draft = {
+  name: string;
+  kind: Kind;
+  is_fish: boolean;
+  lines: DraftLine[];
+  steps: string[];
+  storage: { keep: string; pan: string; micro: string; after: string };
+};
+
+const PREVIEW_DELAY_MS = 300;
+const STORAGE_FIELDS = [
+  { field: 'keep', label: 'Как хранить' },
+  { field: 'pan', label: 'Разогрев на сковороде' },
+  { field: 'micro', label: 'Разогрев в микроволновке' },
+  { field: 'after', label: 'Добавить после разогрева (необязательно)' },
+] as const;
+
+function draftOf(recipe: Recipe | undefined, kind: Kind): Draft {
+  return {
+    name: recipe?.name ?? '',
+    kind: recipe?.kind ?? kind,
+    is_fish: recipe?.is_fish ?? false,
+    lines: recipe
+      ? recipe.ingredients.map((i) => ({ ingredient_id: String(i.ingredient_id), qty: i.qty_display }))
+      : [{ ingredient_id: '', qty: '' }],
+    steps: recipe ? [...recipe.steps] : [''],
+    storage: {
+      keep: recipe?.storage?.keep ?? '',
+      pan: recipe?.storage?.pan ?? '',
+      micro: recipe?.storage?.micro ?? '',
+      after: recipe?.storage?.after ?? '',
+    },
+  };
+}
+
+/** «12,5» и «12.5» — одно число; непонятное — 0, сервер ответит ошибкой у поля. */
+function toNumber(text: string): number {
+  const n = Number(text.trim().replace(',', '.'));
+  return text.trim() && Number.isFinite(n) ? n : 0;
+}
+
+function linesPayload(lines: DraftLine[]) {
+  return lines.map((l) => ({ ingredient_id: Number(l.ingredient_id) || 0, qty: toNumber(l.qty) }));
+}
+
+function payloadOf(draft: Draft, id: string | null): RecipePayload {
+  return {
+    ...(id ? { id } : {}),
+    name: draft.name,
+    kind: draft.kind,
+    is_fish: draft.is_fish,
+    ingredients: linesPayload(draft.lines),
+    steps: draft.steps,
+    storage:
+      draft.kind === 'breakfast'
+        ? null
+        : { keep: draft.storage.keep, pan: draft.storage.pan, micro: draft.storage.micro, after: draft.storage.after || null },
+  };
+}
+
+const PLAN_USE_WARNING: Record<PlanUse, string> = {
+  bought: 'Продукты на это блюдо уже куплены: правка изменит план на текущие дни.',
+  next_trip: 'Блюдо в ближайшей закупке: список покупок изменится.',
+};
+
+type RecipeEditorProps = {
+  editing: Editing;
+  recipe: Recipe | undefined;
+  planUse: PlanUse | undefined;
+  ingredients: CatalogIngredient[] | null;
+  loadIngredients: () => Promise<void>;
+  recipeAction: RecipeAction;
+  onClose: () => void;
+};
+
+function RecipeEditor({ editing, recipe, planUse, ingredients, loadIngredients, recipeAction, onClose }: RecipeEditorProps) {
+  const [draft, setDraft] = useState<Draft>(() => draftOf(recipe, editing.kind));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [saving, setSaving] = useState(false);
+  const nutrition = useNutritionPreview(draft.lines, recipe);
+
+  useEffect(() => {
+    if (!ingredients) loadIngredients();
+  }, [ingredients, loadIngredients]);
+
+  const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  const setLine = (i: number, patch: Partial<DraftLine>) =>
+    update({ lines: draft.lines.map((l, n) => (n === i ? { ...l, ...patch } : l)) });
+  const setStep = (i: number, text: string) => update({ steps: draft.steps.map((s, n) => (n === i ? text : s)) });
+  // Ошибки строк привязаны к номеру строки — после удаления они бы съехали.
+  const removeAt = (field: 'lines' | 'steps', i: number) => {
+    update({ [field]: draft[field].filter((_, n) => n !== i) });
+    setErrors({});
+  };
+
+  const save = async () => {
+    setSaving(true);
+    const result = await recipeAction('save-recipe', payloadOf(draft, editing.id));
+    setSaving(false);
+    if (result) setErrors(result);
+    else onClose();
+  };
+
+  const byId = new Map((ingredients ?? []).map((i) => [String(i.id), i]));
+  // Группы — в порядке справочника сервера, внутри — по алфавиту.
+  const groups = [...new Set((ingredients ?? []).map((i) => i.category))].map((category) => ({
+    category,
+    items: (ingredients ?? []).filter((i) => i.category === category).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+  }));
+  const hasStorage = draft.kind !== 'breakfast';
+  const shownKeys = new Set([
+    'name',
+    'ingredients',
+    'steps',
+    'storage',
+    ...draft.lines.flatMap((_, i) => [`ingredients.${i}.ingredient_id`, `ingredients.${i}.qty`]),
+    ...draft.steps.map((_, i) => `steps.${i}`),
+    ...(hasStorage ? STORAGE_FIELDS.map(({ field }) => `storage.${field}`) : []),
+  ]);
+  const otherErrors = Object.entries(errors).filter(([key]) => !shownKeys.has(key));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={onClose} style={{ ...ghostBtnStyle, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <ArrowLeft size={14} /> Назад
+        </button>
+        <h2 style={{ ...sectionHeading, margin: 0, flex: 1 }}>{recipe ? 'Изменить рецепт' : `${KIND_NAME[draft.kind]}: новый рецепт`}</h2>
+        <button onClick={save} disabled={saving} style={{ ...primaryBtnStyle, opacity: saving ? 0.6 : 1 }}>
+          Сохранить
+        </button>
+      </div>
+
+      {planUse && (
+        <p role="status" style={{ margin: 0, padding: 10, borderRadius: 10, background: COLORS.accentSoft, fontSize: 13 }}>
+          {PLAN_USE_WARNING[planUse]}
+        </p>
+      )}
+
+      <section style={cardStyle}>
+        <div style={{ fontSize: 15, fontWeight: 700 }}>
+          {nutrition ? `≈${nutrition.kcal} ккал · ${nutrition.protein}г белка` : '— ккал'}
+        </div>
+        <div style={{ fontSize: 12, color: COLORS.inkSoft }}>считает сервер по ингредиентам</div>
+      </section>
+
+      <section style={cardStyle}>
+        <label style={labelStyle}>
+          Название
+          <input value={draft.name} onChange={(e) => update({ name: e.target.value })} style={{ ...inputStyle, marginTop: 4 }} />
+        </label>
+        <ErrorText errors={errors} at="name" />
+
+        <label style={{ ...labelStyle, marginTop: 10 }}>
+          Тип
+          {recipe ? (
+            <div style={{ fontWeight: 400, fontSize: 13, color: COLORS.ink, marginTop: 4 }}>{KIND_NAME[draft.kind]}</div>
+          ) : (
+            <select value={draft.kind} onChange={(e) => update({ kind: e.target.value as Kind })} style={{ ...inputStyle, marginTop: 4 }}>
+              {KINDS.map(({ kind, one }) => (
+                <option key={kind} value={kind}>{one}</option>
+              ))}
+            </select>
+          )}
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 10, fontSize: 13 }}>
+          <input type="checkbox" checked={draft.is_fish} onChange={(e) => update({ is_fish: e.target.checked })} />
+          Рыба/морепродукты
+        </label>
+      </section>
+
+      <section style={cardStyle}>
+        <div style={labelStyle}>Ингредиенты (1 порция)</div>
+        {!ingredients && <p style={{ fontSize: 13, color: COLORS.inkSoft, margin: 0 }}>Загрузка справочника…</p>}
+        {ingredients &&
+          draft.lines.map((line, i) => (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <select
+                  aria-label={`Ингредиент ${i + 1}`}
+                  value={line.ingredient_id}
+                  onChange={(e) => setLine(i, { ingredient_id: e.target.value })}
+                  style={{ ...inputStyle, flex: 1 }}
+                >
+                  <option value="">— выберите —</option>
+                  {groups.map((g) => (
+                    <optgroup key={g.category} label={g.category}>
+                      {g.items.map((item) => (
+                        <option key={item.id} value={item.id}>{item.name}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+                <input
+                  aria-label={`Количество ${i + 1}`}
+                  inputMode="decimal"
+                  value={line.qty}
+                  onChange={(e) => setLine(i, { qty: e.target.value })}
+                  style={{ ...inputStyle, width: 70 }}
+                />
+                <span style={{ fontSize: 12, width: 44 }}>{byId.get(line.ingredient_id)?.unit ?? ''}</span>
+                <button aria-label={`Убрать ингредиент ${i + 1}`} onClick={() => removeAt('lines', i)} style={iconBtnStyle}>
+                  <X size={14} />
+                </button>
+              </div>
+              <ErrorText errors={errors} at={`ingredients.${i}.ingredient_id`} />
+              <ErrorText errors={errors} at={`ingredients.${i}.qty`} />
+            </div>
+          ))}
+        <ErrorText errors={errors} at="ingredients" />
+        <button onClick={() => update({ lines: [...draft.lines, { ingredient_id: '', qty: '' }] })} style={smallBtnStyle}>
+          + ингредиент
+        </button>
+      </section>
+
+      <section style={cardStyle}>
+        <div style={labelStyle}>Приготовление</div>
+        {draft.steps.map((step, i) => (
+          <div key={i} style={{ marginBottom: 8 }}>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start' }}>
+              <span style={{ fontSize: 13, paddingTop: 8 }}>{i + 1}.</span>
+              <textarea
+                aria-label={`Шаг ${i + 1}`}
+                value={step}
+                rows={3}
+                onChange={(e) => setStep(i, e.target.value)}
+                style={{ ...inputStyle, flex: 1, resize: 'vertical' }}
+              />
+              <button aria-label={`Убрать шаг ${i + 1}`} onClick={() => removeAt('steps', i)} style={iconBtnStyle}>
+                <X size={14} />
+              </button>
+            </div>
+            <ErrorText errors={errors} at={`steps.${i}`} />
           </div>
         ))}
+        <ErrorText errors={errors} at="steps" />
+        <button onClick={() => update({ steps: [...draft.steps, ''] })} style={smallBtnStyle}>
+          + шаг
+        </button>
       </section>
+
+      {hasStorage && (
+        <section style={cardStyle}>
+          <div style={labelStyle}>Хранение и разогрев</div>
+          {STORAGE_FIELDS.map(({ field, label }) => (
+            <label key={field} style={{ ...labelStyle, fontWeight: 500, marginTop: 6 }}>
+              {label}
+              <textarea
+                value={draft.storage[field]}
+                rows={2}
+                onChange={(e) => update({ storage: { ...draft.storage, [field]: e.target.value } })}
+                style={{ ...inputStyle, marginTop: 4, resize: 'vertical' }}
+              />
+              <ErrorText errors={errors} at={`storage.${field}`} />
+            </label>
+          ))}
+          <ErrorText errors={errors} at="storage" />
+        </section>
+      )}
+
+      {otherErrors.map(([key, msg]) => (
+        <p key={key} role="alert" style={errorTextStyle}>
+          Не удалось сохранить: {msg}
+        </p>
+      ))}
     </div>
+  );
+}
+
+/**
+ * Ккал и белок черновика: пока строки ингредиентов как у сохранённого
+ * рецепта — его значения; после правки — ответ сервера с задержкой, устаревший
+ * ответ отбрасывается.
+ */
+function useNutritionPreview(lines: DraftLine[], recipe: Recipe | undefined): Nutrition | null {
+  const saved = recipe ? { kcal: recipe.kcal, protein: recipe.protein } : null;
+  const [initialKey] = useState(() => JSON.stringify(lines));
+  const [preview, setPreview] = useState<Nutrition | null>(saved);
+  const latest = useRef(0);
+  const key = JSON.stringify(lines);
+
+  useEffect(() => {
+    const id = ++latest.current;
+    if (key === initialKey) {
+      setPreview(saved);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const counted = linesPayload(JSON.parse(key) as DraftLine[]).filter((l) => l.ingredient_id);
+        const result = await previewRecipe(counted);
+        if (id === latest.current) setPreview(result);
+      } catch {
+        // предпросмотр не удался — остаётся прошлое значение, сохранение покажет ошибку
+      }
+    }, PREVIEW_DELAY_MS);
+    return () => clearTimeout(timer);
+    // saved — значения того же рецепта, меняются вместе с ним (key у редактора)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, initialKey]);
+
+  return preview;
+}
+
+function ErrorText({ errors, at }: { errors: FieldErrors; at: string }) {
+  if (!errors[at]) return null;
+  return (
+    <p role="alert" style={errorTextStyle}>
+      {errors[at]}
+    </p>
   );
 }
 
@@ -865,6 +1293,10 @@ const ghostBtnStyle: CSSProperties = {
   fontSize: 13,
   cursor: 'pointer',
 };
+const smallBtnStyle: CSSProperties = { ...ghostBtnStyle, padding: '3px 10px', fontSize: 12, fontWeight: 500 };
+const primaryBtnStyle: CSSProperties = { ...ghostBtnStyle, background: COLORS.primary, color: '#fff' };
+const iconBtnStyle: CSSProperties = { ...ghostBtnStyle, padding: '4px 6px', border: `1px solid ${COLORS.line}`, color: COLORS.inkSoft };
+const errorTextStyle: CSSProperties = { color: '#8a3b2b', fontSize: 12, margin: '4px 0 0' };
 const sectionHeading: CSSProperties = {
   fontFamily: 'ui-serif, Georgia, serif',
   fontSize: 15,

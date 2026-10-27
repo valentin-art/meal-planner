@@ -5,7 +5,7 @@ import { act } from 'react';
 import { type Root, createRoot } from 'react-dom/client';
 import { vi } from 'vitest';
 
-import type { AppState, Recipes } from '../api-client';
+import type { AppState, CatalogIngredient, Recipes } from '../api-client';
 import fixtures from './ui-states.json';
 
 declare global {
@@ -17,6 +17,7 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 export type Scenario = (typeof fixtures.scenarios)[number];
 export const SCENARIOS: Scenario[] = fixtures.scenarios;
 export const RECIPES = fixtures.recipes as unknown as Recipes;
+export const INGREDIENTS = fixtures.ingredients as CatalogIngredient[];
 
 /** AppState из фикстуры сценария для запроса url. */
 export function fullState(scenario: Scenario, url = 'api/state'): AppState {
@@ -35,7 +36,7 @@ export function jsonResponse(body: unknown, status = 200): Response {
 /** fetch, который отвечает только на URL из фикстуры сценария. */
 export function mockFetchFromScenario(scenario: Scenario) {
   const fetchMock = vi.fn(async (url: string) =>
-    jsonResponse(url === 'api/recipes' ? RECIPES : fullState(scenario, url)),
+    jsonResponse(url === 'api/recipes' ? RECIPES : url === 'api/ingredients' ? INGREDIENTS : fullState(scenario, url)),
   );
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
@@ -70,6 +71,28 @@ export function lines(element: Element): string {
     .map((line) => line.trim())
     .filter(Boolean)
     .join('\n');
+}
+
+/**
+ * Как lines(), но поля формы — значениями: «[текст]», у списка — выбранный
+ * пункт, у флажка — [x] / [ ]. Иначе в снапшот попали бы все пункты справочника.
+ */
+export function formLines(element: Element): string {
+  const copy = element.cloneNode(true) as Element;
+  const originals = element.querySelectorAll('input, textarea, select');
+  copy.querySelectorAll('input, textarea, select').forEach((field, i) => {
+    const original = originals[i] as HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement;
+    const shown =
+      original instanceof HTMLSelectElement
+        ? (original.selectedOptions[0]?.textContent ?? '')
+        : original instanceof HTMLInputElement && original.type === 'checkbox'
+          ? (original.checked ? 'x' : ' ')
+          : original.value;
+    const span = document.createElement('span');
+    span.textContent = ` [${shown}] `;
+    field.replaceWith(span);
+  });
+  return lines(copy);
 }
 
 export async function render(element: ReactElement) {

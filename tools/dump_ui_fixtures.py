@@ -1,7 +1,8 @@
 """Ответы API для снапшотов UI (frontend/src/ui-snapshots.test.tsx).
 
 То, что вернул бы сервер на запросы клиента при данных настройках и «сегодня»:
-начальный getState(), «Показать ещё» (28 дней) и getRecipes().
+начальный getState(), «Показать ещё» (28 дней), getRecipes() и
+getIngredients().
 
 Запуск: cd frontend && npm run gen:fixtures. Сервер не нужен.
 """
@@ -9,7 +10,11 @@
 import json
 from datetime import date, timedelta
 
-from meal_planner.api.schemas import to_app_state_out, to_recipes_out
+from meal_planner.api.schemas import (
+    to_app_state_out,
+    to_catalog_ingredient_out,
+    to_recipes_out,
+)
 from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
@@ -81,9 +86,14 @@ def build() -> dict:
     # Ответ GET /api/recipes — один на все сценарии.
     recipes = {
         rid: r.model_dump(mode="json")
-        for rid, r in to_recipes_out(SEED_CATALOG.recipes).items()
+        for rid, r in to_recipes_out(SEED_CATALOG).items()
     }
-    return {"recipes": recipes, "scenarios": scenarios}
+    # Ответ GET /api/ingredients — для редактора рецепта (5.5).
+    ingredients = [
+        to_catalog_ingredient_out(SEED_CATALOG, i).model_dump(mode="json")
+        for i in SEED_CATALOG.ingredients.values()
+    ]
+    return {"recipes": recipes, "ingredients": ingredients, "scenarios": scenarios}
 
 
 if __name__ == "__main__":

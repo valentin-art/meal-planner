@@ -72,6 +72,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/recipes/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Preview Recipe */
+        post: operations["preview_recipe_api_recipes_preview_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/ingredients": {
         parameters: {
             query?: never;
@@ -399,6 +416,8 @@ export interface components {
         };
         /** IngredientOut */
         IngredientOut: {
+            /** Ingredient Id */
+            ingredient_id: number;
             /** Name */
             name: string;
             /** Qty */
@@ -415,6 +434,13 @@ export interface components {
          * @enum {string}
          */
         MealKind: "breakfast" | "lunch" | "dinner";
+        /** NutritionOut */
+        NutritionOut: {
+            /** Kcal */
+            kcal: number;
+            /** Protein */
+            protein: number;
+        };
         /** RecipeActionOut */
         RecipeActionOut: {
             state: components["schemas"]["AppStateOut"];
@@ -438,8 +464,7 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-            /** Kind */
-            kind: string;
+            kind: components["schemas"]["MealKind"];
             /** Kcal */
             kcal: number;
             /** Protein */
@@ -456,6 +481,18 @@ export interface components {
              * @enum {string}
              */
             status: "active" | "archived";
+        };
+        /** RecipePreviewIn */
+        RecipePreviewIn: {
+            /** Ingredients */
+            ingredients: components["schemas"]["RecipePreviewLineIn"][];
+        };
+        /** RecipePreviewLineIn */
+        RecipePreviewLineIn: {
+            /** Ingredient Id */
+            ingredient_id: number;
+            /** Qty */
+            qty: number;
         };
         /** RecipeStorageIn */
         RecipeStorageIn: {
@@ -845,6 +882,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: components["schemas"]["RecipeOut"];
                     };
+                };
+            };
+        };
+    };
+    preview_recipe_api_recipes_preview_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipePreviewIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NutritionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

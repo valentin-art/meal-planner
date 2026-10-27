@@ -13,6 +13,11 @@ export type Recipe = Schemas['RecipeOut'];
 /** Справочник рецептов по id — GET api/recipes, отдельно от AppState. */
 export type Recipes = Record<string, Recipe>;
 export type ValidationError = Schemas['ValidationError'];
+export type CatalogIngredient = Schemas['CatalogIngredientOut'];
+export type RecipePayload = Schemas['SaveRecipeIn'];
+export type RecipeActionResult = Schemas['RecipeActionOut'];
+export type Nutrition = Schemas['NutritionOut'];
+export type PreviewLine = Schemas['RecipePreviewLineIn'];
 
 export type ActionPayloads = {
   'set-cook-schedule': Schemas['SetCookScheduleIn'];
@@ -24,6 +29,14 @@ export type ActionPayloads = {
   'unskip-cook': Record<string, never>;
 };
 export type ActionName = keyof ActionPayloads;
+
+/** Действия с рецептом (5.4): ответ — новое состояние и рецепт от сервера. */
+export type RecipeActionPayloads = {
+  'save-recipe': RecipePayload;
+  'archive-recipe': Schemas['RecipeIdIn'];
+  'restore-recipe': Schemas['RecipeIdIn'];
+};
+export type RecipeActionName = keyof RecipeActionPayloads;
 
 /** Диапазон расписания, ISO-даты (YYYY-MM-DD); по умолчанию 14 дней с сегодня. */
 export type DateRange = { from?: string; to?: string };
@@ -78,14 +91,35 @@ export function getRecipes(): Promise<Recipes> {
   return request('api/recipes');
 }
 
+export function getIngredients(): Promise<CatalogIngredient[]> {
+  return request('api/ingredients');
+}
+
+/** Ккал и белок черновика рецепта — считает сервер, ничего не сохраняется. */
+export function previewRecipe(ingredients: PreviewLine[]): Promise<Nutrition> {
+  return post('api/recipes/preview', { ingredients });
+}
+
+function post<T>(url: string, payload: unknown): Promise<T> {
+  return request(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+}
+
+export function callRecipeAction<N extends RecipeActionName>(
+  name: N,
+  payload: RecipeActionPayloads[N],
+  range?: DateRange,
+): Promise<RecipeActionResult> {
+  return post(withRange(`api/actions/${name}`, range), payload);
+}
+
 export function callAction<N extends ActionName>(
   name: N,
   payload: ActionPayloads[N],
   range?: DateRange,
 ): Promise<AppState> {
-  return request(withRange(`api/actions/${name}`, range), {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
+  return post(withRange(`api/actions/${name}`, range), payload);
 }

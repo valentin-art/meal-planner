@@ -19,9 +19,11 @@ from meal_planner.api.schemas import (
     CatalogIngredientOut,
     HealthOut,
     IngredientActionOut,
+    NutritionOut,
     RecipeActionOut,
     RecipeIdIn,
     RecipeOut,
+    RecipePreviewIn,
     SaveIngredientIn,
     SaveRecipeIn,
     SetAnchorDateIn,
@@ -211,7 +213,9 @@ def recipe_action(
     state, updated, spec = apply_catalog_action(
         repo, catalog, today, date_from, date_to, change, repo.save_recipe
     )
-    return RecipeActionOut(state=state, recipe=to_recipe_out(updated.recipes[spec.id]))
+    return RecipeActionOut(
+        state=state, recipe=to_recipe_out(updated, updated.recipes[spec.id])
+    )
 
 
 def create_app() -> FastAPI:
@@ -250,7 +254,14 @@ def create_app() -> FastAPI:
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
     def get_recipes(catalog: CatalogDep) -> dict[str, RecipeOut]:
         # Только каталог: настройки не нужны и не пишутся.
-        return to_recipes_out(catalog.recipes)
+        return to_recipes_out(catalog)
+
+    @app.post("/api/recipes/preview", response_model=NutritionOut)
+    def preview_recipe(body: RecipePreviewIn, catalog: CatalogDep) -> NutritionOut:
+        # Ккал черновика для редактора (5.5): только чтение — ничего не пишет,
+        # версия не меняется. POST из-за тела, это не действие.
+        kcal, protein = catalog_actions.preview_nutrition(catalog, body.to_lines())
+        return NutritionOut(kcal=kcal, protein=protein)
 
     @app.get("/api/ingredients", response_model=list[CatalogIngredientOut])
     def get_ingredients(catalog: CatalogDep) -> list[CatalogIngredientOut]:

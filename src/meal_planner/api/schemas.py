@@ -5,7 +5,6 @@
 Исключение — SummaryOut для HA: там названия и готовые строки, как в UI.
 """
 
-from collections.abc import Mapping
 from datetime import date
 from typing import Literal
 
@@ -50,6 +49,7 @@ class SettingsOut(BaseModel):
 
 
 class IngredientOut(BaseModel):
+    ingredient_id: int  # id в справочнике — редактор рецепта ссылается по нему
     name: str
     qty: float
     qty_display: str
@@ -67,7 +67,7 @@ class RecipeStorageOut(BaseModel):
 class RecipeOut(BaseModel):
     id: str
     name: str
-    kind: str
+    kind: MealKind
     kcal: int
     protein: int
     ingredients: list[IngredientOut]
@@ -155,7 +155,9 @@ class SetAnchorDateIn(BaseModel):
 
 class RecipeLineIn(BaseModel):
     ingredient_id: int
-    qty: float = Field(gt=0)  # в единице ингредиента
+    # В единице ингредиента. Без gt=0: «больше нуля» проверяет core — по-русски
+    # и у поля, как остальные ошибки формы.
+    qty: float
 
 
 class RecipeStorageIn(BaseModel):
@@ -190,6 +192,23 @@ class SaveRecipeIn(BaseModel):
             else RecipeStorage(storage.keep, storage.pan, storage.micro, storage.after),
             is_fish=self.is_fish,
         )
+
+
+class RecipePreviewLineIn(BaseModel):
+    ingredient_id: int
+    qty: float  # без gt=0: черновик бывает недописан, такие строки не считаются
+
+
+class RecipePreviewIn(BaseModel):
+    ingredients: list[RecipePreviewLineIn]
+
+    def to_lines(self) -> list[RecipeLineInput]:
+        return [RecipeLineInput(i.ingredient_id, i.qty) for i in self.ingredients]
+
+
+class NutritionOut(BaseModel):
+    kcal: int
+    protein: int
 
 
 class RecipeIdIn(BaseModel):
@@ -319,8 +338,9 @@ def to_settings_out(s: Settings) -> SettingsOut:
     )
 
 
-def to_ingredient_out(i: Ingredient) -> IngredientOut:
+def to_ingredient_out(catalog: Catalog, i: Ingredient) -> IngredientOut:
     return IngredientOut(
+        ingredient_id=catalog.ingredients[i.name].id,
         name=i.name,
         qty=i.qty,
         qty_display=format_qty(i.qty),
@@ -329,7 +349,7 @@ def to_ingredient_out(i: Ingredient) -> IngredientOut:
     )
 
 
-def to_recipe_out(r: Recipe) -> RecipeOut:
+def to_recipe_out(catalog: Catalog, r: Recipe) -> RecipeOut:
     storage = r.storage
     return RecipeOut(
         id=r.id,
@@ -337,7 +357,7 @@ def to_recipe_out(r: Recipe) -> RecipeOut:
         kind=r.kind.value,
         kcal=r.kcal,
         protein=r.protein,
-        ingredients=[to_ingredient_out(i) for i in r.ingredients],
+        ingredients=[to_ingredient_out(catalog, i) for i in r.ingredients],
         steps=list(r.steps),
         storage=None
         if storage is None
@@ -366,8 +386,8 @@ def to_catalog_ingredient_out(
     )
 
 
-def to_recipes_out(recipes: Mapping[str, Recipe]) -> dict[str, RecipeOut]:
-    return {rid: to_recipe_out(r) for rid, r in recipes.items()}
+def to_recipes_out(catalog: Catalog) -> dict[str, RecipeOut]:
+    return {rid: to_recipe_out(catalog, r) for rid, r in catalog.recipes.items()}
 
 
 def to_day_out(d: DayMeals) -> DayOut:

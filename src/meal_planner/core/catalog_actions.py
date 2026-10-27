@@ -19,6 +19,7 @@ from meal_planner.core.models import (
     RecipeStatus,
     RecipeStorage,
 )
+from meal_planner.core.nutrition import nutrition
 from meal_planner.core.scheduling import ROTATION_BREAKFASTS
 from meal_planner.core.shopping import CATEGORY_ORDER
 
@@ -201,6 +202,23 @@ def save_recipe(catalog: Catalog, recipe: RecipeInput) -> RecipeSpec:
         is_fish=recipe.is_fish,
         status=status,
     )
+
+
+def preview_nutrition(
+    catalog: Catalog, lines: Iterable[RecipeLineInput]
+) -> tuple[int, int]:
+    """Ккал и белок черновика (5.5) — тот же расчёт, что при сохранении.
+
+    Недописанные строки (ингредиент не выбран, количество ≤ 0) пропускаются:
+    для предпросмотра это не ошибка, её покажет save-recipe.
+    """
+    by_id = {i.id: i for i in catalog.ingredients.values()}
+    counted = [
+        Ingredient(ingredient.name, line.qty, ingredient.unit, ingredient.category)
+        for line in lines
+        if line.qty > 0 and (ingredient := by_id.get(line.ingredient_id)) is not None
+    ]
+    return nutrition(catalog.ingredients, counted)
 
 
 def _existing(catalog: Catalog, recipe_id: str) -> RecipeSpec:

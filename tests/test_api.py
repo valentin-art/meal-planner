@@ -138,7 +138,7 @@ def test_recipes_endpoint(client):
     assert list(body) == list(SEED_CATALOG.recipes)
     assert body == {
         rid: out.model_dump(mode="json")
-        for rid, out in to_recipes_out(SEED_CATALOG.recipes).items()
+        for rid, out in to_recipes_out(SEED_CATALOG).items()
     }
     assert len(body) == 13  # 12 из JSX + бенедикт b3 (5.1a)
 
@@ -649,3 +649,13 @@ def test_state_marks_recipes_in_plan(client, repo):
     plan_use = client.get("/api/state").json()["recipe_plan_use"]
     assert plan_use == dict(recompute(SEED_CATALOG, DEFAULT_2X, TODAY).plan_use)
     assert set(plan_use.values()) == {"bought", "next_trip"}
+
+
+def test_recipe_preview_is_read_only(client, repo):
+    lines = [
+        {"ingredient_id": ING["куриное филе"], "qty": 180},
+        {"ingredient_id": ING["булгур"], "qty": 0},
+    ]
+    r = client.post("/api/recipes/preview", json={"ingredients": lines})
+    assert r.json() == {"kcal": 215, "protein": 41}  # 180 г × 1.20 = 216 → 215
+    assert repo.get_settings() is None

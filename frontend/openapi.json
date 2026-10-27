@@ -127,6 +127,44 @@
         }
       }
     },
+    "/api/recipes/preview": {
+      "post": {
+        "summary": "Preview Recipe",
+        "operationId": "preview_recipe_api_recipes_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipePreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NutritionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/ingredients": {
       "get": {
         "summary": "Get Ingredients",
@@ -1299,6 +1337,10 @@
       },
       "IngredientOut": {
         "properties": {
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          },
           "name": {
             "type": "string",
             "title": "Name"
@@ -1322,6 +1364,7 @@
         },
         "type": "object",
         "required": [
+          "ingredient_id",
           "name",
           "qty",
           "qty_display",
@@ -1338,6 +1381,24 @@
           "dinner"
         ],
         "title": "MealKind"
+      },
+      "NutritionOut": {
+        "properties": {
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein": {
+            "type": "integer",
+            "title": "Protein"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kcal",
+          "protein"
+        ],
+        "title": "NutritionOut"
       },
       "RecipeActionOut": {
         "properties": {
@@ -1376,7 +1437,6 @@
           },
           "qty": {
             "type": "number",
-            "exclusiveMinimum": 0.0,
             "title": "Qty"
           }
         },
@@ -1398,8 +1458,7 @@
             "title": "Name"
           },
           "kind": {
-            "type": "string",
-            "title": "Kind"
+            "$ref": "#/components/schemas/MealKind"
           },
           "kcal": {
             "type": "integer",
@@ -1460,6 +1519,40 @@
           "status"
         ],
         "title": "RecipeOut"
+      },
+      "RecipePreviewIn": {
+        "properties": {
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/RecipePreviewLineIn"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredients"
+        ],
+        "title": "RecipePreviewIn"
+      },
+      "RecipePreviewLineIn": {
+        "properties": {
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          },
+          "qty": {
+            "type": "number",
+            "title": "Qty"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient_id",
+          "qty"
+        ],
+        "title": "RecipePreviewLineIn"
       },
       "RecipeStorageIn": {
         "properties": {

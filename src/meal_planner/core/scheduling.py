@@ -5,6 +5,7 @@
 С 8.1: у дня с блюдами — отклонение от суточной цели.
 """
 
+from collections.abc import Iterable
 from dataclasses import replace
 from datetime import date, timedelta
 
@@ -214,6 +215,21 @@ def build_schedule(
         )
         for i in range(max(days, 0))
     )
+
+
+def cook_window(settings: Settings, cook_date: date) -> tuple[date, date]:
+    """Что ест партия готовки: со следующего дня по следующую готовку."""
+    start = cook_date + timedelta(days=1)
+    return start, nearest_cook_date(cook_weekdays(settings), start)
+
+
+def slot_portions(days: Iterable[DayMeals]) -> dict[int, int]:
+    """Сколько дней в окне у каждой позиции ротации, в порядке появления."""
+    portions: dict[int, int] = {}
+    for d in days:
+        if d.cycle_index is not None:
+            portions[d.cycle_index] = portions.get(d.cycle_index, 0) + 1
+    return portions
 
 
 def trip_cook_date(settings: Settings, today: date) -> date:

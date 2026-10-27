@@ -1,4 +1,5 @@
-"""SQLite-хранилище: строка settings и каталог рецептов (фаза 5).
+"""SQLite-хранилище: строка settings, каталог рецептов (фаза 5) и отметки
+«приготовлено» (8.3b).
 
 Схема и миграции — db/schema.py. Расписание и список покупок не хранятся —
 их всегда считает planner.recompute.
@@ -280,6 +281,31 @@ class Repository:
             conn.execute(
                 "UPDATE cycle_slots SET lunch_id = ?, dinner_id = ? WHERE slot = ?",
                 (slot.lunch_id, slot.dinner_id, slot.slot),
+            )
+            return _bump_version(conn)
+
+    def get_cooked(self) -> frozenset[tuple[date, str]]:
+        """Отметки «приготовлено» (8.3b): (день, recipe_id)."""
+        with self._connect() as conn:
+            return frozenset(
+                (date.fromisoformat(day), recipe_id)
+                for day, recipe_id in conn.execute("SELECT day, recipe_id FROM cooked")
+            )
+
+    def mark_cooked(self, day: date, recipe_id: str) -> int:
+        """Повтор проверяет core/API заранее; здесь он — IntegrityError."""
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO cooked (day, recipe_id) VALUES (?, ?)",
+                (day.isoformat(), recipe_id),
+            )
+            return _bump_version(conn)
+
+    def unmark_cooked(self, day: date, recipe_id: str) -> int:
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM cooked WHERE day = ? AND recipe_id = ?",
+                (day.isoformat(), recipe_id),
             )
             return _bump_version(conn)
 

@@ -131,3 +131,14 @@ def test_sync_targets_only_lists_with_item_description():
         "supported_features": ["todo.TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM"],
     }
     assert "bitwise_and(64)" in json.dumps(script["sequence"], ensure_ascii=False)
+
+
+def test_stock_template_passes_entity_id():
+    # Списание (8.3b) отдаёт новые значения по entity_id счётчика.
+    plan = PACKAGE["script"]["meal_planner_plan"]["sequence"]
+    stock = next(
+        s["variables"]["stock"] for s in plan if "stock" in s.get("variables", {})
+    )
+    assert '"entity_id": s.entity_id' in stock
+    stock_line = resolve(SCHEMAS["StockLineIn"])["properties"]
+    assert set(re.findall(r'"(\w+)":', stock)) == set(stock_line)

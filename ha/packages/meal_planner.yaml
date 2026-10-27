@@ -19,6 +19,11 @@
 # единицы приложение (POST /api/shopping/remaining), остатки оно не хранит:
 # вкладка «Закупки» и сенсоры — полный список по плану, уменьшенный — только
 # в to-do и в ответе meal_planner_plan.
+#
+# Готовка (8.3b): блюда текущей партии и сегодняшний завтрак отмечаются
+# приготовленными по одному (скрипты meal_planner_mark_cooked / _unmark_).
+# Сколько списать и новые значения счётчиков считает приложение, скрипт их
+# только выставляет; повторная отметка отклоняется — дважды не списать.
 
 homeassistant:
   customize:
@@ -30,6 +35,8 @@ homeassistant:
       friendly_name: Ближайшая закупка
     sensor.meal_planner_today_kcal:
       friendly_name: Ккал сегодня
+    sensor.meal_planner_cooking:
+      friendly_name: Готовка
 
 rest:
   - resource: http://127.0.0.1:8001/api/summary
@@ -79,6 +86,18 @@ rest:
         value_template: "{{ value_json.days.today.kcal }}"
         json_attributes_path: "$.days.today"
         json_attributes: [protein, kcal_delta, protein_delta, nutrition]
+      # Что можно отметить приготовленным (8.3b): состояние — дата готовки
+      # текущей партии; до дня 0 и после пропущенной готовки — unavailable.
+      # dishes: [{recipe_id, name, kind, portions, cooked}], breakfast — то же
+      # для сегодняшнего завтрака. Плитки вкладки «Готовка» дашборда «Кухня».
+      - name: Meal planner cooking
+        unique_id: meal_planner_cooking
+        icon: mdi:pot-steam
+        device_class: date
+        availability: "{{ value_json.cooking.cook_date is not none }}"
+        value_template: "{{ value_json.cooking.cook_date }}"
+        json_attributes_path: "$.cooking"
+        json_attributes: [dishes, breakfast]
 
 rest_command:
   meal_planner_summary:
@@ -91,6 +110,18 @@ rest_command:
     content_type: application/json
     timeout: 10
     payload: '{{ {"stock": stock} | to_json }}'
+  meal_planner_mark_cooked:
+    url: http://127.0.0.1:8001/api/actions/mark-cooked
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"recipe_id": recipe_id, "stock": stock} | to_json }}'
+  meal_planner_unmark_cooked:
+    url: http://127.0.0.1:8001/api/actions/unmark-cooked
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"recipe_id": recipe_id, "stock": stock} | to_json }}'
   meal_planner_set_cycle_position:
     url: http://127.0.0.1:8001/api/actions/set-cycle-position
     method: post
@@ -134,8 +165,10 @@ script:
       какие блюда готовить и что купить. В next_shopping — полный список по
       плану, в to_buy — что купить с учётом остатков дома (to_buy.ignored —
       какие остатки не учтены и почему). На вопрос «что купить» отвечай по
-      to_buy. Вызывай для любых вопросов о еде, готовке и покупках. Даты — в
-      формате ГГГГ-ММ-ДД, today — сегодняшняя дата.
+      to_buy. В cooking — блюда текущей партии готовки и сегодняшний завтрак
+      с recipe_id и отметкой cooked (для скриптов «приготовлено»). Вызывай
+      для любых вопросов о еде, готовке и покупках. Даты — в формате
+      ГГГГ-ММ-ДД, today — сегодняшняя дата.
     mode: parallel
     sequence:
       - action: rest_command.meal_planner_summary
@@ -150,7 +183,8 @@ script:
               {%- set ns.lines = ns.lines + [{
                     "ingredient_id": s.attributes.meal_planner_ingredient | int,
                     "qty": s.state | float,
-                    "unit": s.attributes.unit_of_measurement | default('')}] %}
+                    "unit": s.attributes.unit_of_measurement | default(''),
+                    "entity_id": s.entity_id}] %}
             {%- endfor %}
             {{ ns.lines }}
       - action: rest_command.meal_planner_shopping_remaining
@@ -368,6 +402,116 @@ script:
           - variables:
               result:
                 ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_mark_cooked:
+    alias: Питание — блюдо приготовлено
+    description: >-
+      Отмечает блюдо приготовленным и списывает его продукты из счётчиков
+      запасов: блюдо текущей партии готовки (обед или ужин, со всеми
+      порциями) или сегодняшний завтрак. recipe_id и названия — в разделе
+      cooking ответа meal_planner_plan. Повторно отметить нельзя; при ошибке
+      перескажи её текст. untracked в ответе — продукты без счётчика.
+    mode: queued
+    fields:
+      recipe_id:
+        name: Блюдо
+        description: recipe_id блюда из cooking (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+    sequence:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_mark_cooked
+        data:
+          recipe_id: "{{ recipe_id }}"
+          stock: "{{ stock }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          # Значения посчитало приложение; max — только защита set_value.
+          - repeat:
+              for_each: "{{ resp.content.counters }}"
+              sequence:
+                - action: input_number.set_value
+                  target:
+                    entity_id: "{{ repeat.item.entity_id }}"
+                  data:
+                    value: >-
+                      {{ [repeat.item.value,
+                          state_attr(repeat.item.entity_id, 'max') | float(repeat.item.value)]
+                         | min }}
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_cooking
+          - variables:
+              result:
+                ok: true
+                ignored: "{{ resp.content.ignored }}"
+                untracked: "{{ resp.content.untracked }}"
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_unmark_cooked:
+    alias: Питание — отменить «приготовлено»
+    description: >-
+      Снимает отметку «приготовлено» с блюда и возвращает его продукты в
+      счётчики запасов — если отметили по ошибке. recipe_id — из раздела
+      cooking ответа meal_planner_plan.
+    mode: queued
+    fields:
+      recipe_id:
+        name: Блюдо
+        description: recipe_id отмеченного блюда из cooking
+        required: true
+        selector:
+          text:
+    sequence:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_unmark_cooked
+        data:
+          recipe_id: "{{ recipe_id }}"
+          stock: "{{ stock }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          # Значения посчитало приложение; max — только защита set_value.
+          - repeat:
+              for_each: "{{ resp.content.counters }}"
+              sequence:
+                - action: input_number.set_value
+                  target:
+                    entity_id: "{{ repeat.item.entity_id }}"
+                  data:
+                    value: >-
+                      {{ [repeat.item.value,
+                          state_attr(repeat.item.entity_id, 'max') | float(repeat.item.value)]
+                         | min }}
+          - action: homeassistant.update_entity
+            target:
+              entity_id: sensor.meal_planner_cooking
+          - variables:
+              result:
+                ok: true
+                ignored: "{{ resp.content.ignored }}"
+                untracked: "{{ resp.content.untracked }}"
           - stop: Готово
             response_variable: result
       - variables:

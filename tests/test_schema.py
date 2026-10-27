@@ -26,6 +26,7 @@ CATALOG_TABLES = {
     "recipe_steps",
     "cycle_slots",
 }
+ALL_TABLES = {"settings", "cooked"} | CATALOG_TABLES  # cooked — с 8.3b
 
 
 def connect(path: Path) -> closing[sqlite3.Connection]:
@@ -87,8 +88,8 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 3
-    assert tables(db) == {"settings"} | CATALOG_TABLES
+        assert user_version(conn) == len(MIGRATIONS) == 4
+    assert tables(db) == ALL_TABLES
 
 
 def test_seeded_recipes_match_snapshot(db):
@@ -149,7 +150,7 @@ def test_migrates_live_db_before_phase_5(tmp_path):
         )
     repo = Repository(path)
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
-    assert tables(path) == {"settings"} | CATALOG_TABLES
+    assert tables(path) == ALL_TABLES
     assert len(dump_recipes(path)) == len(RECIPE_SPECS)
 
 
@@ -165,7 +166,7 @@ def test_nutrition_target_migration_keeps_settings(tmp_path, monkeypatch):
         )
     repo = Repository(path)
     with connect(path) as conn:
-        assert user_version(conn) == 3
+        assert user_version(conn) == len(MIGRATIONS)
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
 
 
@@ -185,7 +186,7 @@ def test_failed_migration_rolls_back(tmp_path, monkeypatch):
 
     monkeypatch.undo()
     Repository(path)
-    assert tables(path) == {"settings"} | CATALOG_TABLES
+    assert tables(path) == ALL_TABLES
 
 
 def test_db_from_newer_app_is_refused(db):

@@ -242,6 +242,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/mark-cooked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark Cooked */
+        post: operations["mark_cooked_api_actions_mark_cooked_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/unmark-cooked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unmark Cooked */
+        post: operations["unmark_cooked_api_actions_unmark_cooked_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/save-recipe": {
         parameters: {
             query?: never;
@@ -389,6 +423,43 @@ export interface components {
             dinner_id: string;
             /** Portions */
             portions: number;
+        };
+        /** CookedActionOut */
+        CookedActionOut: {
+            /** Version */
+            version: number;
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Recipe Id */
+            recipe_id: string;
+            /** Counters */
+            counters: components["schemas"]["CounterValueOut"][];
+            /** Ignored */
+            ignored: components["schemas"]["StockIgnoredOut"][];
+            /** Untracked */
+            untracked: string[];
+        };
+        /**
+         * CookedIn
+         * @description Отметить или снять «приготовлено» (8.3b) — с остатками из счётчиков HA.
+         *
+         *     День отметки (день готовки партии или сегодняшний завтрак) решает core.
+         */
+        CookedIn: {
+            /** Stock */
+            stock: components["schemas"]["StockLineIn"][];
+            /** Recipe Id */
+            recipe_id: string;
+        };
+        /** CounterValueOut */
+        CounterValueOut: {
+            /** Entity Id */
+            entity_id: string;
+            /** Value */
+            value: number;
         };
         /** CyclePositionOut */
         CyclePositionOut: {
@@ -824,6 +895,33 @@ export interface components {
             qty: number;
             /** Unit */
             unit: string;
+            /** Entity Id */
+            entity_id?: string | null;
+        };
+        /** SummaryBreakfastOut */
+        SummaryBreakfastOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Recipe Id */
+            recipe_id: string;
+            /** Name */
+            name: string;
+            /** Cooked */
+            cooked: boolean;
+        };
+        /**
+         * SummaryCookingOut
+         * @description Что можно отметить приготовленным (8.3b).
+         */
+        SummaryCookingOut: {
+            /** Cook Date */
+            cook_date: string | null;
+            /** Dishes */
+            dishes: components["schemas"]["SummaryDishOut"][];
+            breakfast: components["schemas"]["SummaryBreakfastOut"] | null;
         };
         /** SummaryDayOut */
         SummaryDayOut: {
@@ -862,6 +960,18 @@ export interface components {
             today: components["schemas"]["SummaryDayOut"];
             tomorrow: components["schemas"]["SummaryDayOut"];
         };
+        /** SummaryDishOut */
+        SummaryDishOut: {
+            /** Recipe Id */
+            recipe_id: string;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["MealKind"];
+            /** Portions */
+            portions: number;
+            /** Cooked */
+            cooked: boolean;
+        };
         /**
          * SummaryOut
          * @description Компактный ответ для REST-сенсоров и Assist в HA (7.5).
@@ -881,6 +991,7 @@ export interface components {
             days: components["schemas"]["SummaryDaysOut"];
             next_shopping: components["schemas"]["SummaryTripOut"];
             skipped_cook: components["schemas"]["SkippedCookOut"] | null;
+            cooking: components["schemas"]["SummaryCookingOut"];
         };
         /** SummaryTripOut */
         SummaryTripOut: {
@@ -1349,6 +1460,72 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mark_cooked_api_actions_mark_cooked_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookedActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unmark_cooked_api_actions_unmark_cooked_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookedActionOut"];
                 };
             };
             /** @description Validation Error */

@@ -18,9 +18,10 @@ from meal_planner.core.models import (
 from meal_planner.core.scheduling import (
     build_schedule,
     cook_weekdays,
-    nearest_cook_date,
+    cook_window,
     pause_end,
     settle_skip,
+    slot_portions,
     today_position,
     trip_cook_date,
 )
@@ -39,25 +40,19 @@ def next_shopping_trip(
     # JS ShoppingTab: едим со следующего дня после готовки по следующую готовку
     # включительно. Окно может закончиться через 13 дней после today, поэтому
     # дни строим здесь, а не берём из запрошенного расписания.
-    weekdays = cook_weekdays(settings)
     cook_date = trip_cook_date(settings, today)
-    window_start = cook_date + timedelta(days=1)
-    window_end = nearest_cook_date(weekdays, window_start)
+    window_start, window_end = cook_window(settings, cook_date)
     days = build_schedule(catalog, settings, window_start, window_end)
     # Готовится по позициям ротации в порядке первого появления; обед и ужин —
     # из слота (JS брал ужин по позиции обеда — то же, пока обеды в слотах
     # разные; с 5.3 один рецепт может стоять в нескольких слотах).
-    portions: dict[int, int] = {}
-    for d in days:
-        if d.cycle_index is not None:
-            portions[d.cycle_index] = portions.get(d.cycle_index, 0) + 1
     cook_items = tuple(
         CookItem(
             lunch=catalog.recipes[catalog.slot(k).lunch_id],
             dinner=catalog.recipes[catalog.slot(k).dinner_id],
             portions=n,
         )
-        for k, n in portions.items()
+        for k, n in slot_portions(days).items()
     )
     if settings.shopping_timing == "before":
         shopping_date = cook_date - timedelta(days=1)

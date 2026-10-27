@@ -719,6 +719,82 @@
         }
       }
     },
+    "/api/actions/mark-cooked": {
+      "post": {
+        "summary": "Mark Cooked",
+        "operationId": "mark_cooked_api_actions_mark_cooked_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookedActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/unmark-cooked": {
+      "post": {
+        "summary": "Unmark Cooked",
+        "operationId": "unmark_cooked_api_actions_unmark_cooked_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookedActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/save-recipe": {
       "post": {
         "summary": "Save Recipe",
@@ -1272,6 +1348,94 @@
           "portions"
         ],
         "title": "CookItemOut"
+      },
+      "CookedActionOut": {
+        "properties": {
+          "version": {
+            "type": "integer",
+            "title": "Version"
+          },
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "counters": {
+            "items": {
+              "$ref": "#/components/schemas/CounterValueOut"
+            },
+            "type": "array",
+            "title": "Counters"
+          },
+          "ignored": {
+            "items": {
+              "$ref": "#/components/schemas/StockIgnoredOut"
+            },
+            "type": "array",
+            "title": "Ignored"
+          },
+          "untracked": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Untracked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "version",
+          "day",
+          "recipe_id",
+          "counters",
+          "ignored",
+          "untracked"
+        ],
+        "title": "CookedActionOut"
+      },
+      "CookedIn": {
+        "properties": {
+          "stock": {
+            "items": {
+              "$ref": "#/components/schemas/StockLineIn"
+            },
+            "type": "array",
+            "title": "Stock"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock",
+          "recipe_id"
+        ],
+        "title": "CookedIn",
+        "description": "Отметить или снять «приготовлено» (8.3b) — с остатками из счётчиков HA.\n\nДень отметки (день готовки партии или сегодняшний завтрак) решает core."
+      },
+      "CounterValueOut": {
+        "properties": {
+          "entity_id": {
+            "type": "string",
+            "title": "Entity Id"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          }
+        },
+        "type": "object",
+        "required": [
+          "entity_id",
+          "value"
+        ],
+        "title": "CounterValueOut"
       },
       "CyclePositionOut": {
         "properties": {
@@ -2472,6 +2636,17 @@
           "unit": {
             "type": "string",
             "title": "Unit"
+          },
+          "entity_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entity Id"
           }
         },
         "type": "object",
@@ -2481,6 +2656,76 @@
           "unit"
         ],
         "title": "StockLineIn"
+      },
+      "SummaryBreakfastOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "cooked": {
+            "type": "boolean",
+            "title": "Cooked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "recipe_id",
+          "name",
+          "cooked"
+        ],
+        "title": "SummaryBreakfastOut"
+      },
+      "SummaryCookingOut": {
+        "properties": {
+          "cook_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cook Date"
+          },
+          "dishes": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryDishOut"
+            },
+            "type": "array",
+            "title": "Dishes"
+          },
+          "breakfast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SummaryBreakfastOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "cook_date",
+          "dishes",
+          "breakfast"
+        ],
+        "title": "SummaryCookingOut",
+        "description": "Что можно отметить приготовленным (8.3b)."
       },
       "SummaryDayOut": {
         "properties": {
@@ -2614,6 +2859,38 @@
         ],
         "title": "SummaryDaysOut"
       },
+      "SummaryDishOut": {
+        "properties": {
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MealKind"
+          },
+          "portions": {
+            "type": "integer",
+            "title": "Portions"
+          },
+          "cooked": {
+            "type": "boolean",
+            "title": "Cooked"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "name",
+          "kind",
+          "portions",
+          "cooked"
+        ],
+        "title": "SummaryDishOut"
+      },
       "SummaryOut": {
         "properties": {
           "today": {
@@ -2662,6 +2939,9 @@
                 "type": "null"
               }
             ]
+          },
+          "cooking": {
+            "$ref": "#/components/schemas/SummaryCookingOut"
           }
         },
         "type": "object",
@@ -2672,7 +2952,8 @@
           "protein_target",
           "days",
           "next_shopping",
-          "skipped_cook"
+          "skipped_cook",
+          "cooking"
         ],
         "title": "SummaryOut",
         "description": "Компактный ответ для REST-сенсоров и Assist в HA (7.5)."

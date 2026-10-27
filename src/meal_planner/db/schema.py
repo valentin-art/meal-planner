@@ -160,10 +160,24 @@ def _nutrition_target(conn: sqlite3.Connection) -> None:
     conn.execute("ALTER TABLE settings ADD COLUMN daily_protein_target INTEGER")
 
 
+def _cooked(conn: sqlite3.Connection) -> None:
+    # Отметки «приготовлено» (8.3b): день готовки партии или день завтрака.
+    conn.execute(
+        """
+        CREATE TABLE cooked (
+            day TEXT NOT NULL,
+            recipe_id TEXT NOT NULL REFERENCES recipes (id),
+            PRIMARY KEY (day, recipe_id)
+        )
+        """
+    )
+
+
 MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _settings,  # 1: settings — схема до фазы 5
     _catalog,  # 2: каталог рецептов и сид (5.2)
     _nutrition_target,  # 3: цель по ккал и белку (8.1)
+    _cooked,  # 4: отметки «приготовлено» (8.3b)
 )
 
 

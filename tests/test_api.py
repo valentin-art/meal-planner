@@ -820,3 +820,79 @@ def test_shopping_remaining_first_request_saves_defaults(client, repo):
 )
 def test_shopping_remaining_bad_body_is_422(client, body):
     assert client.post("/api/shopping/remaining", json=body).status_code == 422
+
+
+def test_summary_lists_cooking(client, repo):
+    repo.save_settings(DEFAULT_2X)  # сегодня Пн 09.11, партия Сб 07.11
+    cooking = client.get("/api/summary").json()["cooking"]
+    assert cooking["cook_date"] == "2026-11-07"
+    assert [d["portions"] for d in cooking["dishes"]] == [1] * 8
+    assert not any(d["cooked"] for d in cooking["dishes"])
+    breakfast = cooking["breakfast"]
+    assert (breakfast["date"], breakfast["cooked"]) == ("2026-11-09", False)
+    assert breakfast["name"] == SEED_CATALOG.recipes[breakfast["recipe_id"]].name
+
+
+def test_mark_and_unmark_cooked(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    dish = client.get("/api/summary").json()["cooking"]["dishes"][0]
+    recipe = SEED_CATALOG.recipes[dish["recipe_id"]]
+    first = recipe.ingredients[0]
+    ingredient = SEED_CATALOG.ingredients[first.name]
+    stock = [
+        {
+            "ingredient_id": ingredient.id,
+            "qty": 10000,
+            "unit": ingredient.unit,
+            "entity_id": "input_number.x",
+        }
+    ]
+    body = {"recipe_id": recipe.id, "stock": stock}
+
+    r = client.post("/api/actions/mark-cooked", json=body)
+    assert r.status_code == 200
+    out = r.json()
+    assert (out["day"], out["recipe_id"], out["version"]) == (
+        "2026-11-07",
+        recipe.id,
+        2,
+    )
+    assert out["counters"] == [
+        {"entity_id": "input_number.x", "value": 10000 - first.qty * dish["portions"]}
+    ]
+    assert len(out["untracked"]) == len(recipe.ingredients) - 1
+    assert repo.get_cooked() == {(date(2026, 11, 7), recipe.id)}
+    assert client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
+
+    # Повтор — 422, ничего не записано: дважды не списать.
+    r = client.post("/api/actions/mark-cooked", json=body)
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "Блюдо уже отмечено как приготовленное"
+    assert repo.get_settings().version == 2
+
+    r = client.post("/api/actions/unmark-cooked", json=body)
+    assert r.status_code == 200
+    assert r.json()["counters"] == [
+        {"entity_id": "input_number.x", "value": 10000 + first.qty * dish["portions"]}
+    ]
+    assert repo.get_cooked() == frozenset()
+
+
+@pytest.mark.parametrize(
+    ("action", "recipe_id", "msg"),
+    [
+        ("mark-cooked", "нет", "Это блюдо сейчас не готовится"),
+        ("unmark-cooked", "l1", "Блюдо не отмечено как приготовленное"),
+    ],
+)
+def test_cooked_errors_write_nothing(client, repo, action, recipe_id, msg):
+    repo.save_settings(DEFAULT_2X)
+    r = client.post(
+        f"/api/actions/{action}", json={"recipe_id": recipe_id, "stock": []}
+    )
+    assert r.status_code == 422
+    assert r.json()["detail"] == [
+        {"type": "value_error", "loc": ["body", "recipe_id"], "msg": msg}
+    ]
+    assert repo.get_cooked() == frozenset()
+    assert repo.get_settings().version == 1

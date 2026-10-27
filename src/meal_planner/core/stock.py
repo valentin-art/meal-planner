@@ -24,6 +24,8 @@ class StockLine:
     ingredient_id: int
     qty: float
     unit: str  # единица счётчика, не обязательно ингредиента
+    # Сущность счётчика в HA: списание (8.3b) отдаёт новые значения по ней.
+    entity_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)

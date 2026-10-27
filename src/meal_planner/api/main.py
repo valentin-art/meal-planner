@@ -16,6 +16,8 @@ from fastapi.staticfiles import StaticFiles
 
 from meal_planner.api.schemas import (
     AppStateOut,
+    CookedActionOut,
+    CookedIn,
     HealthOut,
     IngredientActionOut,
     IngredientsOut,
@@ -37,13 +39,14 @@ from meal_planner.api.schemas import (
     SummaryOut,
     to_app_state_out,
     to_catalog_ingredient_out,
+    to_cooked_action_out,
     to_ingredients_out,
     to_recipe_out,
     to_recipes_out,
     to_shopping_remaining_out,
     to_summary_out,
 )
-from meal_planner.core import actions, catalog_actions
+from meal_planner.core import actions, catalog_actions, cooking
 from meal_planner.core.catalog_actions import CatalogError
 from meal_planner.core.models import (
     Catalog,
@@ -240,6 +243,29 @@ def recipe_action(
     )
 
 
+def cooked_action(
+    repo: Repository, catalog: Catalog, today: date, body: CookedIn, mark: bool
+) -> CookedActionOut:
+    """Отметить или снять «приготовлено» (8.3b) и посчитать новые остатки.
+
+    Значения счётчиков выставляет HA; при ошибке ничего не пишется.
+    """
+    # Версия — в строке настроек: до первой записи её создаёт первый GET.
+    settings, _ = stored_or_initial(repo, today)
+    try:
+        change = cooking.cooked_change(
+            catalog, settings, today, repo.get_cooked(), body.recipe_id, mark
+        )
+    except actions.ActionError as e:
+        raise unprocessable((["body", e.field], e.message)) from e
+    update = cooking.counter_update(
+        catalog, change.recipe, change.portions, body.to_lines(), -1 if mark else 1
+    )
+    write = repo.mark_cooked if mark else repo.unmark_cooked
+    version = write(change.day, body.recipe_id)
+    return to_cooked_action_out(version, change.day, body.recipe_id, update)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Meal planner")
 
@@ -270,7 +296,8 @@ def create_app() -> FastAPI:
         return to_summary_out(
             recompute(
                 catalog, settings, today, today, today + timedelta(days=1), version
-            )
+            ),
+            cooking.cooking(catalog, settings, today, repo.get_cooked()),
         )
 
     @app.post("/api/shopping/remaining", response_model=ShoppingRemainingOut)
@@ -428,6 +455,18 @@ def create_app() -> FastAPI:
             date_to,
             lambda s: actions.unskip_cook(s, today),
         )
+
+    @app.post("/api/actions/mark-cooked", response_model=CookedActionOut)
+    def mark_cooked(
+        body: CookedIn, repo: Repo, catalog: CatalogDep, today: Today
+    ) -> CookedActionOut:
+        return cooked_action(repo, catalog, today, body, mark=True)
+
+    @app.post("/api/actions/unmark-cooked", response_model=CookedActionOut)
+    def unmark_cooked(
+        body: CookedIn, repo: Repo, catalog: CatalogDep, today: Today
+    ) -> CookedActionOut:
+        return cooked_action(repo, catalog, today, body, mark=False)
 
     @app.post("/api/actions/save-recipe", response_model=RecipeActionOut)
     def save_recipe(

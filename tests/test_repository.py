@@ -156,3 +156,17 @@ def test_catalog_write_without_settings_writes_nothing(tmp_path):
     with pytest.raises(RuntimeError, match="версию"):
         repo.save_recipe(renamed)
     assert repo.get_catalog().recipes["l1"].name == SEED_CATALOG.recipes["l1"].name
+
+
+def test_cooked_marks(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    assert repo.get_cooked() == frozenset()
+    assert repo.mark_cooked(date(2026, 11, 11), "l3") == 2
+    assert repo.mark_cooked(date(2026, 11, 12), "b1") == 3
+    assert repo.get_cooked() == {(date(2026, 11, 11), "l3"), (date(2026, 11, 12), "b1")}
+    with pytest.raises(sqlite3.IntegrityError):
+        repo.mark_cooked(date(2026, 11, 11), "l3")
+    assert repo.get_settings().version == 3  # повтор не записан
+    assert repo.unmark_cooked(date(2026, 11, 11), "l3") == 4
+    assert repo.get_cooked() == {(date(2026, 11, 12), "b1")}

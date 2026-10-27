@@ -17,6 +17,7 @@ from meal_planner.core.catalog_actions import (
     RecipeLineInput,
     used_in,
 )
+from meal_planner.core.cooking import Cooking, CounterUpdate
 from meal_planner.core.models import (
     AppState,
     Catalog,
@@ -329,6 +330,8 @@ class StockLineIn(BaseModel):
     ingredient_id: int  # id справочника — переименование не ломает связку
     qty: float
     unit: str  # единица счётчика: г, мл, шт, кг, л…; переводит core
+    # Сущность счётчика в HA — по ней списание (8.3b) отдаёт новые значения.
+    entity_id: str | None = None
 
 
 class ShoppingRemainingIn(BaseModel):
@@ -337,7 +340,9 @@ class ShoppingRemainingIn(BaseModel):
     stock: list[StockLineIn]
 
     def to_lines(self) -> list[StockLine]:
-        return [StockLine(i.ingredient_id, i.qty, i.unit) for i in self.stock]
+        return [
+            StockLine(i.ingredient_id, i.qty, i.unit, i.entity_id) for i in self.stock
+        ]
 
 
 class StockIgnoredOut(BaseModel):
@@ -352,6 +357,52 @@ class ShoppingRemainingOut(SummaryTripOut):
     """Ближайшая закупка за вычетом остатков (8.2), строки — как в summary."""
 
     ignored: list[StockIgnoredOut]  # строки остатков, которые не учтены
+
+
+class CookedIn(ShoppingRemainingIn):
+    """Отметить или снять «приготовлено» (8.3b) — с остатками из счётчиков HA.
+
+    День отметки (день готовки партии или сегодняшний завтрак) решает core.
+    """
+
+    recipe_id: str
+
+
+class CounterValueOut(BaseModel):
+    entity_id: str
+    value: float  # новое значение счётчика, в его единице, не меньше 0
+
+
+class CookedActionOut(BaseModel):
+    version: int
+    day: date  # день отметки: готовка партии или сегодня (завтрак)
+    recipe_id: str
+    counters: list[CounterValueOut]  # выставить в HA как есть
+    ignored: list[StockIgnoredOut]  # счётчик есть, но единицу не перевести
+    untracked: list[str]  # ингредиенты блюда без счётчика — не списаны
+
+
+class SummaryDishOut(BaseModel):
+    recipe_id: str
+    name: str
+    kind: MealKind
+    portions: int
+    cooked: bool
+
+
+class SummaryBreakfastOut(BaseModel):
+    date: date
+    recipe_id: str
+    name: str
+    cooked: bool
+
+
+class SummaryCookingOut(BaseModel):
+    """Что можно отметить приготовленным (8.3b)."""
+
+    cook_date: date | None  # null — партии нет (до дня 0, пропуск)
+    dishes: list[SummaryDishOut]  # обеды и ужины партии, по рецепту
+    breakfast: SummaryBreakfastOut | None  # завтрак сегодня, null — блюд нет
 
 
 class SkippedCookOut(BaseModel):
@@ -371,6 +422,7 @@ class SummaryOut(BaseModel):
     days: SummaryDaysOut
     next_shopping: SummaryTripOut
     skipped_cook: SkippedCookOut | None
+    cooking: SummaryCookingOut
 
 
 class HealthOut(BaseModel):
@@ -644,7 +696,44 @@ def to_shopping_remaining_out(s: StockedTrip) -> ShoppingRemainingOut:
     )
 
 
-def to_summary_out(s: AppState) -> SummaryOut:
+def to_summary_cooking_out(c: Cooking) -> SummaryCookingOut:
+    b = c.breakfast
+    return SummaryCookingOut(
+        cook_date=c.batch and c.batch.cook_date,
+        dishes=[]
+        if c.batch is None
+        else [
+            SummaryDishOut(
+                recipe_id=d.recipe.id,
+                name=d.recipe.name,
+                kind=d.recipe.kind,
+                portions=d.portions,
+                cooked=d.cooked,
+            )
+            for d in c.batch.dishes
+        ],
+        breakfast=None
+        if b is None
+        else SummaryBreakfastOut(
+            date=b.date, recipe_id=b.recipe.id, name=b.recipe.name, cooked=b.cooked
+        ),
+    )
+
+
+def to_cooked_action_out(
+    version: int, day: date, recipe_id: str, u: CounterUpdate
+) -> CookedActionOut:
+    return CookedActionOut(
+        version=version,
+        day=day,
+        recipe_id=recipe_id,
+        counters=[CounterValueOut(entity_id=e, value=v) for e, v in u.values],
+        ignored=[to_stock_ignored_out(i) for i in u.ignored],
+        untracked=list(u.untracked),
+    )
+
+
+def to_summary_out(s: AppState, cooking: Cooking) -> SummaryOut:
     """s — recompute на сегодня и завтра: schedule[0] и schedule[1]."""
     today, tomorrow = s.schedule
     return SummaryOut(
@@ -657,4 +746,5 @@ def to_summary_out(s: AppState) -> SummaryOut:
         ),
         next_shopping=to_summary_trip_out(s.next_shopping_trip),
         skipped_cook=to_skipped_cook_out(s.skipped_cook),
+        cooking=to_summary_cooking_out(cooking),
     )

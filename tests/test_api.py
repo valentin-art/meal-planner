@@ -127,6 +127,26 @@ def test_static_dir_is_served(repo, monkeypatch, tmp_path):
     assert client.get("/api/state").status_code == 200
 
 
+def test_index_is_revalidated_and_assets_are_immutable(repo, monkeypatch, tmp_path):
+    # Иначе браузер «на глаз» держит старый index.html со ссылкой на старый
+    # бандл, и после обновления образа UI не меняется.
+    static = tmp_path / "dist"
+    (static / "assets").mkdir(parents=True)
+    (static / "index.html").write_text("<script src='assets/index-abc.js'>", "utf-8")
+    (static / "assets" / "index-abc.js").write_text("console.log(1)", "utf-8")
+    monkeypatch.setenv("MEALPLAN_STATIC_DIR", str(static))
+    client = make_client(repo)
+
+    index = client.get("/")
+    assert index.headers["cache-control"] == "no-cache"
+    assert client.get("/index.html").headers["cache-control"] == "no-cache"
+    again = client.get("/", headers={"If-None-Match": index.headers["etag"]})
+    assert again.status_code == 304
+    assert again.headers["cache-control"] == "no-cache"
+    asset = client.get("/assets/index-abc.js")
+    assert asset.headers["cache-control"] == "public, max-age=31536000, immutable"
+
+
 def test_no_static_dir_gives_404_at_root(client):
     assert client.get("/").status_code == 404
 

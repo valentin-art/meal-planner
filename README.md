@@ -239,6 +239,8 @@ linux/arm64 -t meal-planner .` (тогда в compose — `image:` вместо 
 | в мобильном приложении HA панель «Питание» без шапки, не вернуться в HA | `ui_mode` по умолчанию `normal` — голый iframe без кнопки меню | `ui_mode: toolbar` в `ingress:`, затем «Ingress: Reload» или перезапуск HA |
 | Assist не знает про план | скрипты не открыты для Assist | «Голосовые ассистенты → Открыть доступ» |
 | контейнер `unhealthy` | Docker его сам не перезапускает (только при падении процесса) | `docker logs meal-planner`, `docker restart meal-planner` |
+| в `/opt/meal-planner-data/backups` нет свежих копий, `journalctl -t meal-planner-backup` пуст | не установлено задание cron (шаг 8) | `crontab -l`; поставить задание и прогнать его в окружении cron: `env -i PATH=/usr/bin:/bin sh -c 'docker exec meal-planner meal-planner-backup 2>&1 \| logger -t meal-planner-backup'` |
+| после обновления в панели старый UI (нет новых разделов), хотя `docker exec meal-planner ls /app/frontend/dist/assets` показывает новый бандл | браузер держит `index.html` из кэша; до MP-50 он отдавался без `Cache-Control` | один раз: Ctrl+Shift+R; в приложении HA — «Настройки → Companion App → Отладка → Сбросить кэш фронтенда». С MP-50 `index.html` — `no-cache`, повторяться не должно |
 | HTTP 500, в `docker logs meal-planner` — `SchemaTooNewError` | образ старее БД: откатили приложение после миграции | вернуть новый образ (`git pull`, пересборка) или восстановить копию, снятую до обновления |
 
 ## Проверка под префиксом (как HA Ingress)

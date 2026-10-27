@@ -61,6 +61,23 @@ DEFAULT_STATIC_DIR = Path("frontend/dist")
 MAX_RANGE_DAYS = 366  # ограничение API (?from=&to=), не бизнес-правило
 
 
+class FrontendFiles(StaticFiles):
+    """Сборка фронтенда: index.html всегда сверяется с сервером.
+
+    Без Cache-Control браузер кэширует по Last-Modified «на глаз» и часами
+    отдаёт старый index.html со ссылкой на старый бандл — после обновления
+    образа UI оставался прежним. Файлы в assets/ с хешем в имени не меняются.
+    """
+
+    def file_response(self, full_path, stat_result, scope, status_code=200):
+        response = super().file_response(full_path, stat_result, scope, status_code)
+        hashed = Path(full_path).parent.name == "assets"
+        response.headers["Cache-Control"] = (
+            "public, max-age=31536000, immutable" if hashed else "no-cache"
+        )
+        return response
+
+
 @lru_cache
 def get_repository() -> Repository:
     return Repository(db_path_from_env())
@@ -478,7 +495,7 @@ def create_app() -> FastAPI:
     # Монтируется последним, чтобы не перекрывать /api.
     static_dir = Path(os.environ.get("MEALPLAN_STATIC_DIR", DEFAULT_STATIC_DIR))
     if static_dir.is_dir():
-        app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+        app.mount("/", FrontendFiles(directory=static_dir, html=True), name="static")
     return app
 
 

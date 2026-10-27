@@ -24,6 +24,7 @@ from meal_planner.core.scheduling import (
     settle_skip,
     slot_portions,
 )
+from meal_planner.core.shopping import format_qty
 from meal_planner.core.stock import (
     StockIgnored,
     StockLine,
@@ -170,6 +171,36 @@ def cooked_change(
     if not mark and not is_cooked:
         raise ActionError("recipe_id", "Блюдо не отмечено как приготовленное")
     return CookedChange(day, catalog.recipes[recipe_id], portions)
+
+
+def check_enough(
+    catalog: Catalog, recipe: Recipe, portions: int, lines: Iterable[StockLine]
+) -> None:
+    """Хватает ли продуктов на блюдо; нет — ActionError, блюдо не отмечается.
+
+    Проверяются ингредиенты со счётчиком, единицу которого можно перевести:
+    без счётчика остаток неизвестен, и блюдо с ним иначе не отметить никогда.
+    """
+    by_id: dict[int, list[StockLine]] = {}
+    for line in lines:
+        by_id.setdefault(line.ingredient_id, []).append(line)
+    missing = []
+    for ing in recipe.ingredients:
+        ingredient = catalog.ingredients[ing.name]
+        have = None
+        for line in by_id.get(ingredient.id, ()):
+            per_unit = convert(ingredient, Decimal(1), line.unit)
+            if per_unit is not None:
+                have = (have or Decimal(0)) + Decimal(str(line.qty)) * per_unit
+        need = Decimal(str(ing.qty)) * portions
+        if have is not None and have < need:
+            unit = ingredient.unit
+            missing.append(
+                f"{ingredient.name} — нужно {format_qty(float(need))} {unit},"
+                f" есть {format_qty(float(round(have, 1)))} {unit}"
+            )
+    if missing:
+        raise ActionError("stock", "Не хватает продуктов: " + "; ".join(missing))
 
 
 def counter_update(

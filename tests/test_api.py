@@ -896,3 +896,30 @@ def test_cooked_errors_write_nothing(client, repo, action, recipe_id, msg):
     ]
     assert repo.get_cooked() == frozenset()
     assert repo.get_settings().version == 1
+
+
+def test_mark_cooked_refused_when_stock_is_short(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    dish = client.get("/api/summary").json()["cooking"]["dishes"][0]
+    recipe = SEED_CATALOG.recipes[dish["recipe_id"]]
+    first = recipe.ingredients[0]
+    ingredient = SEED_CATALOG.ingredients[first.name]
+    short = first.qty * dish["portions"] / 2
+    stock = [
+        {
+            "ingredient_id": ingredient.id,
+            "qty": short,
+            "unit": ingredient.unit,
+            "entity_id": "input_number.x",
+        }
+    ]
+    r = client.post(
+        "/api/actions/mark-cooked", json={"recipe_id": recipe.id, "stock": stock}
+    )
+    assert r.status_code == 422
+    (error,) = r.json()["detail"]
+    assert error["loc"] == ["body", "stock"]
+    assert error["msg"].startswith(f"Не хватает продуктов: {first.name} — нужно")
+    # Ничего не отмечено и не записано.
+    assert repo.get_cooked() == frozenset()
+    assert repo.get_settings().version == 1

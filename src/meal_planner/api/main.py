@@ -252,14 +252,18 @@ def cooked_action(
     """
     # Версия — в строке настроек: до первой записи её создаёт первый GET.
     settings, _ = stored_or_initial(repo, today)
+    lines = body.to_lines()
     try:
         change = cooking.cooked_change(
             catalog, settings, today, repo.get_cooked(), body.recipe_id, mark
         )
+        if mark:
+            # Не хватает продуктов — блюдо не отмечается и ничего не списано.
+            cooking.check_enough(catalog, change.recipe, change.portions, lines)
     except actions.ActionError as e:
         raise unprocessable((["body", e.field], e.message)) from e
     update = cooking.counter_update(
-        catalog, change.recipe, change.portions, body.to_lines(), -1 if mark else 1
+        catalog, change.recipe, change.portions, lines, -1 if mark else 1
     )
     write = repo.mark_cooked if mark else repo.unmark_cooked
     version = write(change.day, body.recipe_id)

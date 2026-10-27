@@ -8,6 +8,7 @@ import pytest
 from meal_planner.core.actions import ActionError
 from meal_planner.core.cooking import (
     CounterUpdate,
+    check_enough,
     cooked_change,
     cooking,
     counter_update,
@@ -237,3 +238,30 @@ def test_counter_values_are_rounded():
         SEED_CATALOG, recipe, 1, [line("цукини", 1, "шт", "input_number.zucchini")], -1
     )
     assert update.values == (("input_number.zucchini", 0.64),)  # 1 − 100/280
+
+
+def test_enough_stock_lets_the_dish_be_marked():
+    lines = [
+        line("авокадо", 2, "шт", "input_number.avocado"),  # 260 г — ровно
+        line("оливковое масло", 45, "мл", "input_number.olive_oil"),  # 3 ст.л.
+        line("куриное филе", 0.4, "кг", None),  # 400 г, сущность не нужна
+        line("куриное филе", 200, "г", None),  # +200 г — вместе 600
+        line("брокколи", 0, "шт", "input_number.broccoli"),  # шт не перевести
+    ]
+    # Масло сливочное и киноа без счётчика — не проверяются.
+    check_enough(SEED_CATALOG, RECIPE, 2, lines)
+
+
+def test_not_enough_stock_refuses_the_mark():
+    lines = [
+        line("авокадо", 1.5, "шт", "input_number.avocado"),  # 195 из 260 г
+        line("оливковое масло", 30, "мл", "input_number.olive_oil"),  # 2 из 3
+        line("куриное филе", 1, "кг", "input_number.chicken"),
+    ]
+    with pytest.raises(ActionError) as e:
+        check_enough(SEED_CATALOG, RECIPE, 2, lines)
+    assert e.value.field == "stock"
+    assert e.value.message == (
+        "Не хватает продуктов: авокадо — нужно 260 г, есть 195 г;"
+        " оливковое масло — нужно 3 ст.л., есть 2 ст.л."
+    )

@@ -157,6 +157,7 @@ HA, пути `/opt/...` — пример раскладки (compose стека 
 ### Обновление
 
 ```sh
+docker exec meal-planner meal-planner-backup   # копия до обновления — точка отката
 cd ~/meal-planner && git pull
 ```
 
@@ -166,7 +167,11 @@ cd ~/meal-planner && git pull
 | скрипты / автоматизации в `ha/packages` | HA: «Инструменты разработчика → YAML» → проверить → перезагрузить «Скрипты», «Автоматизации» |
 | сенсоры, `rest_command`, фразы в `ha/packages` | `docker restart homeassistant` |
 
-Миграции БД (новые колонки) выполняются сами при старте приложения.
+Миграции БД выполняются сами — по `PRAGMA user_version`, при первом запросе
+после старта (его делает уже healthcheck). Откатить образ после миграции
+нельзя: старое приложение не открывает БД новой схемы (`SchemaTooNewError`,
+HTTP 500, `unhealthy`). Откат — прежний образ **и** копия БД, снятая до
+обновления (восстановление — ниже).
 
 ### Бэкап и восстановление
 
@@ -175,6 +180,11 @@ cd ~/meal-planner && git pull
 последние 14 (`--keep N`). Лог — `journalctl -t meal-planner-backup`. Копии на
 том же диске: от неудачного действия и порчи файла спасают, от потери диска —
 нет.
+
+В копии — вся БД: настройки **и каталог** — рецепты (в том числе архивные),
+справочник ингредиентов, состав цикла. С фазы 5 рецепты правятся в
+приложении, и эти правки есть только в БД: в репо остался лишь исходный
+сид, кроме бэкапа их взять неоткуда.
 
 Восстановление последней копии:
 
@@ -190,6 +200,18 @@ docker compose start meal-planner
 `mealplan-*.db` должен раскрывать root. `mealplan.db-journal` удалять
 обязательно — иначе SQLite «откатит» его в восстановленный файл. После
 запуска: `curl -s 127.0.0.1:8001/api/state | head -c 200` и настройки в панели.
+
+Проверить копию, не останавливая приложение, — поднять её во временном
+контейнере на `127.0.0.1:8002`:
+
+```sh
+sudo sh -c 'rm -rf /tmp/mp-restore && mkdir /tmp/mp-restore \
+  && cp "$(ls -1 /opt/meal-planner-data/backups/mealplan-*.db | tail -1)" /tmp/mp-restore/mealplan.db \
+  && chown -R 10001 /tmp/mp-restore'
+docker run --rm -d --name mp-restore -p 127.0.0.1:8002:8000 -v /tmp/mp-restore:/data meal-planner:local
+curl -s 127.0.0.1:8002/api/recipes | python3 -c 'import json,sys; print(len(json.load(sys.stdin)))'
+docker stop mp-restore && sudo rm -rf /tmp/mp-restore
+```
 
 ### Переезд на другой хост или архитектуру (Pi / aarch64)
 
@@ -217,6 +239,7 @@ linux/arm64 -t meal-planner .` (тогда в compose — `image:` вместо 
 | в мобильном приложении HA панель «Питание» без шапки, не вернуться в HA | `ui_mode` по умолчанию `normal` — голый iframe без кнопки меню | `ui_mode: toolbar` в `ingress:`, затем «Ingress: Reload» или перезапуск HA |
 | Assist не знает про план | скрипты не открыты для Assist | «Голосовые ассистенты → Открыть доступ» |
 | контейнер `unhealthy` | Docker его сам не перезапускает (только при падении процесса) | `docker logs meal-planner`, `docker restart meal-planner` |
+| HTTP 500, в `docker logs meal-planner` — `SchemaTooNewError` | образ старее БД: откатили приложение после миграции | вернуть новый образ (`git pull`, пересборка) или восстановить копию, снятую до обновления |
 
 ## Проверка под префиксом (как HA Ingress)
 

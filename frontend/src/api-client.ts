@@ -14,6 +14,10 @@ export type Recipe = Schemas['RecipeOut'];
 export type Recipes = Record<string, Recipe>;
 export type ValidationError = Schemas['ValidationError'];
 export type CatalogIngredient = Schemas['CatalogIngredientOut'];
+/** Справочник ингредиентов с вариантами единиц и категорий для формы (5.6). */
+export type IngredientsCatalog = Schemas['IngredientsOut'];
+export type IngredientPayload = Schemas['SaveIngredientIn'];
+export type IngredientActionResult = Schemas['IngredientActionOut'];
 export type RecipePayload = Schemas['SaveRecipeIn'];
 export type RecipeActionResult = Schemas['RecipeActionOut'];
 export type Nutrition = Schemas['NutritionOut'];
@@ -24,6 +28,7 @@ export type ActionPayloads = {
   'set-shopping-timing': Schemas['SetShoppingTimingIn'];
   'set-anchor-date': Schemas['SetAnchorDateIn'];
   'set-cycle-position': Schemas['SetCyclePositionIn'];
+  'set-cycle-slot': Schemas['SetCycleSlotIn'];
   // без тела: что пропускать, решает сервер (ближайшая готовка)
   'skip-next-cook': Record<string, never>;
   'unskip-cook': Record<string, never>;
@@ -91,7 +96,7 @@ export function getRecipes(): Promise<Recipes> {
   return request('api/recipes');
 }
 
-export function getIngredients(): Promise<CatalogIngredient[]> {
+export function getIngredients(): Promise<IngredientsCatalog> {
   return request('api/ingredients');
 }
 
@@ -114,6 +119,10 @@ export function callRecipeAction<N extends RecipeActionName>(
   range?: DateRange,
 ): Promise<RecipeActionResult> {
   return post(withRange(`api/actions/${name}`, range), payload);
+}
+
+export function callIngredientAction(payload: IngredientPayload, range?: DateRange): Promise<IngredientActionResult> {
+  return post(withRange('api/actions/save-ingredient', range), payload);
 }
 
 export function callAction<N extends ActionName>(

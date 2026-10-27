@@ -131,4 +131,5 @@ def recompute(
         skipped_cook=skipped_cook(settings, today),
         can_skip_next_cook=skip_next_cook_error(settings, today) is None,
         plan_use=MappingProxyType(plan_use(catalog, settings, today, trip)),
+        slots=catalog.slots,
     )

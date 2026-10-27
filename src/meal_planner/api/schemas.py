@@ -11,6 +11,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from meal_planner.core.catalog_actions import (
+    UNITS,
     IngredientInput,
     RecipeInput,
     RecipeLineInput,
@@ -36,7 +37,7 @@ from meal_planner.core.models import (
     SkippedCook,
     TodayPosition,
 )
-from meal_planner.core.shopping import format_qty
+from meal_planner.core.shopping import CATEGORY_ORDER, format_qty
 
 
 class SettingsOut(BaseModel):
@@ -90,6 +91,23 @@ class CatalogIngredientOut(BaseModel):
     grams_per_unit: float | None  # для единиц не г/мл
     store_piece: float | None  # штука в магазине, в unit — «≈ N шт»
     used_in: list[str]  # id рецептов: единицу при них не поменять
+
+
+class IngredientsOut(BaseModel):
+    """GET /api/ingredients: справочник и варианты для формы (5.6).
+
+    Единицы и категории — правило core/, форма берёт их отсюда.
+    """
+
+    ingredients: list[CatalogIngredientOut]
+    units: list[str]
+    categories: list[str]  # в порядке списка покупок
+
+
+class CycleSlotOut(BaseModel):
+    slot: int  # 1..5 — позиция ротации
+    lunch_id: str
+    dinner_id: str
 
 
 class DayOut(BaseModel):
@@ -226,8 +244,9 @@ class SaveIngredientIn(BaseModel):
     name: str
     unit: str  # г, мл, шт, ст.л., зубчик — проверяет core
     category: str  # из категорий списка покупок — проверяет core
-    kcal_100g: float
-    protein_100g: float
+    # Пустое поле формы — null: «укажите …» по-русски проверяет core.
+    kcal_100g: float | None
+    protein_100g: float | None
     source: str | None = None
     grams_per_unit: float | None = None  # обязательно для единиц не г/мл
     store_piece: float | None = None
@@ -315,6 +334,7 @@ class AppStateOut(BaseModel):
     # Рецепты в плане (5.1): "bought" — продукты уже куплены, "next_trip" — в
     # ближайшей закупке; остальных нет. Правка такого рецепта меняет план.
     recipe_plan_use: dict[str, PlanUse]
+    cycle_slots: list[CycleSlotOut]  # какой обед и ужин в каждой позиции (5.6)
 
 
 class RecipeActionOut(BaseModel):
@@ -383,6 +403,16 @@ def to_catalog_ingredient_out(
         grams_per_unit=i.grams_per_unit,
         store_piece=i.store_piece,
         used_in=used_in(catalog, i.name),
+    )
+
+
+def to_ingredients_out(catalog: Catalog) -> IngredientsOut:
+    return IngredientsOut(
+        ingredients=[
+            to_catalog_ingredient_out(catalog, i) for i in catalog.ingredients.values()
+        ],
+        units=list(UNITS),
+        categories=list(CATEGORY_ORDER),
     )
 
 
@@ -476,6 +506,10 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         skipped_cook=to_skipped_cook_out(s.skipped_cook),
         can_skip_next_cook=s.can_skip_next_cook,
         recipe_plan_use=dict(s.plan_use),
+        cycle_slots=[
+            CycleSlotOut(slot=c.slot, lunch_id=c.lunch_id, dinner_id=c.dinner_id)
+            for c in s.slots
+        ],
     )
 
 

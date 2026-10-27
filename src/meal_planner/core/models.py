@@ -215,3 +215,4 @@ class AppState:
     skipped_cook: SkippedCook | None
     can_skip_next_cook: bool
     plan_use: Mapping[str, PlanUse]  # только рецепты с признаком (5.4)
+    slots: tuple[CycleSlot, ...]  # состав цикла — для UI (5.6)

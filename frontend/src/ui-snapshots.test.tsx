@@ -44,8 +44,10 @@ describe.each(SCENARIOS)('$name (сегодня $today)', (scenario) => {
     await click(buttons(ui.container, 'Закупки')[0]);
     steps['закупки'] = ui.lines();
 
+    // Поля — значениями (formLines): иначе списки позиций цикла дали бы
+    // десятки строк вариантов на сценарий.
     await click(buttons(ui.container, 'Настройки')[0]);
-    steps['настройки'] = ui.lines();
+    steps['настройки'] = formLines(ui.container);
     ui.unmount();
 
     expect(steps).toMatchSnapshot();
@@ -83,6 +85,24 @@ it('редактор рецепта', async () => {
   await click(buttons(ui.container, 'Назад')[0]);
   await click(buttons(ui.container, 'Новый ужин')[0]);
   forms['новый ужин'] = formLines(ui.container);
+  ui.unmount();
+
+  expect(forms).toMatchSnapshot();
+});
+
+// Форма ингредиента (5.6): новый и «яйца» — в рецептах, единица недоступна.
+it('редактор ингредиента', async () => {
+  const ui = await renderApp(SCENARIOS.find((s) => s.name === 'default_2x')!);
+  await click(buttons(ui.container, 'Настройки')[0]);
+  await click(buttons(ui.container, 'Справочник')[0]);
+  const eggs = [...ui.container.querySelectorAll('li')].find((li) => li.firstChild?.textContent?.trim() === 'яйца')!;
+
+  const forms: Record<string, string> = {};
+  await click(buttons(eggs, 'Изменить')[0]);
+  forms['яйца'] = formLines(ui.container);
+  await click(buttons(ui.container, 'Назад')[0]);
+  await click(buttons(ui.container, 'Новый ингредиент')[0]);
+  forms['новый'] = formLines(ui.container);
   ui.unmount();
 
   expect(forms).toMatchSnapshot();

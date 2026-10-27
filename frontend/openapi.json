@@ -175,11 +175,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/CatalogIngredientOut"
-                  },
-                  "type": "array",
-                  "title": "Response Get Ingredients Api Ingredients Get"
+                  "$ref": "#/components/schemas/IngredientsOut"
                 }
               }
             }
@@ -1035,6 +1031,13 @@
             },
             "type": "object",
             "title": "Recipe Plan Use"
+          },
+          "cycle_slots": {
+            "items": {
+              "$ref": "#/components/schemas/CycleSlotOut"
+            },
+            "type": "array",
+            "title": "Cycle Slots"
           }
         },
         "type": "object",
@@ -1047,7 +1050,8 @@
           "today_position",
           "skipped_cook",
           "can_skip_next_cook",
-          "recipe_plan_use"
+          "recipe_plan_use",
+          "cycle_slots"
         ],
         "title": "AppStateOut"
       },
@@ -1199,6 +1203,29 @@
           "dinner_id"
         ],
         "title": "CyclePositionOut"
+      },
+      "CycleSlotOut": {
+        "properties": {
+          "slot": {
+            "type": "integer",
+            "title": "Slot"
+          },
+          "lunch_id": {
+            "type": "string",
+            "title": "Lunch Id"
+          },
+          "dinner_id": {
+            "type": "string",
+            "title": "Dinner Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slot",
+          "lunch_id",
+          "dinner_id"
+        ],
+        "title": "CycleSlotOut"
       },
       "DayOut": {
         "properties": {
@@ -1372,6 +1399,39 @@
           "category"
         ],
         "title": "IngredientOut"
+      },
+      "IngredientsOut": {
+        "properties": {
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/CatalogIngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          },
+          "units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "categories": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Categories"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredients",
+          "units",
+          "categories"
+        ],
+        "title": "IngredientsOut",
+        "description": "GET /api/ingredients: справочник и варианты для формы (5.6).\n\nЕдиницы и категории — правило core/, форма берёт их отсюда."
       },
       "MealKind": {
         "type": "string",
@@ -1649,11 +1709,25 @@
             "title": "Category"
           },
           "kcal_100g": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Kcal 100G"
           },
           "protein_100g": {
-            "type": "number",
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Protein 100G"
           },
           "source": {

@@ -18,7 +18,8 @@ import {
   type ActionName,
   type ActionPayloads,
   type AppState,
-  type CatalogIngredient,
+  type IngredientPayload,
+  type IngredientsCatalog,
   type Nutrition,
   type Recipe,
   type RecipeActionName,
@@ -74,11 +75,25 @@ const KINDS = [
 const KIND_NAME: Record<Kind, string> = { lunch: 'Обед', dinner: 'Ужин', breakfast: 'Завтрак' };
 
 export default function MealPlanApp() {
-  const { state, recipes, ingredients, loadIngredients, recipeAction, range, loadError, saveError, showRange, runAction, retry } =
-    useAppState();
+  const {
+    state,
+    recipes,
+    catalog,
+    loadIngredients,
+    recipeAction,
+    ingredientAction,
+    range,
+    loadError,
+    saveError,
+    showRange,
+    runAction,
+    retry,
+  } = useAppState();
   const [tab, setTab] = useState<Tab>('schedule');
   // Редактор рецепта (5.5) — на весь экран вместо вкладки; другая вкладка его закрывает.
   const [editing, setEditing] = useState<Editing | null>(null);
+  // Редактор ингредиента (5.6): id или 'new'.
+  const [editingIngredient, setEditingIngredient] = useState<number | 'new' | null>(null);
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
   const [openRecipe, setOpenRecipe] = useState<string | null>(null);
 
@@ -142,6 +157,7 @@ export default function MealPlanApp() {
             onClick={() => {
               setTab(id);
               setEditing(null);
+              setEditingIngredient(null);
             }}
             style={{
               flex: 1,
@@ -174,13 +190,23 @@ export default function MealPlanApp() {
           ) : (
             <p style={{ color: COLORS.inkSoft, textAlign: 'center', marginTop: 40 }}>Загрузка…</p>
           )
+        ) : editingIngredient !== null ? (
+          <IngredientEditor
+            key={editingIngredient}
+            id={editingIngredient === 'new' ? null : editingIngredient}
+            catalog={catalog}
+            recipes={recipes}
+            loadIngredients={loadIngredients}
+            ingredientAction={ingredientAction}
+            onClose={() => setEditingIngredient(null)}
+          />
         ) : editing ? (
           <RecipeEditor
             key={editing.id ?? `new-${editing.kind}`}
             editing={editing}
             recipe={editing.id ? recipes[editing.id] : undefined}
             planUse={editing.id ? state.recipe_plan_use[editing.id] : undefined}
-            ingredients={ingredients}
+            catalog={catalog}
             loadIngredients={loadIngredients}
             recipeAction={recipeAction}
             onClose={() => setEditing(null)}
@@ -222,6 +248,11 @@ export default function MealPlanApp() {
             runAction={runAction}
             onEdit={setEditing}
             recipeAction={recipeAction}
+            slots={state.cycle_slots}
+            planUse={state.recipe_plan_use}
+            catalog={catalog}
+            loadIngredients={loadIngredients}
+            onEditIngredient={setEditingIngredient}
           />
         )}
         {state && loadError && (
@@ -715,9 +746,28 @@ type SettingsTabProps = {
   runAction: RunAction;
   onEdit: (editing: Editing) => void;
   recipeAction: RecipeAction;
+  slots: AppState['cycle_slots'];
+  planUse: AppState['recipe_plan_use'];
+  catalog: IngredientsCatalog | null;
+  loadIngredients: () => Promise<void>;
+  onEditIngredient: (id: number | 'new') => void;
 };
 
-function SettingsTab({ settings, position, skipped, recipes, saveError, runAction, onEdit, recipeAction }: SettingsTabProps) {
+function SettingsTab({
+  settings,
+  position,
+  skipped,
+  recipes,
+  saveError,
+  runAction,
+  onEdit,
+  recipeAction,
+  slots,
+  planUse,
+  catalog,
+  loadIngredients,
+  onEditIngredient,
+}: SettingsTabProps) {
   const setCookSchedule = (change: Partial<ActionPayloads['set-cook-schedule']>) =>
     runAction('set-cook-schedule', {
       cook_count: settings.cook_count === 1 ? 1 : 2,
@@ -851,7 +901,9 @@ function SettingsTab({ settings, position, skipped, recipes, saveError, runActio
         <FieldError error={saveError} action="set-shopping-timing" />
       </section>
 
+      <CycleSection slots={slots} recipes={recipes} planUse={planUse} saveError={saveError} runAction={runAction} />
       <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
+      <IngredientsSection catalog={catalog} loadIngredients={loadIngredients} onEdit={onEditIngredient} />
     </div>
   );
 }
@@ -1012,21 +1064,22 @@ type RecipeEditorProps = {
   editing: Editing;
   recipe: Recipe | undefined;
   planUse: PlanUse | undefined;
-  ingredients: CatalogIngredient[] | null;
+  catalog: IngredientsCatalog | null;
   loadIngredients: () => Promise<void>;
   recipeAction: RecipeAction;
   onClose: () => void;
 };
 
-function RecipeEditor({ editing, recipe, planUse, ingredients, loadIngredients, recipeAction, onClose }: RecipeEditorProps) {
+function RecipeEditor({ editing, recipe, planUse, catalog, loadIngredients, recipeAction, onClose }: RecipeEditorProps) {
+  const ingredients = catalog?.ingredients ?? null;
   const [draft, setDraft] = useState<Draft>(() => draftOf(recipe, editing.kind));
   const [errors, setErrors] = useState<FieldErrors>({});
   const [saving, setSaving] = useState(false);
   const nutrition = useNutritionPreview(draft.lines, recipe);
 
   useEffect(() => {
-    if (!ingredients) loadIngredients();
-  }, [ingredients, loadIngredients]);
+    if (!catalog) loadIngredients();
+  }, [catalog, loadIngredients]);
 
   const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
   const setLine = (i: number, patch: Partial<DraftLine>) =>
@@ -1047,11 +1100,7 @@ function RecipeEditor({ editing, recipe, planUse, ingredients, loadIngredients, 
   };
 
   const byId = new Map((ingredients ?? []).map((i) => [String(i.id), i]));
-  // Группы — в порядке справочника сервера, внутри — по алфавиту.
-  const groups = [...new Set((ingredients ?? []).map((i) => i.category))].map((category) => ({
-    category,
-    items: (ingredients ?? []).filter((i) => i.category === category).sort((a, b) => a.name.localeCompare(b.name, 'ru')),
-  }));
+  const groups = catalog ? ingredientGroups(catalog) : [];
   const hasStorage = draft.kind !== 'breakfast';
   const shownKeys = new Set([
     'name',
@@ -1254,6 +1303,308 @@ function ErrorText({ errors, at }: { errors: FieldErrors; at: string }) {
     <p role="alert" style={errorTextStyle}>
       {errors[at]}
     </p>
+  );
+}
+
+// ---------- Цикл: обед и ужин по позициям (5.6) ----------
+const SLOT_WARNING: Record<PlanUse, string> = {
+  bought: 'Продукты на эту позицию уже куплены: замена изменит текущие дни.',
+  next_trip: 'Позиция в ближайшей закупке: список покупок изменится.',
+};
+
+type CycleSectionProps = {
+  slots: AppState['cycle_slots'];
+  recipes: Recipes;
+  planUse: AppState['recipe_plan_use'];
+  saveError: SaveError | null;
+  runAction: RunAction;
+};
+
+function CycleSection({ slots, recipes, planUse, saveError, runAction }: CycleSectionProps) {
+  const lunches = recipesOfKind(recipes, 'lunch');
+  const dinners = recipesOfKind(recipes, 'dinner');
+  return (
+    <section style={cardStyle}>
+      <h2 style={{ ...sectionHeading, marginTop: 0 }}>Цикл из 5 блюд</h2>
+      {slots.map((slot) => {
+        // «Куплено» важнее «в закупке» — как у признака на сервере.
+        const uses = [planUse[slot.lunch_id], planUse[slot.dinner_id]];
+        const use = uses.includes('bought') ? 'bought' : uses.includes('next_trip') ? 'next_trip' : undefined;
+        const pick = (change: { lunch_id?: string; dinner_id?: string }) =>
+          runAction('set-cycle-slot', { slot: slot.slot, lunch_id: slot.lunch_id, dinner_id: slot.dinner_id, ...change });
+        return (
+          <div key={slot.slot} style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 4 }}>Блюдо №{slot.slot}</div>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <select
+                aria-label={`Обед №${slot.slot}`}
+                value={slot.lunch_id}
+                onChange={(e) => pick({ lunch_id: e.target.value })}
+                style={{ ...inputStyle, flex: 1 }}
+              >
+                {lunches.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+              <select
+                aria-label={`Ужин №${slot.slot}`}
+                value={slot.dinner_id}
+                onChange={(e) => pick({ dinner_id: e.target.value })}
+                style={{ ...inputStyle, flex: 1 }}
+              >
+                {dinners.map((r) => (
+                  <option key={r.id} value={r.id}>{r.name}</option>
+                ))}
+              </select>
+            </div>
+            {use && <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>{SLOT_WARNING[use]}</p>}
+          </div>
+        );
+      })}
+      <FieldError error={saveError} action="set-cycle-slot" />
+    </section>
+  );
+}
+
+// ---------- Справочник ингредиентов (5.6) ----------
+
+/** Группы для списков: категории — в порядке сервера, внутри — по алфавиту. */
+function ingredientGroups(catalog: IngredientsCatalog) {
+  return catalog.categories
+    .map((category) => ({
+      category,
+      items: catalog.ingredients
+        .filter((i) => i.category === category)
+        .sort((a, b) => a.name.localeCompare(b.name, 'ru')),
+    }))
+    .filter((g) => g.items.length > 0);
+}
+
+type IngredientsSectionProps = {
+  catalog: IngredientsCatalog | null;
+  loadIngredients: () => Promise<void>;
+  onEdit: (id: number | 'new') => void;
+};
+
+function IngredientsSection({ catalog, loadIngredients, onEdit }: IngredientsSectionProps) {
+  const [open, setOpen] = useState(false);
+  // Справочник грузится, только когда его раскрыли.
+  useEffect(() => {
+    if (open && !catalog) loadIngredients();
+  }, [open, catalog, loadIngredients]);
+
+  return (
+    <section style={cardStyle}>
+      <h2 style={{ ...sectionHeading, marginTop: 0 }}>Ингредиенты</h2>
+      <button
+        onClick={() => setOpen(!open)}
+        style={{ display: 'flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', padding: 0, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: COLORS.primarySoft }}
+      >
+        {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />} Справочник{catalog ? ` (${catalog.ingredients.length})` : ''}
+      </button>
+      {open && !catalog && <p style={{ fontSize: 13, color: COLORS.inkSoft }}>Загрузка справочника…</p>}
+      {open &&
+        catalog &&
+        ingredientGroups(catalog).map((g) => (
+          <div key={g.category} style={{ marginTop: 8 }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 2 }}>{g.category}</div>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+              {g.items.map((i) => (
+                <li key={i.id} style={{ marginBottom: 4 }}>
+                  {i.name}{' '}
+                  <span style={{ fontSize: 12, color: COLORS.inkSoft }}>
+                    {i.unit} · {i.kcal_100g} ккал · {i.protein_100g}г белка на 100 г
+                  </span>{' '}
+                  <button onClick={() => onEdit(i.id)} style={smallBtnStyle}>
+                    Изменить
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      <button onClick={() => onEdit('new')} style={{ ...smallBtnStyle, display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 10 }}>
+        <Plus size={14} /> Новый ингредиент
+      </button>
+    </section>
+  );
+}
+
+// Форма ингредиента: числа — строками, при отправке пустое → null (сервер
+// ответит «укажите …» у поля, если поле обязательное).
+type IngredientDraft = {
+  name: string;
+  unit: string;
+  category: string;
+  kcal_100g: string;
+  protein_100g: string;
+  grams_per_unit: string;
+  store_piece: string;
+  source: string;
+};
+
+const INGREDIENT_NUMBERS = [
+  { field: 'kcal_100g', label: 'Ккал на 100 г' },
+  { field: 'protein_100g', label: 'Белок на 100 г, г' },
+  { field: 'grams_per_unit', label: 'Граммов в единице (для шт, ст.л., зубчик)' },
+  { field: 'store_piece', label: 'Штука в магазине, в единице ингредиента (необязательно)' },
+] as const;
+
+function optionalNumber(text: string): number | null {
+  return text.trim() ? toNumber(text) : null;
+}
+
+function text(value: number | null | undefined): string {
+  return value === null || value === undefined ? '' : String(value);
+}
+
+type IngredientEditorProps = {
+  id: number | null;
+  catalog: IngredientsCatalog | null;
+  recipes: Recipes;
+  loadIngredients: () => Promise<void>;
+  ingredientAction: (payload: IngredientPayload) => Promise<FieldErrors | null>;
+  onClose: () => void;
+};
+
+function IngredientEditor({ id, catalog, recipes, loadIngredients, ingredientAction, onClose }: IngredientEditorProps) {
+  useEffect(() => {
+    if (!catalog) loadIngredients();
+  }, [catalog, loadIngredients]);
+  if (!catalog) return <p style={{ color: COLORS.inkSoft, textAlign: 'center', marginTop: 40 }}>Загрузка справочника…</p>;
+  const ingredient = id === null ? undefined : catalog.ingredients.find((i) => i.id === id);
+  return (
+    <IngredientForm
+      id={id}
+      ingredient={ingredient}
+      catalog={catalog}
+      recipes={recipes}
+      ingredientAction={ingredientAction}
+      onClose={onClose}
+    />
+  );
+}
+
+type IngredientFormProps = Omit<IngredientEditorProps, 'catalog' | 'loadIngredients'> & {
+  ingredient: IngredientsCatalog['ingredients'][number] | undefined;
+  catalog: IngredientsCatalog;
+};
+
+function IngredientForm({ id, ingredient, catalog, recipes, ingredientAction, onClose }: IngredientFormProps) {
+  const [draft, setDraft] = useState<IngredientDraft>(() => ({
+    name: ingredient?.name ?? '',
+    unit: ingredient?.unit ?? catalog.units[0],
+    category: ingredient?.category ?? catalog.categories[0],
+    kcal_100g: text(ingredient?.kcal_100g),
+    protein_100g: text(ingredient?.protein_100g),
+    grams_per_unit: text(ingredient?.grams_per_unit),
+    store_piece: text(ingredient?.store_piece),
+    source: ingredient?.source ?? '',
+  }));
+  const [errors, setErrors] = useState<FieldErrors>({});
+  const [saving, setSaving] = useState(false);
+  const update = (patch: Partial<IngredientDraft>) => setDraft((d) => ({ ...d, ...patch }));
+  const usedIn = (ingredient?.used_in ?? []).map((rid) => recipes[rid]?.name ?? rid);
+
+  const save = async () => {
+    setSaving(true);
+    const result = await ingredientAction({
+      ...(id === null ? {} : { id }),
+      name: draft.name,
+      unit: draft.unit,
+      category: draft.category,
+      kcal_100g: optionalNumber(draft.kcal_100g),
+      protein_100g: optionalNumber(draft.protein_100g),
+      grams_per_unit: optionalNumber(draft.grams_per_unit),
+      store_piece: optionalNumber(draft.store_piece),
+      source: draft.source || null,
+    });
+    setSaving(false);
+    if (result) setErrors(result);
+    else onClose();
+  };
+
+  const shownKeys = new Set(['name', 'unit', 'category', 'source', ...INGREDIENT_NUMBERS.map(({ field }) => field)]);
+  const otherErrors = Object.entries(errors).filter(([key]) => !shownKeys.has(key));
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <button onClick={onClose} style={{ ...ghostBtnStyle, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          <ArrowLeft size={14} /> Назад
+        </button>
+        <h2 style={{ ...sectionHeading, margin: 0, flex: 1 }}>{ingredient ? 'Изменить ингредиент' : 'Новый ингредиент'}</h2>
+        <button onClick={save} disabled={saving} style={{ ...primaryBtnStyle, opacity: saving ? 0.6 : 1 }}>
+          Сохранить
+        </button>
+      </div>
+
+      {usedIn.length > 0 && (
+        <p role="status" style={{ margin: 0, padding: 10, borderRadius: 10, background: COLORS.accentSoft, fontSize: 13 }}>
+          В рецептах: {usedIn.join(', ')}. Ккал и белок этих рецептов пересчитаются; единицу не поменять.
+        </p>
+      )}
+
+      <section style={cardStyle}>
+        <label style={labelStyle}>
+          Название
+          <input value={draft.name} onChange={(e) => update({ name: e.target.value })} style={{ ...inputStyle, marginTop: 4 }} />
+        </label>
+        <ErrorText errors={errors} at="name" />
+
+        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+          <label style={{ ...labelStyle, flex: 1 }}>
+            Единица
+            <select
+              value={draft.unit}
+              disabled={usedIn.length > 0}
+              onChange={(e) => update({ unit: e.target.value })}
+              style={{ ...inputStyle, marginTop: 4 }}
+            >
+              {catalog.units.map((u) => (
+                <option key={u} value={u}>{u}</option>
+              ))}
+            </select>
+            <ErrorText errors={errors} at="unit" />
+          </label>
+          <label style={{ ...labelStyle, flex: 2 }}>
+            Категория
+            <select value={draft.category} onChange={(e) => update({ category: e.target.value })} style={{ ...inputStyle, marginTop: 4 }}>
+              {catalog.categories.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+            <ErrorText errors={errors} at="category" />
+          </label>
+        </div>
+      </section>
+
+      <section style={cardStyle}>
+        {INGREDIENT_NUMBERS.map(({ field, label }) => (
+          <label key={field} style={{ ...labelStyle, marginTop: 6 }}>
+            {label}
+            <input
+              inputMode="decimal"
+              value={draft[field]}
+              onChange={(e) => update({ [field]: e.target.value })}
+              style={{ ...inputStyle, marginTop: 4 }}
+            />
+            <ErrorText errors={errors} at={field} />
+          </label>
+        ))}
+        <label style={{ ...labelStyle, marginTop: 6 }}>
+          Источник (например, fdc 171287 или этикетка)
+          <input value={draft.source} onChange={(e) => update({ source: e.target.value })} style={{ ...inputStyle, marginTop: 4 }} />
+          <ErrorText errors={errors} at="source" />
+        </label>
+      </section>
+
+      {otherErrors.map(([key, msg]) => (
+        <p key={key} role="alert" style={errorTextStyle}>
+          Не удалось сохранить: {msg}
+        </p>
+      ))}
+    </div>
   );
 }
 

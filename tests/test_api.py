@@ -613,12 +613,16 @@ def test_set_cycle_slot(client, repo):
     assert state["version"] == 2
     lunches = {d["cycle_index"]: d["lunch_id"] for d in state["schedule"]}
     assert lunches[1] == "l2"
+    assert state["cycle_slots"][0] == {"slot": 1, "lunch_id": "l2", "dinner_id": "d1"}
     r = post(client, "set-cycle-slot", {"slot": 1, "lunch_id": "d1", "dinner_id": "d1"})
     assert r.json()["detail"][0]["loc"] == ["body", "lunch_id"]
 
 
 def test_ingredients_and_save_ingredient(client, repo):
-    listed = client.get("/api/ingredients").json()
+    catalog = client.get("/api/ingredients").json()
+    assert catalog["units"] == ["г", "мл", "шт", "ст.л.", "зубчик"]
+    assert catalog["categories"][0] == "Белок"
+    listed = catalog["ingredients"]
     assert [i["name"] for i in listed] == list(SEED_CATALOG.ingredients)
     eggs = next(i for i in listed if i["name"] == "яйца")
     assert (eggs["unit"], eggs["grams_per_unit"], eggs["used_in"]) == (
@@ -659,3 +663,21 @@ def test_recipe_preview_is_read_only(client, repo):
     r = client.post("/api/recipes/preview", json={"ingredients": lines})
     assert r.json() == {"kcal": 215, "protein": 41}  # 180 г × 1.20 = 216 → 215
     assert repo.get_settings() is None
+
+
+def test_state_lists_cycle_slots(client, repo):
+    slots = client.get("/api/state").json()["cycle_slots"]
+    assert slots == [
+        {"slot": k, "lunch_id": f"l{k}", "dinner_id": f"d{k}"} for k in range(1, 6)
+    ]
+
+
+def test_empty_nutrition_is_a_field_error(client, repo):
+    body = {"name": "тофу", "unit": "г", "category": "Белок"}
+    r = post(
+        client, "save-ingredient", {**body, "kcal_100g": None, "protein_100g": None}
+    )
+    assert [(e["loc"], e["msg"]) for e in r.json()["detail"]] == [
+        (["body", "kcal_100g"], "Укажите ккал на 100 г"),
+        (["body", "protein_100g"], "Укажите белок на 100 г"),
+    ]

@@ -8,7 +8,7 @@ import type { AppState } from './api-client';
 import MealPlanApp from './MealPlanApp';
 import { act } from 'react';
 
-import { INGREDIENTS, RECIPES, SCENARIOS, buttons, change, click, flush, fullState, jsonResponse, render } from './__fixtures__/harness';
+import { CATALOG, RECIPES, SCENARIOS, buttons, change, click, flush, fullState, jsonResponse, render } from './__fixtures__/harness';
 
 const scenario = SCENARIOS.find((s) => s.name === 'default_2x')!; // сегодня Ср 2026-11-11
 const BASE = fullState(scenario);
@@ -44,7 +44,7 @@ beforeEach(() => {
         body: init?.body ? JSON.parse(init.body as string) : undefined,
       });
       if (url === 'api/recipes') return recipesResponse();
-      if (url === 'api/ingredients') return jsonResponse(INGREDIENTS);
+      if (url === 'api/ingredients') return jsonResponse(CATALOG);
       return handler(url, init);
     }),
   );
@@ -79,7 +79,7 @@ it('все настройки — на своей вкладке, в «Блюд�
   expect(ui.container.querySelector<HTMLInputElement>('input[type=date]')!.value).toBe('2026-11-05');
   expect(cookSelects(ui.container)).toHaveLength(2);
   expect(buttons(ui.container, 'За день до')).toHaveLength(1);
-  const dishes = [...ui.container.querySelectorAll('section')].at(-1)!;
+  const dishes = [...ui.container.querySelectorAll('section')].find((sec) => sec.querySelector('h2')?.textContent === 'Блюда')!;
   expect([...dishes.querySelectorAll('li')].map((li) => li.firstChild?.textContent?.trim()).sort()).toEqual(
     Object.values(RECIPES).map((r) => r.name).sort(),
   );
@@ -431,7 +431,7 @@ describe('редактор рецепта', () => {
     expect(ui.text()).toContain('— ккал');
 
     await type(field(ui, 'Название'), 'Тофу с рисом');
-    await change(field<HTMLSelectElement>(ui, 'Ингредиент 1'), String(INGREDIENTS[0].id));
+    await change(field<HTMLSelectElement>(ui, 'Ингредиент 1'), String(CATALOG.ingredients[0].id));
     await type(field(ui, 'Количество 1'), '2');
     await type(field<HTMLTextAreaElement>(ui, 'Шаг 1'), 'Обжарьте.');
     await click(buttons(ui.container, 'Сохранить')[0]);
@@ -440,7 +440,7 @@ describe('редактор рецепта', () => {
       name: 'Тофу с рисом',
       kind: 'dinner',
       is_fish: false,
-      ingredients: [{ ingredient_id: INGREDIENTS[0].id, qty: 2 }],
+      ingredients: [{ ingredient_id: CATALOG.ingredients[0].id, qty: 2 }],
       steps: ['Обжарьте.'],
       storage: { keep: '', pan: '', micro: '', after: null },
     });
@@ -529,6 +529,114 @@ describe('архив рецептов', () => {
     expect(ui.text()).not.toContain(b3.name);
     await click(buttons(ui.container, 'Настройки')[0]);
     expect(buttons(ui.container, 'Архив (1)')).toHaveLength(1);
+    ui.unmount();
+  });
+});
+
+// ---------- Цикл и справочник ингредиентов (5.6) ----------
+
+describe('позиции цикла', () => {
+  it('выбор ужина сразу уходит в set-cycle-slot с обедом позиции', async () => {
+    const moved = { ...BASE, cycle_slots: BASE.cycle_slots.map((c) => (c.slot === 2 ? { ...c, dinner_id: 'd5' } : c)) };
+    handler = (url) => (url === 'api/actions/set-cycle-slot' ? jsonResponse(moved) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+
+    const dinner = field<HTMLSelectElement>(ui, 'Ужин №2');
+    expect([...dinner.options].map((o) => o.value)).toEqual(['d1', 'd2', 'd3', 'd4', 'd5']);
+    await change(dinner, 'd5');
+    expect(calls.at(-1)).toEqual({
+      url: 'api/actions/set-cycle-slot',
+      method: 'POST',
+      body: { slot: 2, lunch_id: 'l2', dinner_id: 'd5' },
+    });
+    expect(field<HTMLSelectElement>(ui, 'Ужин №2').value).toBe('d5'); // из ответа сервера
+    ui.unmount();
+  });
+
+  it('предупреждения — по признаку сервера, ошибка — в карточке цикла', async () => {
+    handler = (url) =>
+      url === 'api/actions/set-cycle-slot'
+        ? jsonResponse({ detail: [{ type: 'value_error', loc: ['body', 'lunch_id'], msg: '«X» в архиве — сначала верните его' }] }, 422)
+        : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    const row = (k: number) => field(ui, `Обед №${k}`).closest('div')!.parentElement!.textContent;
+    expect(row(1)).toContain('уже куплены'); // l1/d1 — bought в default_2x
+    expect(row(3)).toContain('в ближайшей закупке');
+    expect(row(2)).not.toContain('куплены');
+
+    await change(field<HTMLSelectElement>(ui, 'Обед №2'), 'l3');
+    const card = field(ui, 'Обед №1').closest('section')!;
+    expect(card.textContent).toContain('Не удалось сохранить: «X» в архиве — сначала верните его');
+    ui.unmount();
+  });
+});
+
+describe('справочник ингредиентов', () => {
+  const eggs = CATALOG.ingredients.find((i) => i.name === 'яйца')!;
+
+  async function openCatalog(ui: Rendered) {
+    await click(buttons(ui.container, 'Настройки')[0]);
+    await click(buttons(ui.container, 'Справочник')[0]);
+  }
+
+  it('грузится, только когда раскрыт', async () => {
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    expect(calls.filter((c) => c.url === 'api/ingredients')).toHaveLength(0);
+    await click(buttons(ui.container, 'Справочник')[0]);
+    expect(calls.filter((c) => c.url === 'api/ingredients')).toHaveLength(1);
+    expect(buttons(ui.container, `Справочник (${CATALOG.ingredients.length})`)).toHaveLength(1);
+    ui.unmount();
+  });
+
+  it('новый: пустые числа — null, после сохранения рецепты перезапрошены', async () => {
+    const tofu = { ...eggs, id: 99, name: 'тофу', unit: 'г', category: 'Белок', used_in: [] };
+    handler = (url) => (url === 'api/actions/save-ingredient' ? jsonResponse({ state: BASE, ingredient: tofu }) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await openCatalog(ui);
+    await click(buttons(ui.container, 'Новый ингредиент')[0]);
+    expect(field<HTMLSelectElement>(ui, 'Единица').disabled).toBe(false);
+
+    await type(field(ui, 'Название'), 'тофу');
+    await change(field<HTMLSelectElement>(ui, 'Категория'), 'Белок');
+    await type(field(ui, 'Ккал на 100 г'), '76');
+    const recipesBefore = calls.filter((c) => c.url === 'api/recipes').length;
+    await click(buttons(ui.container, 'Сохранить')[0]);
+
+    expect(calls.find((c) => c.url === 'api/actions/save-ingredient')!.body).toEqual({
+      name: 'тофу',
+      unit: 'г',
+      category: 'Белок',
+      kcal_100g: 76,
+      protein_100g: null,
+      grams_per_unit: null,
+      store_piece: null,
+      source: null,
+    });
+    expect(calls.filter((c) => c.url === 'api/recipes')).toHaveLength(recipesBefore + 1);
+    expect(buttons(ui.container, `Справочник (${CATALOG.ingredients.length + 1})`)).toHaveLength(1);
+    ui.unmount();
+  });
+
+  it('правка: с id, единица у ингредиента из рецептов недоступна, ошибка — у поля', async () => {
+    handler = (url) =>
+      url === 'api/actions/save-ingredient'
+        ? jsonResponse({ detail: [{ type: 'value_error', loc: ['body', 'protein_100g'], msg: 'Белок на 100 г — от 0 до 100' }] }, 422)
+        : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await openCatalog(ui);
+    const row = [...ui.container.querySelectorAll('li')].find((li) => li.firstChild?.textContent?.trim() === 'яйца')!;
+    await click(buttons(row, 'Изменить')[0]);
+
+    expect(ui.text()).toContain(`В рецептах: ${eggs.used_in.map((id) => RECIPES[id].name).join(', ')}`);
+    expect(field<HTMLSelectElement>(ui, 'Единица').disabled).toBe(true);
+    await type(field(ui, 'Белок на 100 г, г'), '200');
+    await click(buttons(ui.container, 'Сохранить')[0]);
+
+    expect(calls.find((c) => c.url === 'api/actions/save-ingredient')!.body).toMatchObject({ id: eggs.id, protein_100g: 200 });
+    expect(field(ui, 'Белок на 100 г, г').closest('label')!.textContent).toContain('Белок на 100 г — от 0 до 100');
     ui.unmount();
   });
 });

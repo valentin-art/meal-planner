@@ -16,9 +16,9 @@ from fastapi.staticfiles import StaticFiles
 
 from meal_planner.api.schemas import (
     AppStateOut,
-    CatalogIngredientOut,
     HealthOut,
     IngredientActionOut,
+    IngredientsOut,
     NutritionOut,
     RecipeActionOut,
     RecipeIdIn,
@@ -34,6 +34,7 @@ from meal_planner.api.schemas import (
     SummaryOut,
     to_app_state_out,
     to_catalog_ingredient_out,
+    to_ingredients_out,
     to_recipe_out,
     to_recipes_out,
     to_summary_out,
@@ -263,11 +264,9 @@ def create_app() -> FastAPI:
         kcal, protein = catalog_actions.preview_nutrition(catalog, body.to_lines())
         return NutritionOut(kcal=kcal, protein=protein)
 
-    @app.get("/api/ingredients", response_model=list[CatalogIngredientOut])
-    def get_ingredients(catalog: CatalogDep) -> list[CatalogIngredientOut]:
-        return [
-            to_catalog_ingredient_out(catalog, i) for i in catalog.ingredients.values()
-        ]
+    @app.get("/api/ingredients", response_model=IngredientsOut)
+    def get_ingredients(catalog: CatalogDep) -> IngredientsOut:
+        return to_ingredients_out(catalog)
 
     @app.post("/api/actions/set-cook-schedule", response_model=AppStateOut)
     def set_cook_schedule(

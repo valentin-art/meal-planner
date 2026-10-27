@@ -2,8 +2,9 @@
 // загружает его для видимого диапазона дат и отправляет действия; ответ
 // действия заменяет state полностью, локально ничего не пересчитывается.
 // Справочник рецептов грузится один раз (GET api/recipes); после правки
-// рецепта (5.5) в него кладётся рецепт из ответа сервера. Справочник
-// ингредиентов — лениво, когда открывается редактор.
+// рецепта (5.5) в него кладётся рецепт из ответа сервера, после правки
+// ингредиента (5.6) — перезапрашивается целиком. Справочник ингредиентов —
+// лениво, когда он нужен форме.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
@@ -12,13 +13,15 @@ import {
   type ActionPayloads,
   ApiError,
   type AppState,
-  type CatalogIngredient,
   type DateRange,
+  type IngredientPayload,
+  type IngredientsCatalog,
   type RecipeActionName,
   type RecipeActionPayloads,
   type Recipes,
   type ValidationError,
   callAction,
+  callIngredientAction,
   callRecipeAction,
   getIngredients,
   getRecipes,
@@ -60,7 +63,7 @@ export function useAppState() {
   const [recipes, setRecipes] = useState<Recipes | null>(null);
   // Отдельно от loadError: успешный GET state не должен скрыть ошибку справочника.
   const [recipesError, setRecipesError] = useState<string | null>(null);
-  const [ingredients, setIngredients] = useState<CatalogIngredient[] | null>(null);
+  const [catalog, setCatalog] = useState<IngredientsCatalog | null>(null);
   const [range, setRange] = useState<ViewRange>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<SaveError | null>(null);
@@ -99,10 +102,10 @@ export function useAppState() {
 
   const loadIngredients = useCallback(async () => {
     try {
-      setIngredients(await getIngredients());
+      setCatalog(await getIngredients());
     } catch {
-      // редактор покажет «нет справочника» и кнопку повтора
-      setIngredients(null);
+      // форма так и покажет «Загрузка справочника…»; следующее открытие повторит
+      setCatalog(null);
     }
   }, []);
 
@@ -130,6 +133,7 @@ export function useAppState() {
       try {
         const { state: fresh, recipe } = await callRecipeAction(name, payload, toQuery(range));
         setRecipes((all) => (all ? { ...all, [recipe.id]: recipe } : all));
+        setCatalog(null); // used_in ингредиентов устарел — перезапросится формой
         if (id === latest.current) setState(fresh);
         return null;
       } catch (e) {
@@ -139,10 +143,36 @@ export function useAppState() {
     [range],
   );
 
+  /** Сохранить ингредиент; null — сохранено, иначе ошибки для формы. */
+  const ingredientAction = useCallback(
+    async (payload: IngredientPayload): Promise<FieldErrors | null> => {
+      const id = ++latest.current;
+      try {
+        const { state: fresh, ingredient } = await callIngredientAction(payload, toQuery(range));
+        setCatalog((c) =>
+          c && {
+            ...c,
+            ingredients: c.ingredients.some((i) => i.id === ingredient.id)
+              ? c.ingredients.map((i) => (i.id === ingredient.id ? ingredient : i))
+              : [...c.ingredients, ingredient],
+          },
+        );
+        if (id === latest.current) setState(fresh);
+        // Название и ккал на 100 г меняют рецепты — их считает сервер.
+        loadRecipes();
+        return null;
+      } catch (e) {
+        return fieldErrors(e);
+      }
+    },
+    [range, loadRecipes],
+  );
+
   return {
     state,
     recipes,
-    ingredients,
+    catalog,
+    ingredientAction,
     loadIngredients,
     recipeAction,
     range,

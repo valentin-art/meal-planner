@@ -12,7 +12,7 @@ from datetime import date, timedelta
 
 from meal_planner.api.schemas import (
     to_app_state_out,
-    to_catalog_ingredient_out,
+    to_ingredients_out,
     to_recipes_out,
 )
 from meal_planner.core.models import Settings, default_settings
@@ -89,10 +89,7 @@ def build() -> dict:
         for rid, r in to_recipes_out(SEED_CATALOG).items()
     }
     # Ответ GET /api/ingredients — для редактора рецепта (5.5).
-    ingredients = [
-        to_catalog_ingredient_out(SEED_CATALOG, i).model_dump(mode="json")
-        for i in SEED_CATALOG.ingredients.values()
-    ]
+    ingredients = to_ingredients_out(SEED_CATALOG).model_dump(mode="json")
     return {"recipes": recipes, "ingredients": ingredients, "scenarios": scenarios}
 
 

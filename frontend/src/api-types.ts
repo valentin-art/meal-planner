@@ -318,6 +318,8 @@ export interface components {
             recipe_plan_use: {
                 [key: string]: "bought" | "next_trip";
             };
+            /** Cycle Slots */
+            cycle_slots: components["schemas"]["CycleSlotOut"][];
         };
         /**
          * CatalogIngredientOut
@@ -367,6 +369,15 @@ export interface components {
             lunch_id: string | null;
             /** Dinner Id */
             dinner_id: string | null;
+        };
+        /** CycleSlotOut */
+        CycleSlotOut: {
+            /** Slot */
+            slot: number;
+            /** Lunch Id */
+            lunch_id: string;
+            /** Dinner Id */
+            dinner_id: string;
         };
         /** DayOut */
         DayOut: {
@@ -428,6 +439,20 @@ export interface components {
             unit: string;
             /** Category */
             category: string;
+        };
+        /**
+         * IngredientsOut
+         * @description GET /api/ingredients: справочник и варианты для формы (5.6).
+         *
+         *     Единицы и категории — правило core/, форма берёт их отсюда.
+         */
+        IngredientsOut: {
+            /** Ingredients */
+            ingredients: components["schemas"]["CatalogIngredientOut"][];
+            /** Units */
+            units: string[];
+            /** Categories */
+            categories: string[];
         };
         /**
          * MealKind
@@ -527,9 +552,9 @@ export interface components {
             /** Category */
             category: string;
             /** Kcal 100G */
-            kcal_100g: number;
+            kcal_100g: number | null;
             /** Protein 100G */
-            protein_100g: number;
+            protein_100g: number | null;
             /** Source */
             source?: string | null;
             /** Grams Per Unit */
@@ -934,7 +959,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CatalogIngredientOut"][];
+                    "application/json": components["schemas"]["IngredientsOut"];
                 };
             };
         };

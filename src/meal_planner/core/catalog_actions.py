@@ -72,8 +72,8 @@ class IngredientInput:
     name: str
     unit: str
     category: str
-    kcal_100g: float
-    protein_100g: float
+    kcal_100g: float | None  # None — поле формы пустое: ошибка у поля
+    protein_100g: float | None
     source: str | None = None
     grams_per_unit: float | None = None
     store_piece: float | None = None
@@ -318,11 +318,16 @@ def save_ingredient(catalog: Catalog, ingredient: IngredientInput) -> CatalogIng
                 ("category",), f"Категория — одна из: {', '.join(CATEGORY_ORDER)}"
             )
         )
-    if ingredient.kcal_100g < 0:
+    kcal, protein = ingredient.kcal_100g, ingredient.protein_100g
+    if kcal is None:
+        errors.append(FieldError(("kcal_100g",), "Укажите ккал на 100 г"))
+    elif kcal < 0:
         errors.append(
             FieldError(("kcal_100g",), "Ккал на 100 г не может быть меньше нуля")
         )
-    if not 0 <= ingredient.protein_100g <= 100:
+    if protein is None:
+        errors.append(FieldError(("protein_100g",), "Укажите белок на 100 г"))
+    elif not 0 <= protein <= 100:
         errors.append(FieldError(("protein_100g",), "Белок на 100 г — от 0 до 100"))
 
     grams_per_unit = None if unit in WEIGHT_UNITS else ingredient.grams_per_unit
@@ -345,8 +350,8 @@ def save_ingredient(catalog: Catalog, ingredient: IngredientInput) -> CatalogIng
         name=name or "",
         unit=unit,
         category=ingredient.category,
-        kcal_100g=ingredient.kcal_100g,
-        protein_100g=ingredient.protein_100g,
+        kcal_100g=kcal or 0,
+        protein_100g=protein or 0,
         source=_text(ingredient.source),
         grams_per_unit=grams_per_unit,
         store_piece=ingredient.store_piece,

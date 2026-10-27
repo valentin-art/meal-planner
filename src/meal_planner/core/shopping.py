@@ -3,9 +3,10 @@
 Порт aggregate/groupByCategory/fmtQty и подсчёта порций из ShoppingTab
 (meal-plan.jsx). Сознательное отличие от JS: количество округляется вверх
 до 0.1 (ceil), а не Math.round, — чтобы не докупать.
+С 8.2 из суммы можно вычесть остатки (stock.py) — только по запросу клиента.
 """
 
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from decimal import ROUND_CEILING, Decimal
 
 from meal_planner.core.models import (
@@ -33,14 +34,24 @@ def count_portions(recipes: Iterable[Recipe | None]) -> dict[Recipe, int]:
 
 
 def aggregate(
-    catalog: Catalog, entries: Iterable[tuple[Recipe, int]]
+    catalog: Catalog,
+    entries: Iterable[tuple[Recipe, int]],
+    stock: Mapping[str, Decimal] | None = None,
 ) -> list[ShoppingItem]:
+    """stock — остаток по названию, в единице ингредиента (8.2)."""
     # Суммы точные (Decimal): в float 0.1 * 3 = 0.30000000000000004, и ceil дал бы 0.4.
     totals: dict[tuple[str, str, str], Decimal] = {}
     for recipe, portions in entries:
         for ing in recipe.ingredients:
             key = (ing.name, ing.unit, ing.category)
             totals[key] = totals.get(key, Decimal(0)) + Decimal(str(ing.qty)) * portions
+    if stock:
+        # Вычитается до округления; что уже есть целиком — не покупаем.
+        # Единица у ингредиента одна (5.1) — ключ name|unit сходится.
+        totals = {
+            key: total - stock.get(key[0], Decimal(0)) for key, total in totals.items()
+        }
+        totals = {key: total for key, total in totals.items() if total > 0}
     items = [
         ShoppingItem(
             name=name,
@@ -76,7 +87,9 @@ def group_by_category(items: Iterable[ShoppingItem]) -> tuple[ShoppingGroup, ...
 
 
 def extract_shopping_list(
-    catalog: Catalog, days: Sequence[DayMeals]
+    catalog: Catalog,
+    days: Sequence[DayMeals],
+    stock: Mapping[str, Decimal] | None = None,
 ) -> tuple[ShoppingGroup, ...]:
     # JS ShoppingTab: сначала все обеды, потом ужины, потом завтраки.
     # Дни без блюд (до старта цикла, 6.5) count_portions пропускает.
@@ -85,7 +98,7 @@ def extract_shopping_list(
         *count_portions(d.dinner for d in days).items(),
         *count_portions(d.breakfast for d in days).items(),
     ]
-    return group_by_category(aggregate(catalog, entries))
+    return group_by_category(aggregate(catalog, entries, stock))
 
 
 def format_qty(qty: float) -> str:

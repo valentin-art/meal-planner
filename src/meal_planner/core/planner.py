@@ -1,6 +1,8 @@
 """Оркестрация: Settings + сегодняшняя дата → полный AppState."""
 
+from collections.abc import Iterable, Mapping
 from datetime import date, timedelta
+from decimal import Decimal
 from types import MappingProxyType
 
 from meal_planner.core.actions import skip_next_cook_error
@@ -23,12 +25,16 @@ from meal_planner.core.scheduling import (
     trip_cook_date,
 )
 from meal_planner.core.shopping import extract_shopping_list
+from meal_planner.core.stock import StockedTrip, StockLine, stock_in_catalog_units
 
 SCHEDULE_DAYS = 14  # JS PAGE_SIZE
 
 
 def next_shopping_trip(
-    catalog: Catalog, settings: Settings, today: date
+    catalog: Catalog,
+    settings: Settings,
+    today: date,
+    stock: Mapping[str, Decimal] | None = None,
 ) -> ShoppingTrip:
     # JS ShoppingTab: едим со следующего дня после готовки по следующую готовку
     # включительно. Окно может закончиться через 13 дней после today, поэтому
@@ -63,8 +69,20 @@ def next_shopping_trip(
         window_start=window_start,
         window_end=window_end,
         cook_items=cook_items,
-        shopping_groups=extract_shopping_list(catalog, days),
+        shopping_groups=extract_shopping_list(catalog, days, stock),
     )
+
+
+def shopping_with_stock(
+    catalog: Catalog, settings: Settings, today: date, lines: Iterable[StockLine]
+) -> StockedTrip:
+    """Ближайшая закупка за вычетом остатков клиента (8.2).
+
+    Та же поездка, что в recompute; остатки не сохраняются — они вход.
+    """
+    stock, ignored = stock_in_catalog_units(catalog, lines)
+    trip = next_shopping_trip(catalog, settle_skip(settings, today), today, stock)
+    return StockedTrip(trip=trip, ignored=tuple(ignored))
 
 
 def plan_use(

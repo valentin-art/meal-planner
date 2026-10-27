@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shopping/remaining": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Shopping Remaining */
+        post: operations["shopping_remaining_api_shopping_remaining_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/recipes": {
         parameters: {
             query?: never;
@@ -697,6 +714,46 @@ export interface components {
             /** Pieces */
             pieces: number | null;
         };
+        /**
+         * ShoppingRemainingIn
+         * @description Остатки клиента (счётчики HA, 8.2) — приложение их не хранит.
+         */
+        ShoppingRemainingIn: {
+            /** Stock */
+            stock: components["schemas"]["StockLineIn"][];
+        };
+        /**
+         * ShoppingRemainingOut
+         * @description Ближайшая закупка за вычетом остатков (8.2), строки — как в summary.
+         */
+        ShoppingRemainingOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /**
+             * Cook Date
+             * Format: date
+             */
+            cook_date: string;
+            /**
+             * Window Start
+             * Format: date
+             */
+            window_start: string;
+            /**
+             * Window End
+             * Format: date
+             */
+            window_end: string;
+            /** Cook */
+            cook: string[];
+            /** Items */
+            items: string[];
+            /** Ignored */
+            ignored: components["schemas"]["StockIgnoredOut"][];
+        };
         /** ShoppingTripOut */
         ShoppingTripOut: {
             /**
@@ -745,6 +802,28 @@ export interface components {
             pause_end: string;
             /** Can Undo */
             can_undo: boolean;
+        };
+        /** StockIgnoredOut */
+        StockIgnoredOut: {
+            /** Ingredient Id */
+            ingredient_id: number;
+            /** Name */
+            name: string | null;
+            /** Qty */
+            qty: number;
+            /** Unit */
+            unit: string;
+            /** Reason */
+            reason: string;
+        };
+        /** StockLineIn */
+        StockLineIn: {
+            /** Ingredient Id */
+            ingredient_id: number;
+            /** Qty */
+            qty: number;
+            /** Unit */
+            unit: string;
         };
         /** SummaryDayOut */
         SummaryDayOut: {
@@ -927,6 +1006,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SummaryOut"];
+                };
+            };
+        };
+    };
+    shopping_remaining_api_shopping_remaining_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingRemainingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingRemainingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

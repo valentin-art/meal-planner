@@ -38,6 +38,7 @@ from meal_planner.core.models import (
     TodayPosition,
 )
 from meal_planner.core.shopping import CATEGORY_ORDER, format_qty
+from meal_planner.core.stock import StockedTrip, StockIgnored, StockLine
 from meal_planner.core.validation import (
     KCAL_TARGET_MAX,
     KCAL_TARGET_MIN,
@@ -324,6 +325,35 @@ class SummaryTripOut(BaseModel):
     items: list[str]  # «название — 540 г (≈ 2 шт)», как «Что купить» в UI
 
 
+class StockLineIn(BaseModel):
+    ingredient_id: int  # id справочника — переименование не ломает связку
+    qty: float
+    unit: str  # единица счётчика: г, мл, шт, кг, л…; переводит core
+
+
+class ShoppingRemainingIn(BaseModel):
+    """Остатки клиента (счётчики HA, 8.2) — приложение их не хранит."""
+
+    stock: list[StockLineIn]
+
+    def to_lines(self) -> list[StockLine]:
+        return [StockLine(i.ingredient_id, i.qty, i.unit) for i in self.stock]
+
+
+class StockIgnoredOut(BaseModel):
+    ingredient_id: int
+    name: str | None  # null — такого ингредиента нет в справочнике
+    qty: float
+    unit: str
+    reason: str  # по-русски, можно зачитать
+
+
+class ShoppingRemainingOut(SummaryTripOut):
+    """Ближайшая закупка за вычетом остатков (8.2), строки — как в summary."""
+
+    ignored: list[StockIgnoredOut]  # строки остатков, которые не учтены
+
+
 class SkippedCookOut(BaseModel):
     cook_date: date
     pause_start: date
@@ -586,10 +616,37 @@ def to_summary_day_out(d: DayMeals) -> SummaryDayOut:
     )
 
 
+def to_summary_trip_out(t: ShoppingTrip) -> SummaryTripOut:
+    return SummaryTripOut(
+        date=t.shopping_date,
+        cook_date=t.cook_date,
+        window_start=t.window_start,
+        window_end=t.window_end,
+        cook=[cook_line(c) for c in t.cook_items],
+        items=[shopping_line(i) for g in t.shopping_groups for i in g.items],
+    )
+
+
+def to_stock_ignored_out(i: StockIgnored) -> StockIgnoredOut:
+    return StockIgnoredOut(
+        ingredient_id=i.ingredient_id,
+        name=i.name,
+        qty=i.qty,
+        unit=i.unit,
+        reason=i.reason,
+    )
+
+
+def to_shopping_remaining_out(s: StockedTrip) -> ShoppingRemainingOut:
+    return ShoppingRemainingOut(
+        **to_summary_trip_out(s.trip).model_dump(),
+        ignored=[to_stock_ignored_out(i) for i in s.ignored],
+    )
+
+
 def to_summary_out(s: AppState) -> SummaryOut:
     """s — recompute на сегодня и завтра: schedule[0] и schedule[1]."""
     today, tomorrow = s.schedule
-    t = s.next_shopping_trip
     return SummaryOut(
         today=s.today,
         version=s.version,
@@ -598,13 +655,6 @@ def to_summary_out(s: AppState) -> SummaryOut:
         days=SummaryDaysOut(
             today=to_summary_day_out(today), tomorrow=to_summary_day_out(tomorrow)
         ),
-        next_shopping=SummaryTripOut(
-            date=t.shopping_date,
-            cook_date=t.cook_date,
-            window_start=t.window_start,
-            window_end=t.window_end,
-            cook=[cook_line(c) for c in t.cook_items],
-            items=[shopping_line(i) for g in t.shopping_groups for i in g.items],
-        ),
+        next_shopping=to_summary_trip_out(s.next_shopping_trip),
         skipped_cook=to_skipped_cook_out(s.skipped_cook),
     )

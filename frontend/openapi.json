@@ -105,6 +105,44 @@
         }
       }
     },
+    "/api/shopping/remaining": {
+      "post": {
+        "summary": "Shopping Remaining",
+        "operationId": "shopping_remaining_api_shopping_remaining_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingRemainingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingRemainingOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recipes": {
       "get": {
         "summary": "Get Recipes",
@@ -2223,6 +2261,80 @@
         ],
         "title": "ShoppingItemOut"
       },
+      "ShoppingRemainingIn": {
+        "properties": {
+          "stock": {
+            "items": {
+              "$ref": "#/components/schemas/StockLineIn"
+            },
+            "type": "array",
+            "title": "Stock"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock"
+        ],
+        "title": "ShoppingRemainingIn",
+        "description": "Остатки клиента (счётчики HA, 8.2) — приложение их не хранит."
+      },
+      "ShoppingRemainingOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "cook_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Cook Date"
+          },
+          "window_start": {
+            "type": "string",
+            "format": "date",
+            "title": "Window Start"
+          },
+          "window_end": {
+            "type": "string",
+            "format": "date",
+            "title": "Window End"
+          },
+          "cook": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Cook"
+          },
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "ignored": {
+            "items": {
+              "$ref": "#/components/schemas/StockIgnoredOut"
+            },
+            "type": "array",
+            "title": "Ignored"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "cook_date",
+          "window_start",
+          "window_end",
+          "cook",
+          "items",
+          "ignored"
+        ],
+        "title": "ShoppingRemainingOut",
+        "description": "Ближайшая закупка за вычетом остатков (8.2), строки — как в summary."
+      },
       "ShoppingTripOut": {
         "properties": {
           "shopping_date": {
@@ -2306,6 +2418,69 @@
           "can_undo"
         ],
         "title": "SkippedCookOut"
+      },
+      "StockIgnoredOut": {
+        "properties": {
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "qty": {
+            "type": "number",
+            "title": "Qty"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "reason": {
+            "type": "string",
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient_id",
+          "name",
+          "qty",
+          "unit",
+          "reason"
+        ],
+        "title": "StockIgnoredOut"
+      },
+      "StockLineIn": {
+        "properties": {
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          },
+          "qty": {
+            "type": "number",
+            "title": "Qty"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient_id",
+          "qty",
+          "unit"
+        ],
+        "title": "StockLineIn"
       },
       "SummaryDayOut": {
         "properties": {

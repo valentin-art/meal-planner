@@ -773,3 +773,50 @@ def test_summary_shows_deviation_from_target(client, repo):
         f"≈ {today['kcal']} ккал ({signed(kcal_delta)})"
         f" · {today['protein']} г белка ({signed(protein_delta)})"
     )
+
+
+def test_shopping_remaining_subtracts_stock_read_only(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    before = client.get("/api/state").json()
+    summary = client.get("/api/summary").json()["next_shopping"]
+    stock = [
+        {"ingredient_id": 6, "qty": 1, "unit": "шт"},  # авокадо, 130 г
+        {"ingredient_id": 10, "qty": 1, "unit": "шт"},  # брокколи: нет веса штуки
+        {"ingredient_id": 999, "qty": 1, "unit": "шт"},
+    ]
+    r = client.post("/api/shopping/remaining", json={"stock": stock})
+    assert r.status_code == 200
+    body = r.json()
+    # Та же закупка, что в summary, строки в том же формате.
+    for key in ("date", "cook_date", "window_start", "window_end", "cook"):
+        assert body[key] == summary[key]
+    assert "авокадо — 200 г (≈ 2 шт)" in summary["items"]
+    assert "авокадо — 70 г (≈ 1 шт)" in body["items"]
+    assert [i for i in body["items"] if not i.startswith("авокадо")] == [
+        i for i in summary["items"] if not i.startswith("авокадо")
+    ]
+    assert [(i["ingredient_id"], i["name"]) for i in body["ignored"]] == [
+        (10, "брокколи"),
+        (999, None),
+    ]
+    # Только чтение: версия и план — прежние, «Закупки» — полный список.
+    assert client.get("/api/state").json() == before
+    assert repo.get_settings() == StoredSettings(DEFAULT_2X, 1)
+
+
+def test_shopping_remaining_first_request_saves_defaults(client, repo):
+    assert client.post("/api/shopping/remaining", json={"stock": []}).status_code == 200
+    assert repo.get_settings() == StoredSettings(default_settings(TODAY), 1)
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {},
+        {"stock": [{"ingredient_id": "яйца", "qty": 1, "unit": "шт"}]},
+        {"stock": [{"ingredient_id": 1, "qty": "много", "unit": "шт"}]},
+        {"stock": [{"ingredient_id": 1, "qty": 1}]},
+    ],
+)
+def test_shopping_remaining_bad_body_is_422(client, body):
+    assert client.post("/api/shopping/remaining", json=body).status_code == 422

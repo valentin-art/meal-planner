@@ -32,12 +32,15 @@ from meal_planner.api.schemas import (
     SetCycleSlotIn,
     SetNutritionTargetIn,
     SetShoppingTimingIn,
+    ShoppingRemainingIn,
+    ShoppingRemainingOut,
     SummaryOut,
     to_app_state_out,
     to_catalog_ingredient_out,
     to_ingredients_out,
     to_recipe_out,
     to_recipes_out,
+    to_shopping_remaining_out,
     to_summary_out,
 )
 from meal_planner.core import actions, catalog_actions
@@ -48,7 +51,7 @@ from meal_planner.core.models import (
     Settings,
     default_settings,
 )
-from meal_planner.core.planner import recompute
+from meal_planner.core.planner import recompute, shopping_with_stock
 from meal_planner.core.validation import settings_errors, usable_settings
 from meal_planner.db.repository import (
     Repository,
@@ -268,6 +271,18 @@ def create_app() -> FastAPI:
             recompute(
                 catalog, settings, today, today, today + timedelta(days=1), version
             )
+        )
+
+    @app.post("/api/shopping/remaining", response_model=ShoppingRemainingOut)
+    def shopping_remaining(
+        body: ShoppingRemainingIn, repo: Repo, catalog: CatalogDep, today: Today
+    ) -> ShoppingRemainingOut:
+        # Для HA (8.2): ближайшая закупка за вычетом его остатков. Только
+        # чтение — остатки не сохраняются, версия не меняется; POST из-за
+        # тела, это не действие. Вкладка «Закупки» остаётся полным списком.
+        settings, _ = stored_or_initial(repo, today)
+        return to_shopping_remaining_out(
+            shopping_with_stock(catalog, settings, today, body.to_lines())
         )
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])

@@ -12,6 +12,13 @@
 # Атрибуты сущностей LLM в Assist не видит (в контекст попадают только
 # состояние и белый список атрибутов HA), поэтому полные данные модель
 # получает из ответа скрипта meal_planner_plan.
+#
+# Остатки (8.2) — счётчики input_number конфига HA (stock.yaml). Счётчик
+# учитывается, если у него есть атрибут meal_planner_ingredient — id
+# ингредиента справочника (customize в конфиге HA). Вычитает и переводит
+# единицы приложение (POST /api/shopping/remaining), остатки оно не хранит:
+# вкладка «Закупки» и сенсоры — полный список по плану, уменьшенный — только
+# в to-do и в ответе meal_planner_plan.
 
 homeassistant:
   customize:
@@ -78,6 +85,12 @@ rest_command:
     url: http://127.0.0.1:8001/api/summary
     method: get
     timeout: 10
+  meal_planner_shopping_remaining:
+    url: http://127.0.0.1:8001/api/shopping/remaining
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"stock": stock} | to_json }}'
   meal_planner_set_cycle_position:
     url: http://127.0.0.1:8001/api/actions/set-cycle-position
     method: post
@@ -117,18 +130,41 @@ script:
     description: >-
       План питания: что на завтрак, обед и ужин сегодня и завтра (с ккал и
       белком и отклонением от суточной цели, если она задана: kcal_target,
-      kcal_delta, строка nutrition), когда ближайшая закупка и день готовки, какие блюда готовить и
-      полный список покупок. Вызывай для любых вопросов о еде, готовке и
-      покупках. Даты — в формате ГГГГ-ММ-ДД, today — сегодняшняя дата.
+      kcal_delta, строка nutrition), когда ближайшая закупка и день готовки,
+      какие блюда готовить и что купить. В next_shopping — полный список по
+      плану, в to_buy — что купить с учётом остатков дома (to_buy.ignored —
+      какие остатки не учтены и почему). На вопрос «что купить» отвечай по
+      to_buy. Вызывай для любых вопросов о еде, готовке и покупках. Даты — в
+      формате ГГГГ-ММ-ДД, today — сегодняшняя дата.
     mode: parallel
     sequence:
       - action: rest_command.meal_planner_summary
         response_variable: resp
         continue_on_error: true
+      - variables:
+          stock: &stock >-
+            {%- set ns = namespace(lines=[]) %}
+            {%- for s in states.input_number
+                  if s.attributes.meal_planner_ingredient is defined
+                  and s.state not in ['unknown', 'unavailable'] %}
+              {%- set ns.lines = ns.lines + [{
+                    "ingredient_id": s.attributes.meal_planner_ingredient | int,
+                    "qty": s.state | float,
+                    "unit": s.attributes.unit_of_measurement | default('')}] %}
+            {%- endfor %}
+            {{ ns.lines }}
+      - action: rest_command.meal_planner_shopping_remaining
+        data:
+          stock: "{{ stock }}"
+        response_variable: remaining
+        continue_on_error: true
       - if: "{{ resp is defined and resp.status == 200 }}"
         then:
           - variables:
-              result: "{{ resp.content }}"
+              result: >-
+                {{ dict(resp.content, to_buy=remaining.content)
+                   if remaining is defined and remaining.status == 200
+                   else resp.content }}
           - stop: План получен
             response_variable: result
       - variables:
@@ -349,10 +385,11 @@ script:
   meal_planner_sync_shopping_list:
     alias: Питание — список покупок в to-do
     description: >-
-      Переносит список покупок ближайшей закупки в список дел «Покупки»:
-      добавляет недостающее, убирает устаревшее, уже купленное не
-      возвращает, чужие пункты не трогает. Вызывай, когда просят добавить
-      или обновить покупки в списке.
+      Переносит список покупок ближайшей закупки в список дел «Покупки» с
+      учётом остатков дома (счётчики продуктов): добавляет недостающее,
+      убирает устаревшее, уже купленное не возвращает, чужие пункты не
+      трогает. Вызывай, когда просят добавить или обновить покупки в
+      списке. ignored в ответе — остатки, которые не удалось учесть.
     mode: queued
     fields:
       todo_list:
@@ -365,7 +402,10 @@ script:
     sequence:
       - variables:
           todo_entity: "{{ todo_list | default('todo.pokupki', true) }}"
-      - action: rest_command.meal_planner_summary
+          stock: *stock
+      - action: rest_command.meal_planner_shopping_remaining
+        data:
+          stock: "{{ stock }}"
         response_variable: resp
         continue_on_error: true
       - if: "{{ not (resp is defined and resp.status == 200) }}"
@@ -383,8 +423,8 @@ script:
           status: [needs_action, completed]
         response_variable: todo
       - variables:
-          tag: "meal-planner {{ resp.content.next_shopping.date }}"
-          lines: "{{ resp.content.next_shopping['items'] }}"
+          tag: "meal-planner {{ resp.content.date }}"
+          lines: "{{ resp.content['items'] }}"
           ours: >-
             {{ todo[todo_entity]['items']
                | selectattr('description', 'defined')
@@ -418,6 +458,7 @@ script:
             ok: true
             added: "{{ missing | length }}"
             removed: "{{ stale | length }}"
+            ignored: "{{ resp.content.ignored }}"
       - stop: Готово
         response_variable: result
 

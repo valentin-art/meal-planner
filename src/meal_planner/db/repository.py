@@ -30,8 +30,8 @@ DEFAULT_DB_PATH = Path("data/mealplan.db")
 _UPSERT = """
 INSERT INTO settings
     (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing,
-     skipped_cook_date)
-VALUES (1, ?, ?, ?, ?, ?, ?)
+     skipped_cook_date, daily_kcal_target, daily_protein_target)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
     meal_anchor_date = excluded.meal_anchor_date,
     cook_count = excluded.cook_count,
@@ -39,6 +39,8 @@ ON CONFLICT(id) DO UPDATE SET
     cook_weekday2 = excluded.cook_weekday2,
     shopping_timing = excluded.shopping_timing,
     skipped_cook_date = excluded.skipped_cook_date,
+    daily_kcal_target = excluded.daily_kcal_target,
+    daily_protein_target = excluded.daily_protein_target,
     version = version + 1
 RETURNING version
 """
@@ -46,8 +48,8 @@ RETURNING version
 _INSERT_IF_ABSENT = """
 INSERT INTO settings
     (id, meal_anchor_date, cook_count, cook_weekday1, cook_weekday2, shopping_timing,
-     skipped_cook_date)
-VALUES (1, ?, ?, ?, ?, ?, ?)
+     skipped_cook_date, daily_kcal_target, daily_protein_target)
+VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO NOTHING
 """
 
@@ -70,17 +72,20 @@ def _row(settings: Settings) -> tuple:
         settings.cook_weekday2,
         settings.shopping_timing,
         settings.skipped_cook_date and settings.skipped_cook_date.isoformat(),
+        settings.daily_kcal_target,
+        settings.daily_protein_target,
     )
 
 
 def _read(conn: sqlite3.Connection) -> StoredSettings | None:
     row = conn.execute(
         "SELECT meal_anchor_date, cook_count, cook_weekday1, cook_weekday2,"
-        " shopping_timing, skipped_cook_date, version FROM settings WHERE id = 1"
+        " shopping_timing, skipped_cook_date, daily_kcal_target, daily_protein_target,"
+        " version FROM settings WHERE id = 1"
     ).fetchone()
     if row is None:
         return None
-    anchor, cook_count, wd1, wd2, timing, skipped, version = row
+    anchor, cook_count, wd1, wd2, timing, skipped, kcal, protein, version = row
     settings = Settings(
         date.fromisoformat(anchor),
         cook_count,
@@ -88,6 +93,8 @@ def _read(conn: sqlite3.Connection) -> StoredSettings | None:
         wd2,
         timing,
         skipped and date.fromisoformat(skipped),
+        kcal,
+        protein,
     )
     return StoredSettings(settings=settings, version=version)
 

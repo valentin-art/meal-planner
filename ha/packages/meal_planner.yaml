@@ -21,6 +21,8 @@ homeassistant:
       friendly_name: Питание завтра
     sensor.meal_planner_next_shopping:
       friendly_name: Ближайшая закупка
+    sensor.meal_planner_today_kcal:
+      friendly_name: Ккал сегодня
 
 rest:
   - resource: http://127.0.0.1:8001/api/summary
@@ -56,6 +58,20 @@ rest:
         value_template: "{{ value_json.next_shopping.date }}"
         json_attributes_path: "$.next_shopping"
         json_attributes: [cook_date, window_start, window_end, cook, items]
+      # Ккал сегодня числом — для истории и графиков (8.1). Отклонение от
+      # суточной цели — в атрибутах; без цели они null. В дни без блюд
+      # (пауза, день 0) — unavailable, а не 0: не портит средние в истории.
+      # Не none в value_template: Jinja отдаёт строку «None», числовой
+      # сенсор её не примет.
+      - name: Meal planner today kcal
+        unique_id: meal_planner_today_kcal
+        icon: mdi:fire
+        unit_of_measurement: ккал
+        state_class: measurement
+        availability: "{{ value_json.days.today.lunch is not none }}"
+        value_template: "{{ value_json.days.today.kcal }}"
+        json_attributes_path: "$.days.today"
+        json_attributes: [protein, kcal_delta, protein_delta, nutrition]
 
 rest_command:
   meal_planner_summary:
@@ -100,7 +116,8 @@ script:
     alias: Питание — план
     description: >-
       План питания: что на завтрак, обед и ужин сегодня и завтра (с ккал и
-      белком), когда ближайшая закупка и день готовки, какие блюда готовить и
+      белком и отклонением от суточной цели, если она задана: kcal_target,
+      kcal_delta, строка nutrition), когда ближайшая закупка и день готовки, какие блюда готовить и
       полный список покупок. Вызывай для любых вопросов о еде, готовке и
       покупках. Даты — в формате ГГГГ-ММ-ДД, today — сегодняшняя дата.
     mode: parallel

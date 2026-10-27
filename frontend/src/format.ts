@@ -48,3 +48,10 @@ export function fmtDate(iso: string): string {
 export function addDaysISO(iso: string, days: number): string {
   return new Date(parseISO(iso).getTime() + days * DAY_MS).toISOString().slice(0, 10);
 }
+
+/** « (−210)» к итогу дня; отклонение от цели считает сервер, null — без цели. */
+export function fmtDelta(delta: number | null): string {
+  if (delta === null) return '';
+  const sign = delta === 0 ? '±' : delta > 0 ? '+' : '−';
+  return ` (${sign}${Math.abs(delta)})`;
+}

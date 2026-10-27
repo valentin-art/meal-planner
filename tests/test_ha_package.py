@@ -84,7 +84,8 @@ def entity_id(sensor: dict) -> str:
 
 @pytest.mark.parametrize("sensor", sensors(), ids=entity_id)
 def test_sensor_templates_use_summary_fields(sensor):
-    for path in re.findall(r"value_json((?:\.\w+)+)", sensor["value_template"]):
+    templates = sensor["value_template"] + sensor.get("availability", "")
+    for path in re.findall(r"value_json((?:\.\w+)+)", templates):
         schema_at(path.split(".")[1:])
     attrs = schema_at(sensor["json_attributes_path"].removeprefix("$.").split("."))
     assert set(sensor["json_attributes"]) <= set(attrs["properties"])

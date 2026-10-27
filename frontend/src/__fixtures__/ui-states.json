@@ -1491,7 +1491,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -1505,7 +1507,9 @@
        "is_day_zero": true,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -1518,7 +1522,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -1531,7 +1537,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -1544,7 +1552,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -1557,7 +1567,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -1570,7 +1582,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -1583,7 +1597,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -1596,7 +1612,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -1609,7 +1627,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -1622,7 +1642,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -1635,7 +1657,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -1648,7 +1672,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -1661,7 +1687,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -1674,7 +1702,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -1991,7 +2021,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -2005,7 +2037,9 @@
        "is_day_zero": true,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -2018,7 +2052,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -2031,7 +2067,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -2044,7 +2082,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -2057,7 +2097,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -2070,7 +2112,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -2083,7 +2127,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -2096,7 +2142,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -2109,7 +2157,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -2122,7 +2172,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -2135,7 +2187,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -2148,7 +2202,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -2161,7 +2217,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -2174,7 +2232,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -2187,7 +2247,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -2200,7 +2262,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-25",
@@ -2213,7 +2277,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-26",
@@ -2226,7 +2292,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-27",
@@ -2239,7 +2307,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-28",
@@ -2252,7 +2322,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-29",
@@ -2265,7 +2337,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-30",
@@ -2278,7 +2352,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-01",
@@ -2291,7 +2367,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-02",
@@ -2304,7 +2382,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-03",
@@ -2317,7 +2397,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-04",
@@ -2330,7 +2412,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-05",
@@ -2343,7 +2427,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-06",
@@ -2356,7 +2442,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -2679,7 +2767,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -2693,7 +2783,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -2706,7 +2798,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -2719,7 +2813,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -2732,7 +2828,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -2745,7 +2843,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -2758,7 +2858,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -2771,7 +2873,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -2784,7 +2888,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -2797,7 +2903,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -2810,7 +2918,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -2823,7 +2933,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -2836,7 +2948,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -2849,7 +2963,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -2862,7 +2978,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -3222,7 +3340,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -3236,7 +3356,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -3249,7 +3371,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -3262,7 +3386,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -3275,7 +3401,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -3288,7 +3416,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -3301,7 +3431,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -3314,7 +3446,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -3327,7 +3461,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -3340,7 +3476,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -3353,7 +3491,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -3366,7 +3506,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -3379,7 +3521,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -3392,7 +3536,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -3405,7 +3551,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-25",
@@ -3418,7 +3566,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-26",
@@ -3431,7 +3581,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-27",
@@ -3444,7 +3596,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-28",
@@ -3457,7 +3611,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-29",
@@ -3470,7 +3626,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-30",
@@ -3483,7 +3641,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-01",
@@ -3496,7 +3656,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-02",
@@ -3509,7 +3671,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-03",
@@ -3522,7 +3686,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-04",
@@ -3535,7 +3701,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-05",
@@ -3548,7 +3716,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-06",
@@ -3561,7 +3731,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-07",
@@ -3574,7 +3746,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-08",
@@ -3587,7 +3761,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -3953,7 +4129,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "before",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -3967,7 +4145,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -3980,7 +4160,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -3993,7 +4175,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -4006,7 +4190,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -4019,7 +4205,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -4032,7 +4220,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -4045,7 +4235,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -4058,7 +4250,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -4071,7 +4265,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -4084,7 +4280,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -4097,7 +4295,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -4110,7 +4310,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -4123,7 +4325,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -4136,7 +4340,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -4508,7 +4714,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "before",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -4522,7 +4730,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -4535,7 +4745,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -4548,7 +4760,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -4561,7 +4775,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -4574,7 +4790,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -4587,7 +4805,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -4600,7 +4820,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -4613,7 +4835,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -4626,7 +4850,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -4639,7 +4865,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -4652,7 +4880,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -4665,7 +4895,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -4678,7 +4910,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -4691,7 +4925,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -4704,7 +4940,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-25",
@@ -4717,7 +4955,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-26",
@@ -4730,7 +4970,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-27",
@@ -4743,7 +4985,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-28",
@@ -4756,7 +5000,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-29",
@@ -4769,7 +5015,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-30",
@@ -4782,7 +5030,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-01",
@@ -4795,7 +5045,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-02",
@@ -4808,7 +5060,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-03",
@@ -4821,7 +5075,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-04",
@@ -4834,7 +5090,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-05",
@@ -4847,7 +5105,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-06",
@@ -4860,7 +5120,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-07",
@@ -4873,7 +5135,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -5251,7 +5515,9 @@
       "cook_weekday1": 7,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -5265,7 +5531,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-05",
@@ -5278,7 +5546,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-06",
@@ -5291,7 +5561,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-07",
@@ -5304,7 +5576,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-08",
@@ -5317,7 +5591,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-09",
@@ -5330,7 +5606,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -5343,7 +5621,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -5356,7 +5636,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -5369,7 +5651,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -5382,7 +5666,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -5395,7 +5681,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -5408,7 +5696,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -5421,7 +5711,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -5434,7 +5726,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -5876,7 +6170,9 @@
       "cook_weekday1": 7,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -5890,7 +6186,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-05",
@@ -5903,7 +6201,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-06",
@@ -5916,7 +6216,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-07",
@@ -5929,7 +6231,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-08",
@@ -5942,7 +6246,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-09",
@@ -5955,7 +6261,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -5968,7 +6276,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -5981,7 +6291,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -5994,7 +6306,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -6007,7 +6321,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -6020,7 +6336,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -6033,7 +6351,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -6046,7 +6366,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -6059,7 +6381,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -6072,7 +6396,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -6085,7 +6411,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -6098,7 +6426,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -6111,7 +6441,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -6124,7 +6456,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -6137,7 +6471,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -6150,7 +6486,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-25",
@@ -6163,7 +6501,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-26",
@@ -6176,7 +6516,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-27",
@@ -6189,7 +6531,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-28",
@@ -6202,7 +6546,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-29",
@@ -6215,7 +6561,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-30",
@@ -6228,7 +6576,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-01",
@@ -6241,7 +6591,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -6689,7 +7041,9 @@
       "cook_weekday1": 1,
       "cook_weekday2": 2,
       "shopping_timing": "before",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -6703,7 +7057,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-03-30",
@@ -6716,7 +7072,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-03-31",
@@ -6729,7 +7087,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-01",
@@ -6742,7 +7102,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-02",
@@ -6755,7 +7117,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-03",
@@ -6768,7 +7132,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-04",
@@ -6781,7 +7147,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-05",
@@ -6794,7 +7162,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-06",
@@ -6807,7 +7177,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-07",
@@ -6820,7 +7192,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-08",
@@ -6833,7 +7207,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-09",
@@ -6846,7 +7222,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-10",
@@ -6859,7 +7237,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-11",
@@ -6872,7 +7252,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -7308,7 +7690,9 @@
       "cook_weekday1": 1,
       "cook_weekday2": 2,
       "shopping_timing": "before",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -7322,7 +7706,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-03-30",
@@ -7335,7 +7721,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-03-31",
@@ -7348,7 +7736,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-01",
@@ -7361,7 +7751,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-02",
@@ -7374,7 +7766,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-03",
@@ -7387,7 +7781,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-04",
@@ -7400,7 +7796,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-05",
@@ -7413,7 +7811,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-06",
@@ -7426,7 +7826,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-07",
@@ -7439,7 +7841,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-08",
@@ -7452,7 +7856,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-09",
@@ -7465,7 +7871,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-10",
@@ -7478,7 +7886,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-11",
@@ -7491,7 +7901,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-12",
@@ -7504,7 +7916,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-13",
@@ -7517,7 +7931,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-14",
@@ -7530,7 +7946,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-15",
@@ -7543,7 +7961,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-16",
@@ -7556,7 +7976,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-17",
@@ -7569,7 +7991,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-18",
@@ -7582,7 +8006,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-19",
@@ -7595,7 +8021,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-20",
@@ -7608,7 +8036,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-21",
@@ -7621,7 +8051,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-22",
@@ -7634,7 +8066,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-23",
@@ -7647,7 +8081,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-24",
@@ -7660,7 +8096,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2027-04-25",
@@ -7673,7 +8111,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -8115,7 +8555,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -8129,7 +8571,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": true,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-07",
@@ -8142,7 +8586,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": true,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-08",
@@ -8155,7 +8601,9 @@
        "is_day_zero": true,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-09",
@@ -8168,7 +8616,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -8181,7 +8631,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -8194,7 +8646,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -8207,7 +8661,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -8220,7 +8676,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -8233,7 +8691,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -8246,7 +8706,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -8259,7 +8721,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -8272,7 +8736,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -8285,7 +8751,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -8298,7 +8766,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -8686,7 +9156,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": null
+      "skipped_cook_date": null,
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -8700,7 +9172,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": true,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-07",
@@ -8713,7 +9187,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": true,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-08",
@@ -8726,7 +9202,9 @@
        "is_day_zero": true,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-09",
@@ -8739,7 +9217,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -8752,7 +9232,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -8765,7 +9247,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -8778,7 +9262,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -8791,7 +9277,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -8804,7 +9292,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -8817,7 +9307,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -8830,7 +9322,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -8843,7 +9337,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -8856,7 +9352,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -8869,7 +9367,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -8882,7 +9382,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -8895,7 +9397,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -8908,7 +9412,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -8921,7 +9427,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -8934,7 +9442,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-25",
@@ -8947,7 +9457,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-26",
@@ -8960,7 +9472,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-27",
@@ -8973,7 +9487,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-28",
@@ -8986,7 +9502,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-29",
@@ -8999,7 +9517,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-30",
@@ -9012,7 +9532,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-01",
@@ -9025,7 +9547,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-02",
@@ -9038,7 +9562,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-03",
@@ -9051,7 +9577,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -9445,7 +9973,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": "2026-11-11"
+      "skipped_cook_date": "2026-11-11",
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -9459,7 +9989,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -9472,7 +10004,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -9485,7 +10019,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -9498,7 +10034,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": true
+       "is_skipped": true,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -9511,7 +10049,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": true
+       "is_skipped": true,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -9524,7 +10064,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": true
+       "is_skipped": true,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -9537,7 +10079,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -9550,7 +10094,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -9563,7 +10109,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -9576,7 +10124,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -9589,7 +10139,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -9602,7 +10154,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -9615,7 +10169,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -9628,7 +10184,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -10022,7 +10580,9 @@
       "cook_weekday1": 3,
       "cook_weekday2": 6,
       "shopping_timing": "same",
-      "skipped_cook_date": "2026-11-11"
+      "skipped_cook_date": "2026-11-11",
+      "daily_kcal_target": null,
+      "daily_protein_target": null
      },
      "schedule": [
       {
@@ -10036,7 +10596,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-10",
@@ -10049,7 +10611,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-11",
@@ -10062,7 +10626,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-12",
@@ -10075,7 +10641,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": true
+       "is_skipped": true,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-13",
@@ -10088,7 +10656,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": true
+       "is_skipped": true,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-14",
@@ -10101,7 +10671,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": true
+       "is_skipped": true,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-15",
@@ -10114,7 +10686,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-16",
@@ -10127,7 +10701,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-17",
@@ -10140,7 +10716,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-18",
@@ -10153,7 +10731,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-19",
@@ -10166,7 +10746,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-20",
@@ -10179,7 +10761,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-21",
@@ -10192,7 +10776,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-22",
@@ -10205,7 +10791,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-23",
@@ -10218,7 +10806,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-24",
@@ -10231,7 +10821,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-25",
@@ -10244,7 +10836,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-26",
@@ -10257,7 +10851,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-27",
@@ -10270,7 +10866,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-28",
@@ -10283,7 +10881,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-29",
@@ -10296,7 +10896,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-11-30",
@@ -10309,7 +10911,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-01",
@@ -10322,7 +10926,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-02",
@@ -10335,7 +10941,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-03",
@@ -10348,7 +10956,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-04",
@@ -10361,7 +10971,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-05",
@@ -10374,7 +10986,9 @@
        "is_day_zero": false,
        "is_cook_day": true,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       },
       {
        "date": "2026-12-06",
@@ -10387,7 +11001,9 @@
        "is_day_zero": false,
        "is_cook_day": false,
        "is_before_start": false,
-       "is_skipped": false
+       "is_skipped": false,
+       "kcal_delta": null,
+       "protein_delta": null
       }
      ],
      "next_shopping_trip": {
@@ -10744,6 +11360,1368 @@
       "d3": "next_trip",
       "l5": "next_trip",
       "d5": "next_trip"
+     },
+     "cycle_slots": [
+      {
+       "slot": 1,
+       "lunch_id": "l1",
+       "dinner_id": "d1"
+      },
+      {
+       "slot": 2,
+       "lunch_id": "l2",
+       "dinner_id": "d2"
+      },
+      {
+       "slot": 3,
+       "lunch_id": "l3",
+       "dinner_id": "d3"
+      },
+      {
+       "slot": 4,
+       "lunch_id": "l4",
+       "dinner_id": "d4"
+      },
+      {
+       "slot": 5,
+       "lunch_id": "l5",
+       "dinner_id": "d5"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "name": "nutrition_target",
+   "today": "2026-11-11",
+   "responses": {
+    "api/state": {
+     "today": "2026-11-11",
+     "settings": {
+      "meal_anchor_date": "2026-11-05",
+      "cook_count": 2,
+      "cook_weekday1": 3,
+      "cook_weekday2": 6,
+      "shopping_timing": "same",
+      "skipped_cook_date": null,
+      "daily_kcal_target": 2000,
+      "daily_protein_target": 100
+     },
+     "schedule": [
+      {
+       "date": "2026-11-11",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-12",
+       "cycle_index": 3,
+       "breakfast_id": "b2",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1985,
+       "protein_total": 119,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -15,
+       "protein_delta": 19
+      },
+      {
+       "date": "2026-11-13",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-11-14",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-15",
+       "cycle_index": 3,
+       "breakfast_id": "b1",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1790,
+       "protein_total": 125,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -210,
+       "protein_delta": 25
+      },
+      {
+       "date": "2026-11-16",
+       "cycle_index": 2,
+       "breakfast_id": "b2",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2215,
+       "protein_total": 118,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 215,
+       "protein_delta": 18
+      },
+      {
+       "date": "2026-11-17",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-18",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-19",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-11-20",
+       "cycle_index": 2,
+       "breakfast_id": "b2",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2215,
+       "protein_total": 118,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 215,
+       "protein_delta": 18
+      },
+      {
+       "date": "2026-11-21",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-22",
+       "cycle_index": 3,
+       "breakfast_id": "b2",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1985,
+       "protein_total": 119,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -15,
+       "protein_delta": 19
+      },
+      {
+       "date": "2026-11-23",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-11-24",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      }
+     ],
+     "next_shopping_trip": {
+      "shopping_date": "2026-11-11",
+      "cook_date": "2026-11-11",
+      "window_start": "2026-11-12",
+      "window_end": "2026-11-14",
+      "window_days": 3,
+      "cook_items": [
+       {
+        "lunch_id": "l3",
+        "dinner_id": "d3",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l5",
+        "dinner_id": "d5",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l4",
+        "dinner_id": "d4",
+        "portions": 1
+       }
+      ],
+      "shopping_groups": [
+       {
+        "category": "Белок",
+        "items": [
+         {
+          "name": "креветки варёные очищенные (размороженные или замороженные)",
+          "qty": 180.0,
+          "qty_display": "180",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "куриное филе",
+          "qty": 480.0,
+          "qty_display": "480",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "лосось",
+          "qty": 170.0,
+          "qty_display": "170",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "тунец консервированный или креветки варёные очищенные",
+          "qty": 130.0,
+          "qty_display": "130",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Крупы",
+        "items": [
+         {
+          "name": "булгур",
+          "qty": 120.0,
+          "qty_display": "120",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "нут консервированный",
+          "qty": 80.0,
+          "qty_display": "80",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "паста цельнозерновая",
+          "qty": 90.0,
+          "qty_display": "90",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "рис басмати",
+          "qty": 80.0,
+          "qty_display": "80",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Овощи",
+        "items": [
+         {
+          "name": "авокадо",
+          "qty": 200.0,
+          "qty_display": "200",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 2
+         },
+         {
+          "name": "баклажан",
+          "qty": 100.0,
+          "qty_display": "100",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "болгарский перец",
+          "qty": 185.0,
+          "qty_display": "185",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "брокколи",
+          "qty": 100.0,
+          "qty_display": "100",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "листовой салат/шпинат/руккола",
+          "qty": 60.0,
+          "qty_display": "60",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "маслины",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "огурец",
+          "qty": 150.0,
+          "qty_display": "150",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "помидор",
+          "qty": 160.0,
+          "qty_display": "160",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "сок лимона",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "мл",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "цукини",
+          "qty": 220.0,
+          "qty_display": "220",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "черри-томаты",
+          "qty": 140.0,
+          "qty_display": "140",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "чеснок",
+          "qty": 1.0,
+          "qty_display": "1",
+          "unit": "зубчик",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "шпинат",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Яйца и молочное",
+        "items": [
+         {
+          "name": "греческий йогурт",
+          "qty": 500.0,
+          "qty_display": "500",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "пармезан",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "фета",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "яйца",
+          "qty": 6.0,
+          "qty_display": "6",
+          "unit": "шт",
+          "category": "Яйца и молочное",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Прочее",
+        "items": [
+         {
+          "name": "гранола или орехи",
+          "qty": 60.0,
+          "qty_display": "60",
+          "unit": "г",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "масло сливочное",
+          "qty": 1.0,
+          "qty_display": "1",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "оливковое масло",
+          "qty": 7.5,
+          "qty_display": "7.5",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "хлеб цельнозерновой",
+          "qty": 180.0,
+          "qty_display": "180",
+          "unit": "г",
+          "category": "Прочее",
+          "pieces": null
+         }
+        ]
+       }
+      ]
+     },
+     "version": 1,
+     "today_position": {
+      "current": 1,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-12",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2026-11-06",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-08",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       }
+      ]
+     },
+     "skipped_cook": null,
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "b2": "next_trip",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip",
+      "l4": "next_trip",
+      "d4": "next_trip"
+     },
+     "cycle_slots": [
+      {
+       "slot": 1,
+       "lunch_id": "l1",
+       "dinner_id": "d1"
+      },
+      {
+       "slot": 2,
+       "lunch_id": "l2",
+       "dinner_id": "d2"
+      },
+      {
+       "slot": 3,
+       "lunch_id": "l3",
+       "dinner_id": "d3"
+      },
+      {
+       "slot": 4,
+       "lunch_id": "l4",
+       "dinner_id": "d4"
+      },
+      {
+       "slot": 5,
+       "lunch_id": "l5",
+       "dinner_id": "d5"
+      }
+     ]
+    },
+    "api/state?from=2026-11-11&to=2026-12-08": {
+     "today": "2026-11-11",
+     "settings": {
+      "meal_anchor_date": "2026-11-05",
+      "cook_count": 2,
+      "cook_weekday1": 3,
+      "cook_weekday2": 6,
+      "shopping_timing": "same",
+      "skipped_cook_date": null,
+      "daily_kcal_target": 2000,
+      "daily_protein_target": 100
+     },
+     "schedule": [
+      {
+       "date": "2026-11-11",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-12",
+       "cycle_index": 3,
+       "breakfast_id": "b2",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1985,
+       "protein_total": 119,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -15,
+       "protein_delta": 19
+      },
+      {
+       "date": "2026-11-13",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-11-14",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-15",
+       "cycle_index": 3,
+       "breakfast_id": "b1",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1790,
+       "protein_total": 125,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -210,
+       "protein_delta": 25
+      },
+      {
+       "date": "2026-11-16",
+       "cycle_index": 2,
+       "breakfast_id": "b2",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2215,
+       "protein_total": 118,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 215,
+       "protein_delta": 18
+      },
+      {
+       "date": "2026-11-17",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-18",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-19",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-11-20",
+       "cycle_index": 2,
+       "breakfast_id": "b2",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2215,
+       "protein_total": 118,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 215,
+       "protein_delta": 18
+      },
+      {
+       "date": "2026-11-21",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-22",
+       "cycle_index": 3,
+       "breakfast_id": "b2",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1985,
+       "protein_total": 119,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -15,
+       "protein_delta": 19
+      },
+      {
+       "date": "2026-11-23",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-11-24",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-25",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-11-26",
+       "cycle_index": 3,
+       "breakfast_id": "b2",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1985,
+       "protein_total": 119,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -15,
+       "protein_delta": 19
+      },
+      {
+       "date": "2026-11-27",
+       "cycle_index": 2,
+       "breakfast_id": "b1",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2020,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 20,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-28",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-11-29",
+       "cycle_index": 3,
+       "breakfast_id": "b1",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1790,
+       "protein_total": 125,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -210,
+       "protein_delta": 25
+      },
+      {
+       "date": "2026-11-30",
+       "cycle_index": 5,
+       "breakfast_id": "b2",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 2170,
+       "protein_total": 133,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 170,
+       "protein_delta": 33
+      },
+      {
+       "date": "2026-12-01",
+       "cycle_index": 2,
+       "breakfast_id": "b1",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2020,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 20,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-12-02",
+       "cycle_index": 1,
+       "breakfast_id": "b2",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 2055,
+       "protein_total": 128,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 55,
+       "protein_delta": 28
+      },
+      {
+       "date": "2026-12-03",
+       "cycle_index": 5,
+       "breakfast_id": "b1",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 1975,
+       "protein_total": 139,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -25,
+       "protein_delta": 39
+      },
+      {
+       "date": "2026-12-04",
+       "cycle_index": 4,
+       "breakfast_id": "b2",
+       "lunch_id": "l4",
+       "dinner_id": "d4",
+       "kcal_total": 2065,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 65,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-12-05",
+       "cycle_index": 1,
+       "breakfast_id": "b1",
+       "lunch_id": "l1",
+       "dinner_id": "d1",
+       "kcal_total": 1860,
+       "protein_total": 134,
+       "is_day_zero": false,
+       "is_cook_day": true,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -140,
+       "protein_delta": 34
+      },
+      {
+       "date": "2026-12-06",
+       "cycle_index": 3,
+       "breakfast_id": "b2",
+       "lunch_id": "l3",
+       "dinner_id": "d3",
+       "kcal_total": 1985,
+       "protein_total": 119,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": -15,
+       "protein_delta": 19
+      },
+      {
+       "date": "2026-12-07",
+       "cycle_index": 2,
+       "breakfast_id": "b1",
+       "lunch_id": "l2",
+       "dinner_id": "d2",
+       "kcal_total": 2020,
+       "protein_total": 124,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 20,
+       "protein_delta": 24
+      },
+      {
+       "date": "2026-12-08",
+       "cycle_index": 5,
+       "breakfast_id": "b2",
+       "lunch_id": "l5",
+       "dinner_id": "d5",
+       "kcal_total": 2170,
+       "protein_total": 133,
+       "is_day_zero": false,
+       "is_cook_day": false,
+       "is_before_start": false,
+       "is_skipped": false,
+       "kcal_delta": 170,
+       "protein_delta": 33
+      }
+     ],
+     "next_shopping_trip": {
+      "shopping_date": "2026-11-11",
+      "cook_date": "2026-11-11",
+      "window_start": "2026-11-12",
+      "window_end": "2026-11-14",
+      "window_days": 3,
+      "cook_items": [
+       {
+        "lunch_id": "l3",
+        "dinner_id": "d3",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l5",
+        "dinner_id": "d5",
+        "portions": 1
+       },
+       {
+        "lunch_id": "l4",
+        "dinner_id": "d4",
+        "portions": 1
+       }
+      ],
+      "shopping_groups": [
+       {
+        "category": "Белок",
+        "items": [
+         {
+          "name": "креветки варёные очищенные (размороженные или замороженные)",
+          "qty": 180.0,
+          "qty_display": "180",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "куриное филе",
+          "qty": 480.0,
+          "qty_display": "480",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "лосось",
+          "qty": 170.0,
+          "qty_display": "170",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         },
+         {
+          "name": "тунец консервированный или креветки варёные очищенные",
+          "qty": 130.0,
+          "qty_display": "130",
+          "unit": "г",
+          "category": "Белок",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Крупы",
+        "items": [
+         {
+          "name": "булгур",
+          "qty": 120.0,
+          "qty_display": "120",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "нут консервированный",
+          "qty": 80.0,
+          "qty_display": "80",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "паста цельнозерновая",
+          "qty": 90.0,
+          "qty_display": "90",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         },
+         {
+          "name": "рис басмати",
+          "qty": 80.0,
+          "qty_display": "80",
+          "unit": "г",
+          "category": "Крупы",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Овощи",
+        "items": [
+         {
+          "name": "авокадо",
+          "qty": 200.0,
+          "qty_display": "200",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 2
+         },
+         {
+          "name": "баклажан",
+          "qty": 100.0,
+          "qty_display": "100",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "болгарский перец",
+          "qty": 185.0,
+          "qty_display": "185",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "брокколи",
+          "qty": 100.0,
+          "qty_display": "100",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "листовой салат/шпинат/руккола",
+          "qty": 60.0,
+          "qty_display": "60",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "маслины",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "огурец",
+          "qty": 150.0,
+          "qty_display": "150",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "помидор",
+          "qty": 160.0,
+          "qty_display": "160",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "сок лимона",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "мл",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "цукини",
+          "qty": 220.0,
+          "qty_display": "220",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": 1
+         },
+         {
+          "name": "черри-томаты",
+          "qty": 140.0,
+          "qty_display": "140",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "чеснок",
+          "qty": 1.0,
+          "qty_display": "1",
+          "unit": "зубчик",
+          "category": "Овощи",
+          "pieces": null
+         },
+         {
+          "name": "шпинат",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Овощи",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Яйца и молочное",
+        "items": [
+         {
+          "name": "греческий йогурт",
+          "qty": 500.0,
+          "qty_display": "500",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "пармезан",
+          "qty": 30.0,
+          "qty_display": "30",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "фета",
+          "qty": 40.0,
+          "qty_display": "40",
+          "unit": "г",
+          "category": "Яйца и молочное",
+          "pieces": null
+         },
+         {
+          "name": "яйца",
+          "qty": 6.0,
+          "qty_display": "6",
+          "unit": "шт",
+          "category": "Яйца и молочное",
+          "pieces": null
+         }
+        ]
+       },
+       {
+        "category": "Прочее",
+        "items": [
+         {
+          "name": "гранола или орехи",
+          "qty": 60.0,
+          "qty_display": "60",
+          "unit": "г",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "масло сливочное",
+          "qty": 1.0,
+          "qty_display": "1",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "оливковое масло",
+          "qty": 7.5,
+          "qty_display": "7.5",
+          "unit": "ст.л.",
+          "category": "Прочее",
+          "pieces": null
+         },
+         {
+          "name": "хлеб цельнозерновой",
+          "qty": 180.0,
+          "qty_display": "180",
+          "unit": "г",
+          "category": "Прочее",
+          "pieces": null
+         }
+        ]
+       }
+      ]
+     },
+     "version": 1,
+     "today_position": {
+      "current": 1,
+      "options": [
+       {
+        "dish": 0,
+        "anchor": "2026-11-12",
+        "lunch_id": null,
+        "dinner_id": null
+       },
+       {
+        "dish": 1,
+        "anchor": "2026-11-06",
+        "lunch_id": "l1",
+        "dinner_id": "d1"
+       },
+       {
+        "dish": 4,
+        "anchor": "2026-11-08",
+        "lunch_id": "l4",
+        "dinner_id": "d4"
+       }
+      ]
+     },
+     "skipped_cook": null,
+     "can_skip_next_cook": true,
+     "recipe_plan_use": {
+      "b1": "bought",
+      "l1": "bought",
+      "d1": "bought",
+      "b2": "next_trip",
+      "l3": "next_trip",
+      "d3": "next_trip",
+      "l5": "next_trip",
+      "d5": "next_trip",
+      "l4": "next_trip",
+      "d4": "next_trip"
      },
      "cycle_slots": [
       {

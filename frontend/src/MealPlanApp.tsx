@@ -28,7 +28,7 @@ import {
   type Recipes,
   previewRecipe,
 } from './api-client';
-import { WEEKDAY_FULL, fmtDate, weekdayFull, weekdayShort } from './format';
+import { WEEKDAY_FULL, fmtDate, fmtDelta, weekdayFull, weekdayShort } from './format';
 import { type FieldErrors, type SaveError, useAppState } from './useAppState';
 
 // Презентационный слой: всё, что показано, — поля AppState от сервера.
@@ -401,7 +401,7 @@ function ScheduleTab({ state, recipes, selectedDateStr, goToDate, goToToday, loa
                   <div><b>Обед:</b> {recipes[day.lunch_id].name}{recipes[day.lunch_id].is_fish && <span style={{ color: COLORS.flame }}> · рыба/морепродукты</span>}</div>
                   <div><b>Ужин:</b> {recipes[day.dinner_id].name}{recipes[day.dinner_id].is_fish && <span style={{ color: COLORS.flame }}> · рыба/морепродукты</span>}</div>
                   <div style={{ fontSize: 12, color: COLORS.inkSoft, marginTop: 4 }}>
-                    Итого: ≈{day.kcal_total} ккал · {day.protein_total}г белка
+                    Итого: ≈{day.kcal_total} ккал{fmtDelta(day.kcal_delta)} · {day.protein_total}г белка{fmtDelta(day.protein_delta)}
                   </div>
                 </div>
               )}
@@ -558,8 +558,9 @@ function MenuTab({ state, recipes, selectedDateStr, goToDate, openRecipe, setOpe
             <div style={{ height: 10 }} />
             <RecipeBlock recipe={recipes[day.dinner_id]} slot="Ужин" openRecipe={openRecipe} setOpenRecipe={setOpenRecipe} />
             <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.primarySoft, marginTop: 12, marginBottom: 0, borderTop: `1px solid ${COLORS.line}`, paddingTop: 8 }}>
-              Итого за день: ≈{day.kcal_total} ккал · {day.protein_total}г белка
+              Итого за день: ≈{day.kcal_total} ккал{fmtDelta(day.kcal_delta)} · {day.protein_total}г белка{fmtDelta(day.protein_delta)}
             </p>
+            <TargetNote settings={state.settings} />
           </>
         )}
       </section>
@@ -901,10 +902,77 @@ function SettingsTab({
         <FieldError error={saveError} action="set-shopping-timing" />
       </section>
 
+      <NutritionTargetSection settings={settings} saveError={saveError} runAction={runAction} />
+
       <CycleSection slots={slots} recipes={recipes} planUse={planUse} saveError={saveError} runAction={runAction} />
       <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
       <IngredientsSection catalog={catalog} loadIngredients={loadIngredients} onEdit={onEditIngredient} />
     </div>
+  );
+}
+
+// ---------- Цель по ккал и белку (8.1) ----------
+function TargetNote({ settings }: { settings: Settings }) {
+  const { daily_kcal_target: kcal, daily_protein_target: protein } = settings;
+  if (kcal === null && protein === null) return null;
+  const parts = [kcal !== null && `${kcal} ккал`, protein !== null && `${protein}г белка`].filter(Boolean);
+  return <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>Цель: {parts.join(' · ')}</p>;
+}
+
+type NutritionTargetSectionProps = {
+  settings: Settings;
+  saveError: SaveError | null;
+  runAction: RunAction;
+};
+
+function NutritionTargetSection({ settings, saveError, runAction }: NutritionTargetSectionProps) {
+  // Черновик полей; после ответа сервера — снова то, что сохранено.
+  const [kcal, setKcal] = useState(text(settings.daily_kcal_target));
+  const [protein, setProtein] = useState(text(settings.daily_protein_target));
+  useEffect(() => {
+    setKcal(text(settings.daily_kcal_target));
+    setProtein(text(settings.daily_protein_target));
+  }, [settings.daily_kcal_target, settings.daily_protein_target]);
+
+  return (
+    <section style={cardStyle}>
+      <label style={labelStyle}>Цель на день</label>
+      <div style={{ display: 'flex', gap: 8 }}>
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-label="Ккал"
+          placeholder="ккал — без цели"
+          value={kcal}
+          onChange={(e) => setKcal(e.target.value)}
+          style={inputStyle}
+        />
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-label="Белок, г"
+          placeholder="белок, г — без цели"
+          value={protein}
+          onChange={(e) => setProtein(e.target.value)}
+          style={inputStyle}
+        />
+      </div>
+      <button
+        onClick={() =>
+          runAction('set-nutrition-target', {
+            daily_kcal_target: optionalNumber(kcal),
+            daily_protein_target: optionalNumber(protein),
+          })
+        }
+        style={{ ...ghostBtnStyle, marginTop: 10 }}
+      >
+        Применить
+      </button>
+      <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '8px 0 0' }}>
+        Итог дня покажет отклонение от цели. Блюда и порции не меняются. Пустое поле — без цели.
+      </p>
+      <FieldError error={saveError} action="set-nutrition-target" />
+    </section>
   );
 }
 

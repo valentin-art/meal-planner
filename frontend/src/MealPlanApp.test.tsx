@@ -150,6 +150,29 @@ describe('настройки уходят в action-эндпоинты, отве
     ui.unmount();
   });
 
+  it('цель на день: пустое поле — null, отклонение в итоге дня с сервера', async () => {
+    const targeted = fullState(SCENARIOS.find((s) => s.name === 'nutrition_target')!);
+    handler = (url) => (url.startsWith('api/actions') ? jsonResponse(targeted) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    const kcal = ui.container.querySelector<HTMLInputElement>('input[aria-label="Ккал"]')!;
+    expect(kcal.value).toBe('');
+
+    await change(kcal, '2000');
+    await click(buttons(ui.container, 'Применить')[0]);
+    expect(calls.at(-1)).toEqual({
+      url: 'api/actions/set-nutrition-target',
+      method: 'POST',
+      body: { daily_kcal_target: 2000, daily_protein_target: null },
+    });
+    // поля — из ответа сервера
+    expect(ui.container.querySelector<HTMLInputElement>('input[aria-label="Белок, г"]')!.value).toBe('100');
+
+    await click(buttons(ui.container, 'Расписание')[0]);
+    expect(ui.container.textContent).toContain('Итого: ≈1860 ккал (−140) · 134г белка (+34)');
+    ui.unmount();
+  });
+
   it('«Сегодня» — варианты с сервера, выбор уходит в set-cycle-position', async () => {
     const { options, current } = BASE.today_position;
     const moved = { ...withSettings({ meal_anchor_date: options[1].anchor }), today_position: { options, current: options[1].dish } };

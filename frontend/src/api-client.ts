@@ -29,6 +29,7 @@ export type ActionPayloads = {
   'set-anchor-date': Schemas['SetAnchorDateIn'];
   'set-cycle-position': Schemas['SetCyclePositionIn'];
   'set-cycle-slot': Schemas['SetCycleSlotIn'];
+  'set-nutrition-target': Schemas['SetNutritionTargetIn'];
   // без тела: что пропускать, решает сервер (ближайшая готовка)
   'skip-next-cook': Record<string, never>;
   'unskip-cook': Record<string, never>;

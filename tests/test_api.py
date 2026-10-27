@@ -49,6 +49,8 @@ def test_state_without_settings_returns_defaults(client, repo):
         "cook_weekday2": 6,
         "shopping_timing": "same",
         "skipped_cook_date": None,
+        "daily_kcal_target": None,
+        "daily_protein_target": None,
     }
     assert [d["date"] for d in body["schedule"]][:2] == ["2026-11-09", "2026-11-10"]
     assert len(body["schedule"]) == 14
@@ -214,7 +216,11 @@ def test_summary_reshapes_state_for_today_and_tomorrow(client, repo):
             "is_day_zero": day.is_day_zero,
             "is_before_start": day.is_before_start,
             "is_skipped": day.is_skipped,
+            "kcal_delta": None,
+            "protein_delta": None,
+            "nutrition": f"≈ {day.kcal_total} ккал · {day.protein_total} г белка",
         }
+    assert (body["kcal_target"], body["protein_target"]) == (None, None)
 
     trip, out = state.next_shopping_trip, body["next_shopping"]
     assert (out["date"], out["cook_date"]) == ("2026-11-11", "2026-11-11")
@@ -545,6 +551,8 @@ def test_invalid_saved_settings_fall_back_with_warning(client, repo, caplog):
         "cook_weekday2": 6,
         "shopping_timing": "same",
         "skipped_cook_date": None,
+        "daily_kcal_target": None,
+        "daily_protein_target": None,
     }
     assert body["version"] == 1
     assert "cook_weekday2: Два дня готовки должны различаться" in caplog.text
@@ -701,3 +709,67 @@ def test_empty_nutrition_is_a_field_error(client, repo):
         (["body", "kcal_100g"], "Укажите ккал на 100 г"),
         (["body", "protein_100g"], "Укажите белок на 100 г"),
     ]
+
+
+def test_set_nutrition_target_shows_deviation(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = post(
+        client,
+        "set-nutrition-target",
+        {"daily_kcal_target": 2000, "daily_protein_target": 100},
+    ).json()
+    assert body["version"] == 2
+    assert body["settings"]["daily_kcal_target"] == 2000
+    assert body["settings"]["daily_protein_target"] == 100
+    for day in body["schedule"]:
+        if day["cycle_index"] is None:
+            assert (day["kcal_delta"], day["protein_delta"]) == (None, None)
+        else:
+            assert day["kcal_delta"] == day["kcal_total"] - 2000
+            assert day["protein_delta"] == day["protein_total"] - 100
+    # null снимает цель, второе поле — независимо
+    body = post(
+        client,
+        "set-nutrition-target",
+        {"daily_kcal_target": None, "daily_protein_target": 100},
+    ).json()
+    assert body["settings"]["daily_kcal_target"] is None
+    assert {d["kcal_delta"] for d in body["schedule"]} == {None}
+    assert repo.get_settings().settings == dataclasses.replace(
+        DEFAULT_2X, daily_protein_target=100
+    )
+
+
+@pytest.mark.parametrize(
+    "body",
+    [
+        {"daily_kcal_target": 20000, "daily_protein_target": None},
+        {"daily_kcal_target": None, "daily_protein_target": 5},
+        {"daily_kcal_target": 2000},  # оба поля обязательны
+    ],
+)
+def test_nutrition_target_out_of_range_is_422_and_not_saved(client, repo, body):
+    repo.save_settings(DEFAULT_2X)
+    assert post(client, "set-nutrition-target", body).status_code == 422
+    assert repo.get_settings() == StoredSettings(DEFAULT_2X, 1)
+
+
+def test_summary_shows_deviation_from_target(client, repo):
+    repo.save_settings(
+        dataclasses.replace(
+            DEFAULT_2X, daily_kcal_target=2000, daily_protein_target=100
+        )
+    )
+    body = client.get("/api/summary").json()
+    assert (body["kcal_target"], body["protein_target"]) == (2000, 100)
+    today = body["days"]["today"]
+    kcal_delta, protein_delta = today["kcal"] - 2000, today["protein"] - 100
+    assert (today["kcal_delta"], today["protein_delta"]) == (kcal_delta, protein_delta)
+
+    def signed(n):
+        return "±0" if n == 0 else f"+{n}" if n > 0 else f"−{-n}"
+
+    assert today["nutrition"] == (
+        f"≈ {today['kcal']} ккал ({signed(kcal_delta)})"
+        f" · {today['protein']} г белка ({signed(protein_delta)})"
+    )

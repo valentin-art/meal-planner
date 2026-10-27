@@ -331,6 +331,80 @@
         }
       }
     },
+    "/api/actions/set-nutrition-target": {
+      "post": {
+        "summary": "Set Nutrition Target",
+        "operationId": "set_nutrition_target_api_actions_set_nutrition_target_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetNutritionTargetIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/set-anchor-date": {
       "post": {
         "summary": "Set Anchor Date",
@@ -1301,6 +1375,28 @@
           "is_skipped": {
             "type": "boolean",
             "title": "Is Skipped"
+          },
+          "kcal_delta": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Delta"
+          },
+          "protein_delta": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein Delta"
           }
         },
         "type": "object",
@@ -1315,7 +1411,9 @@
           "is_day_zero",
           "is_cook_day",
           "is_before_start",
-          "is_skipped"
+          "is_skipped",
+          "kcal_delta",
+          "protein_delta"
         ],
         "title": "DayOut"
       },
@@ -1924,6 +2022,42 @@
         ],
         "title": "SetCycleSlotIn"
       },
+      "SetNutritionTargetIn": {
+        "properties": {
+          "daily_kcal_target": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 6000.0,
+                "minimum": 500.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Kcal Target"
+          },
+          "daily_protein_target": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 400.0,
+                "minimum": 10.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Protein Target"
+          }
+        },
+        "type": "object",
+        "required": [
+          "daily_kcal_target",
+          "daily_protein_target"
+        ],
+        "title": "SetNutritionTargetIn"
+      },
       "SetShoppingTimingIn": {
         "properties": {
           "shopping_timing": {
@@ -1986,6 +2120,28 @@
               }
             ],
             "title": "Skipped Cook Date"
+          },
+          "daily_kcal_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Kcal Target"
+          },
+          "daily_protein_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Daily Protein Target"
           }
         },
         "type": "object",
@@ -1995,7 +2151,9 @@
           "cook_weekday1",
           "cook_weekday2",
           "shopping_timing",
-          "skipped_cook_date"
+          "skipped_cook_date",
+          "daily_kcal_target",
+          "daily_protein_target"
         ],
         "title": "SettingsOut"
       },
@@ -2212,6 +2370,39 @@
           "is_skipped": {
             "type": "boolean",
             "title": "Is Skipped"
+          },
+          "kcal_delta": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Delta"
+          },
+          "protein_delta": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein Delta"
+          },
+          "nutrition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nutrition"
           }
         },
         "type": "object",
@@ -2225,7 +2416,10 @@
           "is_cook_day",
           "is_day_zero",
           "is_before_start",
-          "is_skipped"
+          "is_skipped",
+          "kcal_delta",
+          "protein_delta",
+          "nutrition"
         ],
         "title": "SummaryDayOut"
       },
@@ -2256,6 +2450,28 @@
             "type": "integer",
             "title": "Version"
           },
+          "kcal_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Target"
+          },
+          "protein_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Protein Target"
+          },
           "days": {
             "$ref": "#/components/schemas/SummaryDaysOut"
           },
@@ -2277,6 +2493,8 @@
         "required": [
           "today",
           "version",
+          "kcal_target",
+          "protein_target",
           "days",
           "next_shopping",
           "skipped_cook"

@@ -2,6 +2,7 @@
 
 Отличие с 6.5: до якоря блюд нет, первая готовка — день 0 (якорь − 1).
 С 7.7: пропущенная готовка ставит цикл на паузу (skipped).
+С 8.1: у дня с блюдами — отклонение от суточной цели.
 """
 
 from dataclasses import replace
@@ -78,6 +79,21 @@ def nearest_cook_date(cook_weekdays: tuple[int, ...], from_date: date) -> date:
 def day_totals(breakfast: Recipe, lunch: Recipe, dinner: Recipe) -> tuple[int, int]:
     parts = (breakfast, lunch, dinner)
     return sum(r.kcal for r in parts), sum(r.protein for r in parts)
+
+
+def with_target_deltas(day: DayMeals, settings: Settings) -> DayMeals:
+    """Отклонение итога дня от цели (8.1): плюс — больше цели.
+
+    Только у дней с блюдами: день 0, дни до старта и пауза — не «−2000».
+    """
+    if day.cycle_index is None:
+        return day
+    kcal, protein = settings.daily_kcal_target, settings.daily_protein_target
+    return replace(
+        day,
+        kcal_delta=None if kcal is None else day.kcal_total - kcal,
+        protein_delta=None if protein is None else day.protein_total - protein,
+    )
 
 
 def day_zero(anchor: date) -> date:
@@ -190,8 +206,11 @@ def build_schedule(
     skipped = settings.skipped_cook_date
     days = (date_to - date_from).days + 1
     return tuple(
-        meals_for_date(
-            catalog, date_from + timedelta(days=i), anchor, weekdays, skipped
+        with_target_deltas(
+            meals_for_date(
+                catalog, date_from + timedelta(days=i), anchor, weekdays, skipped
+            ),
+            settings,
         )
         for i in range(max(days, 0))
     )

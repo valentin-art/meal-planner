@@ -11,6 +11,8 @@ from meal_planner.core.models import Settings, default_settings
 from meal_planner.core.scheduling import cook_weekdays
 
 WEEKDAY_MESSAGE = "День готовки — число от 1 (пн) до 7 (вс)"
+KCAL_TARGET_MIN, KCAL_TARGET_MAX = 500, 6000
+PROTEIN_TARGET_MIN, PROTEIN_TARGET_MAX = 10, 400
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,6 +47,23 @@ def settings_errors(settings: Settings) -> list[SettingsError]:
     if settings.shopping_timing not in ("same", "before"):
         errors.append(
             SettingsError("shopping_timing", "Закупка — в день готовки или за день до")
+        )
+    # Пределы цели (8.1) — защита от опечатки (20000), не правило плана.
+    kcal = settings.daily_kcal_target
+    if kcal is not None and not KCAL_TARGET_MIN <= kcal <= KCAL_TARGET_MAX:
+        errors.append(
+            SettingsError(
+                "daily_kcal_target",
+                f"Цель по ккал — от {KCAL_TARGET_MIN} до {KCAL_TARGET_MAX}",
+            )
+        )
+    protein = settings.daily_protein_target
+    if protein is not None and not PROTEIN_TARGET_MIN <= protein <= PROTEIN_TARGET_MAX:
+        errors.append(
+            SettingsError(
+                "daily_protein_target",
+                f"Цель по белку — от {PROTEIN_TARGET_MIN} до {PROTEIN_TARGET_MAX} г",
+            )
         )
     skipped = settings.skipped_cook_date
     # Дни готовки проверяются только у валидного расписания (not errors).

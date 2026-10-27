@@ -30,6 +30,7 @@ from meal_planner.api.schemas import (
     SetCookScheduleIn,
     SetCyclePositionIn,
     SetCycleSlotIn,
+    SetNutritionTargetIn,
     SetShoppingTimingIn,
     SummaryOut,
     to_app_state_out,
@@ -321,6 +322,26 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.set_shopping_timing(s, body.shopping_timing),
+        )
+
+    @app.post("/api/actions/set-nutrition-target", response_model=AppStateOut)
+    def set_nutrition_target(
+        body: SetNutritionTargetIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.set_nutrition_target(
+                s, body.daily_kcal_target, body.daily_protein_target
+            ),
         )
 
     @app.post("/api/actions/set-anchor-date", response_model=AppStateOut)

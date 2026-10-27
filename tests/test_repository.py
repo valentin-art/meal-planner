@@ -86,6 +86,15 @@ def test_skipped_cook_roundtrip(tmp_path):
     assert repo.get_settings() == StoredSettings(SETTINGS, 2)
 
 
+def test_nutrition_target_roundtrip(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    target = replace(SETTINGS, daily_kcal_target=2000, daily_protein_target=100)
+    repo.save_settings(target)
+    assert repo.get_settings() == StoredSettings(target, 1)
+    repo.save_settings(SETTINGS)  # цели сняты — NULL в БД
+    assert repo.get_settings() == StoredSettings(SETTINGS, 2)
+
+
 def test_migrates_db_from_before_skip(tmp_path):
     # Таблица до 7.7: без skipped_cook_date, со строкой настроек.
     path = tmp_path / "old.db"

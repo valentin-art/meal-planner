@@ -73,6 +73,19 @@ def set_shopping_timing(
     return replace(settings, shopping_timing=shopping_timing)
 
 
+def set_nutrition_target(
+    settings: Settings,
+    daily_kcal_target: int | None,
+    daily_protein_target: int | None,
+) -> Settings:
+    # Обе цели целиком: форма шлёт оба поля, None — цели нет (8.1).
+    return replace(
+        settings,
+        daily_kcal_target=daily_kcal_target,
+        daily_protein_target=daily_protein_target,
+    )
+
+
 def set_cycle_position(
     catalog: Catalog, settings: Settings, today: date, dish: int
 ) -> Settings:

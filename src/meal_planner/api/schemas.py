@@ -38,6 +38,12 @@ from meal_planner.core.models import (
     TodayPosition,
 )
 from meal_planner.core.shopping import CATEGORY_ORDER, format_qty
+from meal_planner.core.validation import (
+    KCAL_TARGET_MAX,
+    KCAL_TARGET_MIN,
+    PROTEIN_TARGET_MAX,
+    PROTEIN_TARGET_MIN,
+)
 
 
 class SettingsOut(BaseModel):
@@ -47,6 +53,8 @@ class SettingsOut(BaseModel):
     cook_weekday2: int | None
     shopping_timing: ShoppingTiming
     skipped_cook_date: date | None
+    daily_kcal_target: int | None  # null — цели нет (8.1)
+    daily_protein_target: int | None
 
 
 class IngredientOut(BaseModel):
@@ -123,6 +131,9 @@ class DayOut(BaseModel):
     is_cook_day: bool
     is_before_start: bool
     is_skipped: bool  # пауза после пропущенной готовки — блюд нет (7.7)
+    # Итог минус цель (8.1): null — цели нет или в этот день нет блюд.
+    kcal_delta: int | None
+    protein_delta: int | None
 
 
 class ShoppingItemOut(BaseModel):
@@ -169,6 +180,14 @@ class SetShoppingTimingIn(BaseModel):
 
 class SetAnchorDateIn(BaseModel):
     meal_anchor_date: date  # "" или кривая дата → 422, ничего не сохраняется
+
+
+class SetNutritionTargetIn(BaseModel):
+    # Обе цели целиком, null — цели нет. ge/le дублируют core/validation.
+    daily_kcal_target: int | None = Field(ge=KCAL_TARGET_MIN, le=KCAL_TARGET_MAX)
+    daily_protein_target: int | None = Field(
+        ge=PROTEIN_TARGET_MIN, le=PROTEIN_TARGET_MAX
+    )
 
 
 class RecipeLineIn(BaseModel):
@@ -285,6 +304,10 @@ class SummaryDayOut(BaseModel):
     is_day_zero: bool
     is_before_start: bool
     is_skipped: bool
+    kcal_delta: int | None  # итог минус цель (8.1), null — нет цели или блюд
+    protein_delta: int | None
+    # «≈ 1790 ккал (−210) · 95 г белка (−5)», как итог дня в UI; без блюд — null.
+    nutrition: str | None
 
 
 class SummaryDaysOut(BaseModel):
@@ -313,6 +336,8 @@ class SummaryOut(BaseModel):
 
     today: date
     version: int
+    kcal_target: int | None  # суточная цель (8.1), null — нет
+    protein_target: int | None
     days: SummaryDaysOut
     next_shopping: SummaryTripOut
     skipped_cook: SkippedCookOut | None
@@ -355,6 +380,8 @@ def to_settings_out(s: Settings) -> SettingsOut:
         cook_weekday2=s.cook_weekday2,
         shopping_timing=s.shopping_timing,
         skipped_cook_date=s.skipped_cook_date,
+        daily_kcal_target=s.daily_kcal_target,
+        daily_protein_target=s.daily_protein_target,
     )
 
 
@@ -433,6 +460,8 @@ def to_day_out(d: DayMeals) -> DayOut:
         is_cook_day=d.is_cook_day,
         is_before_start=d.is_before_start,
         is_skipped=d.is_skipped,
+        kcal_delta=d.kcal_delta,
+        protein_delta=d.protein_delta,
     )
 
 
@@ -522,6 +551,23 @@ def cook_line(c: CookItem) -> str:
     return f"{c.lunch.name} + {c.dinner.name} — x{c.portions}"
 
 
+def signed(n: int) -> str:
+    # Минус — U+2212, как во фронтенде (format.ts fmtDelta).
+    return "±0" if n == 0 else f"+{n}" if n > 0 else f"−{-n}"
+
+
+def nutrition_line(d: DayMeals) -> str | None:
+    if d.cycle_index is None:
+        return None
+    kcal = f"≈ {d.kcal_total} ккал"
+    protein = f"{d.protein_total} г белка"
+    if d.kcal_delta is not None:
+        kcal += f" ({signed(d.kcal_delta)})"
+    if d.protein_delta is not None:
+        protein += f" ({signed(d.protein_delta)})"
+    return f"{kcal} · {protein}"
+
+
 def to_summary_day_out(d: DayMeals) -> SummaryDayOut:
     return SummaryDayOut(
         date=d.date,
@@ -534,6 +580,9 @@ def to_summary_day_out(d: DayMeals) -> SummaryDayOut:
         is_day_zero=d.is_day_zero,
         is_before_start=d.is_before_start,
         is_skipped=d.is_skipped,
+        kcal_delta=d.kcal_delta,
+        protein_delta=d.protein_delta,
+        nutrition=nutrition_line(d),
     )
 
 
@@ -544,6 +593,8 @@ def to_summary_out(s: AppState) -> SummaryOut:
     return SummaryOut(
         today=s.today,
         version=s.version,
+        kcal_target=s.settings.daily_kcal_target,
+        protein_target=s.settings.daily_protein_target,
         days=SummaryDaysOut(
             today=to_summary_day_out(today), tomorrow=to_summary_day_out(tomorrow)
         ),

@@ -87,7 +87,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 2
+        assert user_version(conn) == len(MIGRATIONS) == 3
     assert tables(db) == {"settings"} | CATALOG_TABLES
 
 
@@ -151,6 +151,22 @@ def test_migrates_live_db_before_phase_5(tmp_path):
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
     assert tables(path) == {"settings"} | CATALOG_TABLES
     assert len(dump_recipes(path)) == len(RECIPE_SPECS)
+
+
+def test_nutrition_target_migration_keeps_settings(tmp_path, monkeypatch):
+    # БД на v2 (до 8.1) с сохранёнными настройками: цели появляются пустыми.
+    path = tmp_path / "v2.db"
+    monkeypatch.setattr(schema, "MIGRATIONS", MIGRATIONS[:2])
+    Repository(path)
+    monkeypatch.undo()
+    with connect(path) as conn, conn:
+        conn.execute(
+            "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 7, NULL)"
+        )
+    repo = Repository(path)
+    with connect(path) as conn:
+        assert user_version(conn) == 3
+    assert repo.get_settings() == StoredSettings(SETTINGS, 7)
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):

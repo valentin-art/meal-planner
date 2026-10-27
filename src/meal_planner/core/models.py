@@ -114,6 +114,10 @@ class Settings:
     # с того же блюда со следующей готовки. Один пропуск; прошедший
     # переносится в якорь (scheduling.settle_skip).
     skipped_cook_date: date | None = None
+    # Суточная цель (8.1): только показывает отклонение дня, блюда не меняет.
+    # None — цели нет.
+    daily_kcal_target: int | None = None
+    daily_protein_target: int | None = None
 
 
 def default_settings(today: date) -> Settings:
@@ -144,6 +148,9 @@ class DayMeals:
     is_cook_day: bool  # is_day_zero или день недели готовки после старта
     is_before_start: bool  # раньше дня 0: цикл ещё не начался
     is_skipped: bool = False  # в паузе пропущенной готовки: блюд нет (7.7)
+    # Итог дня минус цель (8.1); None — цели нет или в этот день нет блюд.
+    kcal_delta: int | None = None
+    protein_delta: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

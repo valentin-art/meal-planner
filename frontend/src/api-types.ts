@@ -140,6 +140,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/set-nutrition-target": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Nutrition Target */
+        post: operations["set_nutrition_target_api_actions_set_nutrition_target_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/set-anchor-date": {
         parameters: {
             query?: never;
@@ -406,6 +423,10 @@ export interface components {
             is_before_start: boolean;
             /** Is Skipped */
             is_skipped: boolean;
+            /** Kcal Delta */
+            kcal_delta: number | null;
+            /** Protein Delta */
+            protein_delta: number | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -614,6 +635,13 @@ export interface components {
             /** Dinner Id */
             dinner_id: string;
         };
+        /** SetNutritionTargetIn */
+        SetNutritionTargetIn: {
+            /** Daily Kcal Target */
+            daily_kcal_target: number | null;
+            /** Daily Protein Target */
+            daily_protein_target: number | null;
+        };
         /** SetShoppingTimingIn */
         SetShoppingTimingIn: {
             /**
@@ -642,6 +670,10 @@ export interface components {
             shopping_timing: "same" | "before";
             /** Skipped Cook Date */
             skipped_cook_date: string | null;
+            /** Daily Kcal Target */
+            daily_kcal_target: number | null;
+            /** Daily Protein Target */
+            daily_protein_target: number | null;
         };
         /** ShoppingGroupOut */
         ShoppingGroupOut: {
@@ -739,6 +771,12 @@ export interface components {
             is_before_start: boolean;
             /** Is Skipped */
             is_skipped: boolean;
+            /** Kcal Delta */
+            kcal_delta: number | null;
+            /** Protein Delta */
+            protein_delta: number | null;
+            /** Nutrition */
+            nutrition: string | null;
         };
         /** SummaryDaysOut */
         SummaryDaysOut: {
@@ -757,6 +795,10 @@ export interface components {
             today: string;
             /** Version */
             version: number;
+            /** Kcal Target */
+            kcal_target: number | null;
+            /** Protein Target */
+            protein_target: number | null;
             days: components["schemas"]["SummaryDaysOut"];
             next_shopping: components["schemas"]["SummaryTripOut"];
             skipped_cook: components["schemas"]["SkippedCookOut"] | null;
@@ -1013,6 +1055,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SetShoppingTimingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_nutrition_target_api_actions_set_nutrition_target_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetNutritionTargetIn"];
             };
         };
         responses: {

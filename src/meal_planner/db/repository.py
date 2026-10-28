@@ -181,6 +181,59 @@ def _read_slot_versions(conn: sqlite3.Connection) -> list[SlotVersion]:
     ]
 
 
+def _write_ingredient(conn: sqlite3.Connection, ingredient: CatalogIngredient) -> None:
+    conn.execute(
+        _SAVE_INGREDIENT,
+        (
+            ingredient.id,
+            ingredient.name,
+            ingredient.unit,
+            ingredient.category,
+            ingredient.kcal_100g,
+            ingredient.protein_100g,
+            ingredient.source,
+            ingredient.grams_per_unit,
+            ingredient.store_piece,
+        ),
+    )
+
+
+def _write_recipe(conn: sqlite3.Connection, recipe: RecipeSpec) -> None:
+    """Рецепт целиком: ингредиенты и шаги заменяются; статус — тоже здесь."""
+    storage = recipe.storage
+    conn.execute(
+        _SAVE_RECIPE,
+        (
+            recipe.id,
+            recipe.name,
+            recipe.kind.value,
+            recipe.is_fish,
+            recipe.status,
+            storage and storage.keep,
+            storage and storage.pan,
+            storage and storage.micro,
+            storage and storage.after,
+        ),
+    )
+    conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe.id,))
+    conn.executemany(
+        "INSERT INTO recipe_ingredients (recipe_id, position, ingredient_id,"
+        " qty) VALUES (?, ?, (SELECT id FROM ingredients WHERE name = ?), ?)",
+        [
+            (recipe.id, position, i.name, i.qty)
+            for position, i in enumerate(recipe.ingredients, start=1)
+        ],
+    )
+    conn.execute("DELETE FROM recipe_steps WHERE recipe_id = ?", (recipe.id,))
+    conn.executemany(
+        "INSERT INTO recipe_steps (recipe_id, position, text) VALUES (?, ?, ?)",
+        [
+            (recipe.id, position, text)
+            for position, text in enumerate(recipe.steps, start=1)
+        ],
+    )
+
+
 def _write_slot_versions(
     conn: sqlite3.Connection, versions: tuple[SlotVersion, ...]
 ) -> None:
@@ -299,43 +352,20 @@ class Repository:
         slot_versions — состав позиций после правки (8.4b), в той же транзакции;
         None — не трогать.
         """
-        storage = recipe.storage
         with self._connect() as conn:
-            conn.execute(
-                _SAVE_RECIPE,
-                (
-                    recipe.id,
-                    recipe.name,
-                    recipe.kind.value,
-                    recipe.is_fish,
-                    recipe.status,
-                    storage and storage.keep,
-                    storage and storage.pan,
-                    storage and storage.micro,
-                    storage and storage.after,
-                ),
-            )
-            conn.execute(
-                "DELETE FROM recipe_ingredients WHERE recipe_id = ?", (recipe.id,)
-            )
-            conn.executemany(
-                "INSERT INTO recipe_ingredients (recipe_id, position, ingredient_id,"
-                " qty) VALUES (?, ?, (SELECT id FROM ingredients WHERE name = ?), ?)",
-                [
-                    (recipe.id, position, i.name, i.qty)
-                    for position, i in enumerate(recipe.ingredients, start=1)
-                ],
-            )
-            conn.execute("DELETE FROM recipe_steps WHERE recipe_id = ?", (recipe.id,))
-            conn.executemany(
-                "INSERT INTO recipe_steps (recipe_id, position, text) VALUES (?, ?, ?)",
-                [
-                    (recipe.id, position, text)
-                    for position, text in enumerate(recipe.steps, start=1)
-                ],
-            )
+            _write_recipe(conn, recipe)
             if slot_versions is not None:
                 _write_slot_versions(conn, slot_versions)
+            return _bump_version(conn)
+
+    def save_proposal(
+        self, recipe: RecipeSpec, ingredients: tuple[CatalogIngredient, ...]
+    ) -> int:
+        """Черновик от Assist и его новые ингредиенты (8.6b) — одной записью."""
+        with self._connect() as conn:
+            for ingredient in ingredients:
+                _write_ingredient(conn, ingredient)
+            _write_recipe(conn, recipe)
             return _bump_version(conn)
 
     def save_slot_versions(self, versions: tuple[SlotVersion, ...]) -> int:
@@ -401,18 +431,5 @@ class Repository:
 
     def save_ingredient(self, ingredient: CatalogIngredient) -> int:
         with self._connect() as conn:
-            conn.execute(
-                _SAVE_INGREDIENT,
-                (
-                    ingredient.id,
-                    ingredient.name,
-                    ingredient.unit,
-                    ingredient.category,
-                    ingredient.kcal_100g,
-                    ingredient.protein_100g,
-                    ingredient.source,
-                    ingredient.grams_per_unit,
-                    ingredient.store_piece,
-                ),
-            )
+            _write_ingredient(conn, ingredient)
             return _bump_version(conn)

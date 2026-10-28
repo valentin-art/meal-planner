@@ -537,6 +537,8 @@ export interface components {
             store_piece: number | null;
             /** Used In */
             used_in: string[];
+            /** From Assist */
+            from_assist: boolean;
         };
         /** CookItemOut */
         CookItemOut: {
@@ -708,6 +710,8 @@ export interface components {
             unit: string;
             /** Category */
             category: string;
+            /** From Assist */
+            from_assist: boolean;
         };
         /**
          * IngredientsOut
@@ -728,6 +732,28 @@ export interface components {
          * @enum {string}
          */
         MealKind: "breakfast" | "lunch" | "dinner";
+        /**
+         * NewIngredientIn
+         * @description Ингредиента нет в справочнике — описание от Assist (8.6b).
+         */
+        NewIngredientIn: {
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category: string;
+            /** Kcal 100G */
+            kcal_100g: number;
+            /** Protein 100G */
+            protein_100g: number;
+            /** Grams Per Unit */
+            grams_per_unit?: number | null;
+            /** Store Piece */
+            store_piece?: number | null;
+            /** Source */
+            source?: string | null;
+        };
         /** NutritionOut */
         NutritionOut: {
             /** Kcal */
@@ -762,6 +788,11 @@ export interface components {
             /** Steps */
             steps: string[];
             storage?: components["schemas"]["RecipeStorageIn"] | null;
+            /**
+             * New Ingredients
+             * @default []
+             */
+            new_ingredients: components["schemas"]["NewIngredientIn"][];
         };
         /** ProposedLineIn */
         ProposedLineIn: {
@@ -769,6 +800,8 @@ export interface components {
             name: string;
             /** Qty */
             qty: number;
+            /** Unit */
+            unit: string;
         };
         /** RecipeActionOut */
         RecipeActionOut: {

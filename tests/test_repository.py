@@ -8,7 +8,9 @@ import pytest
 
 from meal_planner.core.catalog import spec_of
 from meal_planner.core.models import (
+    CatalogIngredient,
     CycleShuffle,
+    Ingredient,
     PortionScale,
     Settings,
     SlotVersion,
@@ -201,6 +203,30 @@ def test_delete_recipe(tmp_path):
                 f"SELECT count(*) FROM {table} WHERE recipe_id = 'l6'"
             ).fetchone()
             assert count == (0,)
+
+
+def test_save_proposal_writes_ingredients_and_recipe(tmp_path):
+    # Черновик от Assist с новым ингредиентом (8.6b) — одна версия.
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    tofu = CatalogIngredient(
+        len(SEED_CATALOG.ingredients) + 1,
+        "тофу",
+        "г",
+        "Белок",
+        76,
+        8.08,
+        "Assist: оценка модели",
+        None,
+        None,
+    )
+    l1 = spec_of(SEED_CATALOG.recipes["l1"])
+    line = Ingredient("тофу", 100, "г", "Белок")
+    draft = replace(l1, id="l6", ingredients=(line,), status="draft")
+    assert repo.save_proposal(draft, (tofu,)) == 2
+    catalog = repo.get_catalog()
+    assert catalog.ingredients["тофу"] == tofu
+    assert catalog.recipes["l6"].ingredients == (line,)
 
 
 def test_catalog_write_without_settings_writes_nothing(tmp_path):

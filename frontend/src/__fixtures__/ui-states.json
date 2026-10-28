@@ -13,7 +13,8 @@
      "qty": 4.0,
      "qty_display": "4",
      "unit": "шт",
-     "category": "Яйца и молочное"
+     "category": "Яйца и молочное",
+     "from_assist": false
     },
     {
      "ingredient_id": 2,
@@ -21,7 +22,8 @@
      "qty": 1.0,
      "qty_display": "1",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 3,
@@ -29,7 +31,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -57,7 +60,8 @@
      "qty": 250.0,
      "qty_display": "250",
      "unit": "г",
-     "category": "Яйца и молочное"
+     "category": "Яйца и молочное",
+     "from_assist": false
     },
     {
      "ingredient_id": 5,
@@ -65,7 +69,8 @@
      "qty": 30.0,
      "qty_display": "30",
      "unit": "г",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 3,
@@ -73,7 +78,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 6,
@@ -81,7 +87,8 @@
      "qty": 65.0,
      "qty_display": "65",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 7,
@@ -89,7 +96,8 @@
      "qty": 5.0,
      "qty_display": "5",
      "unit": "мл",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -117,7 +125,8 @@
      "qty": 4.0,
      "qty_display": "4",
      "unit": "шт",
-     "category": "Яйца и молочное"
+     "category": "Яйца и молочное",
+     "from_assist": false
     },
     {
      "ingredient_id": 3,
@@ -125,7 +134,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -151,7 +161,8 @@
      "qty": 180.0,
      "qty_display": "180",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 9,
@@ -159,7 +170,8 @@
      "qty": 70.0,
      "qty_display": "70",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 10,
@@ -167,7 +179,8 @@
      "qty": 100.0,
      "qty_display": "100",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 11,
@@ -175,7 +188,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -183,7 +197,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -218,7 +233,8 @@
      "qty": 180.0,
      "qty_display": "180",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 14,
@@ -226,7 +242,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 15,
@@ -234,7 +251,8 @@
      "qty": 50.0,
      "qty_display": "50",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 16,
@@ -242,7 +260,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 17,
@@ -250,7 +269,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -285,7 +305,8 @@
      "qty": 90.0,
      "qty_display": "90",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 19,
@@ -293,7 +314,8 @@
      "qty": 130.0,
      "qty_display": "130",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 20,
@@ -301,7 +323,8 @@
      "qty": 40.0,
      "qty_display": "40",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 21,
@@ -309,7 +332,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 6,
@@ -317,7 +341,8 @@
      "qty": 35.0,
      "qty_display": "35",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -325,7 +350,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -361,7 +387,8 @@
      "qty": 180.0,
      "qty_display": "180",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 22,
@@ -369,7 +396,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 23,
@@ -377,7 +405,8 @@
      "qty": 115.0,
      "qty_display": "115",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 11,
@@ -385,7 +414,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -393,7 +423,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -426,7 +457,8 @@
      "qty": 170.0,
      "qty_display": "170",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 25,
@@ -434,7 +466,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 10,
@@ -442,7 +475,8 @@
      "qty": 100.0,
      "qty_display": "100",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 7,
@@ -450,7 +484,8 @@
      "qty": 15.0,
      "qty_display": "15",
      "unit": "мл",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -485,7 +520,8 @@
      "qty": 180.0,
      "qty_display": "180",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 26,
@@ -493,7 +529,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 27,
@@ -501,7 +538,8 @@
      "qty": 150.0,
      "qty_display": "150",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 28,
@@ -509,7 +547,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 23,
@@ -517,7 +556,8 @@
      "qty": 70.0,
      "qty_display": "70",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 6,
@@ -525,7 +565,8 @@
      "qty": 35.0,
      "qty_display": "35",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 29,
@@ -533,7 +574,8 @@
      "qty": 15.0,
      "qty_display": "15",
      "unit": "г",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -541,7 +583,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 7,
@@ -549,7 +592,8 @@
      "qty": 15.0,
      "qty_display": "15",
      "unit": "мл",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -585,7 +629,8 @@
      "qty": 170.0,
      "qty_display": "170",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 26,
@@ -593,7 +638,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 6,
@@ -601,7 +647,8 @@
      "qty": 65.0,
      "qty_display": "65",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 30,
@@ -609,7 +656,8 @@
      "qty": 15.0,
      "qty_display": "15",
      "unit": "г",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -617,7 +665,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 7,
@@ -625,7 +674,8 @@
      "qty": 15.0,
      "qty_display": "15",
      "unit": "мл",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -660,7 +710,8 @@
      "qty": 180.0,
      "qty_display": "180",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 11,
@@ -668,7 +719,8 @@
      "qty": 140.0,
      "qty_display": "140",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 32,
@@ -676,7 +728,8 @@
      "qty": 100.0,
      "qty_display": "100",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 23,
@@ -684,7 +737,8 @@
      "qty": 70.0,
      "qty_display": "70",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 33,
@@ -692,7 +746,8 @@
      "qty": 1.0,
      "qty_display": "1",
      "unit": "зубчик",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 22,
@@ -700,7 +755,8 @@
      "qty": 40.0,
      "qty_display": "40",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -708,7 +764,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -745,7 +802,8 @@
      "qty": 160.0,
      "qty_display": "160",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 27,
@@ -753,7 +811,8 @@
      "qty": 150.0,
      "qty_display": "150",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 28,
@@ -761,7 +820,8 @@
      "qty": 160.0,
      "qty_display": "160",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 34,
@@ -769,7 +829,8 @@
      "qty": 30.0,
      "qty_display": "30",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 35,
@@ -777,7 +838,8 @@
      "qty": 40.0,
      "qty_display": "40",
      "unit": "г",
-     "category": "Яйца и молочное"
+     "category": "Яйца и молочное",
+     "from_assist": false
     },
     {
      "ingredient_id": 6,
@@ -785,7 +847,8 @@
      "qty": 35.0,
      "qty_display": "35",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -793,7 +856,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -827,7 +891,8 @@
      "qty": 140.0,
      "qty_display": "140",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 1,
@@ -835,7 +900,8 @@
      "qty": 2.0,
      "qty_display": "2",
      "unit": "шт",
-     "category": "Яйца и молочное"
+     "category": "Яйца и молочное",
+     "from_assist": false
     },
     {
      "ingredient_id": 36,
@@ -843,7 +909,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 37,
@@ -851,7 +918,8 @@
      "qty": 30.0,
      "qty_display": "30",
      "unit": "г",
-     "category": "Яйца и молочное"
+     "category": "Яйца и молочное",
+     "from_assist": false
     },
     {
      "ingredient_id": 26,
@@ -859,7 +927,8 @@
      "qty": 60.0,
      "qty_display": "60",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 21,
@@ -867,7 +936,8 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 12,
@@ -875,7 +945,8 @@
      "qty": 1.5,
      "qty_display": "1.5",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
     },
     {
      "ingredient_id": 7,
@@ -883,7 +954,8 @@
      "qty": 15.0,
      "qty_display": "15",
      "unit": "мл",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     }
    ],
    "steps": [
@@ -910,8 +982,8 @@
    "id": "d6",
    "name": "Говядина с гречкой и морковью",
    "kind": "dinner",
-   "kcal": 670,
-   "protein": 49,
+   "kcal": 695,
+   "protein": 50,
    "ingredients": [
     {
      "ingredient_id": 13,
@@ -919,7 +991,8 @@
      "qty": 180.0,
      "qty_display": "180",
      "unit": "г",
-     "category": "Белок"
+     "category": "Белок",
+     "from_assist": false
     },
     {
      "ingredient_id": 14,
@@ -927,15 +1000,17 @@
      "qty": 80.0,
      "qty_display": "80",
      "unit": "г",
-     "category": "Крупы"
+     "category": "Крупы",
+     "from_assist": false
     },
     {
      "ingredient_id": 16,
      "name": "морковь",
-     "qty": 100.0,
-     "qty_display": "100",
+     "qty": 160.0,
+     "qty_display": "160",
      "unit": "г",
-     "category": "Овощи"
+     "category": "Овощи",
+     "from_assist": false
     },
     {
      "ingredient_id": 17,
@@ -943,7 +1018,17 @@
      "qty": 1.0,
      "qty_display": "1",
      "unit": "ст.л.",
-     "category": "Прочее"
+     "category": "Прочее",
+     "from_assist": false
+    },
+    {
+     "ingredient_id": 38,
+     "name": "паприка копчёная",
+     "qty": 0.5,
+     "qty_display": "0.5",
+     "unit": "ч.л.",
+     "category": "Прочее",
+     "from_assist": true
     }
    ],
    "steps": [
@@ -976,7 +1061,8 @@
      "b1",
      "b3",
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 2,
@@ -990,7 +1076,8 @@
     "store_piece": null,
     "used_in": [
      "b1"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 3,
@@ -1006,7 +1093,8 @@
      "b1",
      "b2",
      "b3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 4,
@@ -1020,7 +1108,8 @@
     "store_piece": null,
     "used_in": [
      "b2"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 5,
@@ -1034,7 +1123,8 @@
     "store_piece": null,
     "used_in": [
      "b2"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 6,
@@ -1052,7 +1142,8 @@
      "d1",
      "d2",
      "d4"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 7,
@@ -1070,7 +1161,8 @@
      "d1",
      "d2",
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 8,
@@ -1088,7 +1180,8 @@
      "d1",
      "d4",
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 9,
@@ -1102,7 +1195,8 @@
     "store_piece": null,
     "used_in": [
      "l1"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 10,
@@ -1117,7 +1211,8 @@
     "used_in": [
      "l1",
      "l5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 11,
@@ -1133,7 +1228,8 @@
      "l1",
      "l4",
      "d3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 12,
@@ -1154,7 +1250,8 @@
      "d3",
      "d4",
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 13,
@@ -1167,8 +1264,10 @@
     "grams_per_unit": null,
     "store_piece": null,
     "used_in": [
-     "l2"
-    ]
+     "l2",
+     "d6"
+    ],
+    "from_assist": false
    },
    {
     "id": 14,
@@ -1181,8 +1280,10 @@
     "grams_per_unit": null,
     "store_piece": null,
     "used_in": [
-     "l2"
-    ]
+     "l2",
+     "d6"
+    ],
+    "from_assist": false
    },
    {
     "id": 15,
@@ -1196,7 +1297,8 @@
     "store_piece": 100.0,
     "used_in": [
      "l2"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 16,
@@ -1209,8 +1311,10 @@
     "grams_per_unit": null,
     "store_piece": 160.0,
     "used_in": [
-     "l2"
-    ]
+     "l2",
+     "d6"
+    ],
+    "from_assist": false
    },
    {
     "id": 17,
@@ -1223,8 +1327,10 @@
     "grams_per_unit": 13.6,
     "store_piece": null,
     "used_in": [
-     "l2"
-    ]
+     "l2",
+     "d6"
+    ],
+    "from_assist": false
    },
    {
     "id": 18,
@@ -1238,7 +1344,8 @@
     "store_piece": null,
     "used_in": [
      "l3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 19,
@@ -1252,7 +1359,8 @@
     "store_piece": null,
     "used_in": [
      "l3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 20,
@@ -1266,7 +1374,8 @@
     "store_piece": null,
     "used_in": [
      "l3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 21,
@@ -1281,7 +1390,8 @@
     "used_in": [
      "l3",
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 22,
@@ -1296,7 +1406,8 @@
     "used_in": [
      "l4",
      "d3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 23,
@@ -1312,7 +1423,8 @@
      "l4",
      "d1",
      "d3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 24,
@@ -1327,7 +1439,8 @@
     "used_in": [
      "l5",
      "d2"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 25,
@@ -1341,7 +1454,8 @@
     "store_piece": null,
     "used_in": [
      "l5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 26,
@@ -1357,7 +1471,8 @@
      "d1",
      "d2",
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 27,
@@ -1372,7 +1487,8 @@
     "used_in": [
      "d1",
      "d4"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 28,
@@ -1387,7 +1503,8 @@
     "used_in": [
      "d1",
      "d4"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 29,
@@ -1401,7 +1518,8 @@
     "store_piece": null,
     "used_in": [
      "d1"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 30,
@@ -1415,7 +1533,8 @@
     "store_piece": null,
     "used_in": [
      "d2"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 31,
@@ -1429,7 +1548,8 @@
     "store_piece": null,
     "used_in": [
      "d3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 32,
@@ -1443,7 +1563,8 @@
     "store_piece": 330.0,
     "used_in": [
      "d3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 33,
@@ -1457,7 +1578,8 @@
     "store_piece": null,
     "used_in": [
      "d3"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 34,
@@ -1471,7 +1593,8 @@
     "store_piece": null,
     "used_in": [
      "d4"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 35,
@@ -1485,7 +1608,8 @@
     "store_piece": null,
     "used_in": [
      "d4"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 36,
@@ -1499,7 +1623,8 @@
     "store_piece": null,
     "used_in": [
      "d5"
-    ]
+    ],
+    "from_assist": false
    },
    {
     "id": 37,
@@ -1513,13 +1638,30 @@
     "store_piece": null,
     "used_in": [
      "d5"
-    ]
+    ],
+    "from_assist": false
+   },
+   {
+    "id": 38,
+    "name": "паприка копчёная",
+    "unit": "ч.л.",
+    "category": "Прочее",
+    "kcal_100g": 282.0,
+    "protein_100g": 14.1,
+    "source": "Assist: оценка модели",
+    "grams_per_unit": 2.3,
+    "store_piece": null,
+    "used_in": [
+     "d6"
+    ],
+    "from_assist": true
    }
   ],
   "units": [
    "г",
    "мл",
    "шт",
+   "ч.л.",
    "ст.л.",
    "зубчик"
   ],
@@ -17905,7 +18047,8 @@
          "qty": 252.0,
          "qty_display": "252",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 14,
@@ -17913,7 +18056,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 15,
@@ -17921,7 +18065,8 @@
          "qty": 70.0,
          "qty_display": "70",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 16,
@@ -17929,7 +18074,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 17,
@@ -17937,7 +18083,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -17953,7 +18100,8 @@
          "qty": 238.0,
          "qty_display": "238",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -17961,7 +18109,8 @@
          "qty": 84.0,
          "qty_display": "84",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -17969,7 +18118,8 @@
          "qty": 91.0,
          "qty_display": "91",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 30,
@@ -17977,7 +18127,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -17985,7 +18136,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -17993,7 +18145,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18009,7 +18162,8 @@
          "qty": 261.0,
          "qty_display": "261",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -18017,7 +18171,8 @@
          "qty": 116.0,
          "qty_display": "116",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -18025,7 +18180,8 @@
          "qty": 166.75,
          "qty_display": "166.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -18033,7 +18189,8 @@
          "qty": 116.0,
          "qty_display": "116",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18041,7 +18198,8 @@
          "qty": 2.175,
          "qty_display": "2.175",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18057,7 +18215,8 @@
          "qty": 264.0,
          "qty_display": "264",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -18065,7 +18224,8 @@
          "qty": 247.5,
          "qty_display": "247.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -18073,7 +18233,8 @@
          "qty": 264.0,
          "qty_display": "264",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 34,
@@ -18081,7 +18242,8 @@
          "qty": 49.5,
          "qty_display": "49.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 35,
@@ -18089,7 +18251,8 @@
          "qty": 66.0,
          "qty_display": "66",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18097,7 +18260,8 @@
          "qty": 57.75,
          "qty_display": "57.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18105,7 +18269,8 @@
          "qty": 2.475,
          "qty_display": "2.475",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18121,7 +18286,8 @@
          "qty": 261.0,
          "qty_display": "261",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 9,
@@ -18129,7 +18295,8 @@
          "qty": 101.5,
          "qty_display": "101.5",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -18137,7 +18304,8 @@
          "qty": 145.0,
          "qty_display": "145",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -18145,7 +18313,8 @@
          "qty": 116.0,
          "qty_display": "116",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18153,7 +18322,8 @@
          "qty": 2.175,
          "qty_display": "2.175",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18169,7 +18339,8 @@
          "qty": 297.0,
          "qty_display": "297",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -18177,7 +18348,8 @@
          "qty": 99.0,
          "qty_display": "99",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -18185,7 +18357,8 @@
          "qty": 247.5,
          "qty_display": "247.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -18193,7 +18366,8 @@
          "qty": 132.0,
          "qty_display": "132",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -18201,7 +18375,8 @@
          "qty": 115.5,
          "qty_display": "115.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18209,7 +18384,8 @@
          "qty": 57.75,
          "qty_display": "57.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 29,
@@ -18217,7 +18393,8 @@
          "qty": 24.75,
          "qty_display": "24.75",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18225,7 +18402,8 @@
          "qty": 2.475,
          "qty_display": "2.475",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -18233,7 +18411,8 @@
          "qty": 24.75,
          "qty_display": "24.75",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18249,7 +18428,8 @@
          "qty": 135.0,
          "qty_display": "135",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 19,
@@ -18257,7 +18437,8 @@
          "qty": 195.0,
          "qty_display": "195",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 20,
@@ -18265,7 +18446,8 @@
          "qty": 60.0,
          "qty_display": "60",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -18273,7 +18455,8 @@
          "qty": 90.0,
          "qty_display": "90",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18281,7 +18464,8 @@
          "qty": 52.5,
          "qty_display": "52.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18289,7 +18473,8 @@
          "qty": 2.25,
          "qty_display": "2.25",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18305,7 +18490,8 @@
          "qty": 333.0,
          "qty_display": "333",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -18313,7 +18499,8 @@
          "qty": 259.0,
          "qty_display": "259",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 32,
@@ -18321,7 +18508,8 @@
          "qty": 185.0,
          "qty_display": "185",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -18329,7 +18517,8 @@
          "qty": 129.5,
          "qty_display": "129.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 33,
@@ -18337,7 +18526,8 @@
          "qty": 1.85,
          "qty_display": "1.85",
          "unit": "зубчик",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -18345,7 +18535,8 @@
          "qty": 74.0,
          "qty_display": "74",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18353,7 +18544,8 @@
          "qty": 2.775,
          "qty_display": "2.775",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18369,7 +18561,8 @@
          "qty": 255.0,
          "qty_display": "255",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 25,
@@ -18377,7 +18570,8 @@
          "qty": 120.0,
          "qty_display": "120",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -18385,7 +18579,8 @@
          "qty": 150.0,
          "qty_display": "150",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -18393,7 +18588,8 @@
          "qty": 22.5,
          "qty_display": "22.5",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18409,7 +18605,8 @@
          "qty": 196.0,
          "qty_display": "196",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 1,
@@ -18417,7 +18614,8 @@
          "qty": 2.8,
          "qty_display": "2.8",
          "unit": "шт",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 36,
@@ -18425,7 +18623,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 37,
@@ -18433,7 +18632,8 @@
          "qty": 42.0,
          "qty_display": "42",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -18441,7 +18641,8 @@
          "qty": 84.0,
          "qty_display": "84",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -18449,7 +18650,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18457,7 +18659,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -18465,7 +18668,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18481,7 +18685,8 @@
          "qty": 117.0,
          "qty_display": "117",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 19,
@@ -18489,7 +18694,8 @@
          "qty": 169.0,
          "qty_display": "169",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 20,
@@ -18497,7 +18703,8 @@
          "qty": 52.0,
          "qty_display": "52",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -18505,7 +18712,8 @@
          "qty": 78.0,
          "qty_display": "78",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18513,7 +18721,8 @@
          "qty": 45.5,
          "qty_display": "45.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18521,7 +18730,8 @@
          "qty": 1.95,
          "qty_display": "1.95",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18537,7 +18747,8 @@
          "qty": 279.0,
          "qty_display": "279",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -18545,7 +18756,8 @@
          "qty": 217.0,
          "qty_display": "217",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 32,
@@ -18553,7 +18765,8 @@
          "qty": 155.0,
          "qty_display": "155",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -18561,7 +18774,8 @@
          "qty": 108.5,
          "qty_display": "108.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 33,
@@ -18569,7 +18783,8 @@
          "qty": 1.55,
          "qty_display": "1.55",
          "unit": "зубчик",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -18577,7 +18792,8 @@
          "qty": 62.0,
          "qty_display": "62",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18585,7 +18801,8 @@
          "qty": 2.325,
          "qty_display": "2.325",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18601,7 +18818,8 @@
          "qty": 216.0,
          "qty_display": "216",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 14,
@@ -18609,7 +18827,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 15,
@@ -18617,7 +18836,8 @@
          "qty": 60.0,
          "qty_display": "60",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 16,
@@ -18625,7 +18845,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 17,
@@ -18633,7 +18854,8 @@
          "qty": 1.8,
          "qty_display": "1.8",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18649,7 +18871,8 @@
          "qty": 204.0,
          "qty_display": "204",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -18657,7 +18880,8 @@
          "qty": 72.0,
          "qty_display": "72",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18665,7 +18889,8 @@
          "qty": 78.0,
          "qty_display": "78",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 30,
@@ -18673,7 +18898,8 @@
          "qty": 18.0,
          "qty_display": "18",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18681,7 +18907,8 @@
          "qty": 1.8,
          "qty_display": "1.8",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -18689,7 +18916,8 @@
          "qty": 18.0,
          "qty_display": "18",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18705,7 +18933,8 @@
          "qty": 225.0,
          "qty_display": "225",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 9,
@@ -18713,7 +18942,8 @@
          "qty": 87.5,
          "qty_display": "87.5",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -18721,7 +18951,8 @@
          "qty": 125.0,
          "qty_display": "125",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -18729,7 +18960,8 @@
          "qty": 100.0,
          "qty_display": "100",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18737,7 +18969,8 @@
          "qty": 1.875,
          "qty_display": "1.875",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18753,7 +18986,8 @@
          "qty": 252.0,
          "qty_display": "252",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -18761,7 +18995,8 @@
          "qty": 84.0,
          "qty_display": "84",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -18769,7 +19004,8 @@
          "qty": 210.0,
          "qty_display": "210",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -18777,7 +19013,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -18785,7 +19022,8 @@
          "qty": 98.0,
          "qty_display": "98",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18793,7 +19031,8 @@
          "qty": 49.0,
          "qty_display": "49",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 29,
@@ -18801,7 +19040,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18809,7 +19049,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -18817,7 +19058,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18833,7 +19075,8 @@
          "qty": 225.0,
          "qty_display": "225",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -18841,7 +19084,8 @@
          "qty": 100.0,
          "qty_display": "100",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -18849,7 +19093,8 @@
          "qty": 143.75,
          "qty_display": "143.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -18857,7 +19102,8 @@
          "qty": 100.0,
          "qty_display": "100",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18865,7 +19111,8 @@
          "qty": 1.875,
          "qty_display": "1.875",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18881,7 +19128,8 @@
          "qty": 224.0,
          "qty_display": "224",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -18889,7 +19137,8 @@
          "qty": 210.0,
          "qty_display": "210",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -18897,7 +19146,8 @@
          "qty": 224.0,
          "qty_display": "224",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 34,
@@ -18905,7 +19155,8 @@
          "qty": 42.0,
          "qty_display": "42",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 35,
@@ -18913,7 +19164,8 @@
          "qty": 56.0,
          "qty_display": "56",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -18921,7 +19173,8 @@
          "qty": 49.0,
          "qty_display": "49",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -18929,7 +19182,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -18945,7 +19199,8 @@
          "qty": 221.0,
          "qty_display": "221",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 25,
@@ -18953,7 +19208,8 @@
          "qty": 104.0,
          "qty_display": "104",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -18961,7 +19217,8 @@
          "qty": 130.0,
          "qty_display": "130",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -18969,7 +19226,8 @@
          "qty": 19.5,
          "qty_display": "19.5",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -18985,7 +19243,8 @@
          "qty": 168.0,
          "qty_display": "168",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 1,
@@ -18993,7 +19252,8 @@
          "qty": 2.4,
          "qty_display": "2.4",
          "unit": "шт",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 36,
@@ -19001,7 +19261,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 37,
@@ -19009,7 +19270,8 @@
          "qty": 36.0,
          "qty_display": "36",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -19017,7 +19279,8 @@
          "qty": 72.0,
          "qty_display": "72",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -19025,7 +19288,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -19033,7 +19297,8 @@
          "qty": 1.8,
          "qty_display": "1.8",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -19041,7 +19306,8 @@
          "qty": 18.0,
          "qty_display": "18",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       }
@@ -19946,7 +20212,8 @@
          "qty": 252.0,
          "qty_display": "252",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 14,
@@ -19954,7 +20221,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 15,
@@ -19962,7 +20230,8 @@
          "qty": 70.0,
          "qty_display": "70",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 16,
@@ -19970,7 +20239,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 17,
@@ -19978,7 +20248,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -19994,7 +20265,8 @@
          "qty": 238.0,
          "qty_display": "238",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -20002,7 +20274,8 @@
          "qty": 84.0,
          "qty_display": "84",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20010,7 +20283,8 @@
          "qty": 91.0,
          "qty_display": "91",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 30,
@@ -20018,7 +20292,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20026,7 +20301,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -20034,7 +20310,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -20050,7 +20327,8 @@
          "qty": 261.0,
          "qty_display": "261",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -20058,7 +20336,8 @@
          "qty": 116.0,
          "qty_display": "116",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -20066,7 +20345,8 @@
          "qty": 166.75,
          "qty_display": "166.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -20074,7 +20354,8 @@
          "qty": 116.0,
          "qty_display": "116",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20082,7 +20363,8 @@
          "qty": 2.175,
          "qty_display": "2.175",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20098,7 +20380,8 @@
          "qty": 264.0,
          "qty_display": "264",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -20106,7 +20389,8 @@
          "qty": 247.5,
          "qty_display": "247.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -20114,7 +20398,8 @@
          "qty": 264.0,
          "qty_display": "264",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 34,
@@ -20122,7 +20407,8 @@
          "qty": 49.5,
          "qty_display": "49.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 35,
@@ -20130,7 +20416,8 @@
          "qty": 66.0,
          "qty_display": "66",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20138,7 +20425,8 @@
          "qty": 57.75,
          "qty_display": "57.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20146,7 +20434,8 @@
          "qty": 2.475,
          "qty_display": "2.475",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20162,7 +20451,8 @@
          "qty": 261.0,
          "qty_display": "261",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 9,
@@ -20170,7 +20460,8 @@
          "qty": 101.5,
          "qty_display": "101.5",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -20178,7 +20469,8 @@
          "qty": 145.0,
          "qty_display": "145",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -20186,7 +20478,8 @@
          "qty": 116.0,
          "qty_display": "116",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20194,7 +20487,8 @@
          "qty": 2.175,
          "qty_display": "2.175",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20210,7 +20504,8 @@
          "qty": 297.0,
          "qty_display": "297",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -20218,7 +20513,8 @@
          "qty": 99.0,
          "qty_display": "99",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -20226,7 +20522,8 @@
          "qty": 247.5,
          "qty_display": "247.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -20234,7 +20531,8 @@
          "qty": 132.0,
          "qty_display": "132",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -20242,7 +20540,8 @@
          "qty": 115.5,
          "qty_display": "115.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20250,7 +20549,8 @@
          "qty": 57.75,
          "qty_display": "57.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 29,
@@ -20258,7 +20558,8 @@
          "qty": 24.75,
          "qty_display": "24.75",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20266,7 +20567,8 @@
          "qty": 2.475,
          "qty_display": "2.475",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -20274,7 +20576,8 @@
          "qty": 24.75,
          "qty_display": "24.75",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -20290,7 +20593,8 @@
          "qty": 135.0,
          "qty_display": "135",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 19,
@@ -20298,7 +20602,8 @@
          "qty": 195.0,
          "qty_display": "195",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 20,
@@ -20306,7 +20611,8 @@
          "qty": 60.0,
          "qty_display": "60",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -20314,7 +20620,8 @@
          "qty": 90.0,
          "qty_display": "90",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20322,7 +20629,8 @@
          "qty": 52.5,
          "qty_display": "52.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20330,7 +20638,8 @@
          "qty": 2.25,
          "qty_display": "2.25",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20346,7 +20655,8 @@
          "qty": 333.0,
          "qty_display": "333",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -20354,7 +20664,8 @@
          "qty": 259.0,
          "qty_display": "259",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 32,
@@ -20362,7 +20673,8 @@
          "qty": 185.0,
          "qty_display": "185",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -20370,7 +20682,8 @@
          "qty": 129.5,
          "qty_display": "129.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 33,
@@ -20378,7 +20691,8 @@
          "qty": 1.85,
          "qty_display": "1.85",
          "unit": "зубчик",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -20386,7 +20700,8 @@
          "qty": 74.0,
          "qty_display": "74",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20394,7 +20709,8 @@
          "qty": 2.775,
          "qty_display": "2.775",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20410,7 +20726,8 @@
          "qty": 255.0,
          "qty_display": "255",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 25,
@@ -20418,7 +20735,8 @@
          "qty": 120.0,
          "qty_display": "120",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -20426,7 +20744,8 @@
          "qty": 150.0,
          "qty_display": "150",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -20434,7 +20753,8 @@
          "qty": 22.5,
          "qty_display": "22.5",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -20450,7 +20770,8 @@
          "qty": 196.0,
          "qty_display": "196",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 1,
@@ -20458,7 +20779,8 @@
          "qty": 2.8,
          "qty_display": "2.8",
          "unit": "шт",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 36,
@@ -20466,7 +20788,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 37,
@@ -20474,7 +20797,8 @@
          "qty": 42.0,
          "qty_display": "42",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -20482,7 +20806,8 @@
          "qty": 84.0,
          "qty_display": "84",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -20490,7 +20815,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20498,7 +20824,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -20506,7 +20833,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -20522,7 +20850,8 @@
          "qty": 117.0,
          "qty_display": "117",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 19,
@@ -20530,7 +20859,8 @@
          "qty": 169.0,
          "qty_display": "169",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 20,
@@ -20538,7 +20868,8 @@
          "qty": 52.0,
          "qty_display": "52",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -20546,7 +20877,8 @@
          "qty": 78.0,
          "qty_display": "78",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20554,7 +20886,8 @@
          "qty": 45.5,
          "qty_display": "45.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20562,7 +20895,8 @@
          "qty": 1.95,
          "qty_display": "1.95",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20578,7 +20912,8 @@
          "qty": 279.0,
          "qty_display": "279",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -20586,7 +20921,8 @@
          "qty": 217.0,
          "qty_display": "217",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 32,
@@ -20594,7 +20930,8 @@
          "qty": 155.0,
          "qty_display": "155",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -20602,7 +20939,8 @@
          "qty": 108.5,
          "qty_display": "108.5",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 33,
@@ -20610,7 +20948,8 @@
          "qty": 1.55,
          "qty_display": "1.55",
          "unit": "зубчик",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -20618,7 +20957,8 @@
          "qty": 62.0,
          "qty_display": "62",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20626,7 +20966,8 @@
          "qty": 2.325,
          "qty_display": "2.325",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20642,7 +20983,8 @@
          "qty": 216.0,
          "qty_display": "216",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 14,
@@ -20650,7 +20992,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 15,
@@ -20658,7 +21001,8 @@
          "qty": 60.0,
          "qty_display": "60",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 16,
@@ -20666,7 +21010,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 17,
@@ -20674,7 +21019,8 @@
          "qty": 1.8,
          "qty_display": "1.8",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20690,7 +21036,8 @@
          "qty": 204.0,
          "qty_display": "204",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -20698,7 +21045,8 @@
          "qty": 72.0,
          "qty_display": "72",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20706,7 +21054,8 @@
          "qty": 78.0,
          "qty_display": "78",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 30,
@@ -20714,7 +21063,8 @@
          "qty": 18.0,
          "qty_display": "18",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20722,7 +21072,8 @@
          "qty": 1.8,
          "qty_display": "1.8",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -20730,7 +21081,8 @@
          "qty": 18.0,
          "qty_display": "18",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -20746,7 +21098,8 @@
          "qty": 225.0,
          "qty_display": "225",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 9,
@@ -20754,7 +21107,8 @@
          "qty": 87.5,
          "qty_display": "87.5",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -20762,7 +21116,8 @@
          "qty": 125.0,
          "qty_display": "125",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -20770,7 +21125,8 @@
          "qty": 100.0,
          "qty_display": "100",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20778,7 +21134,8 @@
          "qty": 1.875,
          "qty_display": "1.875",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20794,7 +21151,8 @@
          "qty": 252.0,
          "qty_display": "252",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -20802,7 +21160,8 @@
          "qty": 84.0,
          "qty_display": "84",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -20810,7 +21169,8 @@
          "qty": 210.0,
          "qty_display": "210",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -20818,7 +21178,8 @@
          "qty": 112.0,
          "qty_display": "112",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -20826,7 +21187,8 @@
          "qty": 98.0,
          "qty_display": "98",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20834,7 +21196,8 @@
          "qty": 49.0,
          "qty_display": "49",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 29,
@@ -20842,7 +21205,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "г",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20850,7 +21214,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -20858,7 +21223,8 @@
          "qty": 21.0,
          "qty_display": "21",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -20874,7 +21240,8 @@
          "qty": 225.0,
          "qty_display": "225",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 22,
@@ -20882,7 +21249,8 @@
          "qty": 100.0,
          "qty_display": "100",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 23,
@@ -20890,7 +21258,8 @@
          "qty": 143.75,
          "qty_display": "143.75",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 11,
@@ -20898,7 +21267,8 @@
          "qty": 100.0,
          "qty_display": "100",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20906,7 +21276,8 @@
          "qty": 1.875,
          "qty_display": "1.875",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20922,7 +21293,8 @@
          "qty": 224.0,
          "qty_display": "224",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 27,
@@ -20930,7 +21302,8 @@
          "qty": 210.0,
          "qty_display": "210",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 28,
@@ -20938,7 +21311,8 @@
          "qty": 224.0,
          "qty_display": "224",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 34,
@@ -20946,7 +21320,8 @@
          "qty": 42.0,
          "qty_display": "42",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 35,
@@ -20954,7 +21329,8 @@
          "qty": 56.0,
          "qty_display": "56",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 6,
@@ -20962,7 +21338,8 @@
          "qty": 49.0,
          "qty_display": "49",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -20970,7 +21347,8 @@
          "qty": 2.1,
          "qty_display": "2.1",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         }
        ]
       },
@@ -20986,7 +21364,8 @@
          "qty": 221.0,
          "qty_display": "221",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 25,
@@ -20994,7 +21373,8 @@
          "qty": 104.0,
          "qty_display": "104",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 10,
@@ -21002,7 +21382,8 @@
          "qty": 130.0,
          "qty_display": "130",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -21010,7 +21391,8 @@
          "qty": 19.5,
          "qty_display": "19.5",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       },
@@ -21026,7 +21408,8 @@
          "qty": 168.0,
          "qty_display": "168",
          "unit": "г",
-         "category": "Белок"
+         "category": "Белок",
+         "from_assist": false
         },
         {
          "ingredient_id": 1,
@@ -21034,7 +21417,8 @@
          "qty": 2.4,
          "qty_display": "2.4",
          "unit": "шт",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 36,
@@ -21042,7 +21426,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Крупы"
+         "category": "Крупы",
+         "from_assist": false
         },
         {
          "ingredient_id": 37,
@@ -21050,7 +21435,8 @@
          "qty": 36.0,
          "qty_display": "36",
          "unit": "г",
-         "category": "Яйца и молочное"
+         "category": "Яйца и молочное",
+         "from_assist": false
         },
         {
          "ingredient_id": 26,
@@ -21058,7 +21444,8 @@
          "qty": 72.0,
          "qty_display": "72",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 21,
@@ -21066,7 +21453,8 @@
          "qty": 96.0,
          "qty_display": "96",
          "unit": "г",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         },
         {
          "ingredient_id": 12,
@@ -21074,7 +21462,8 @@
          "qty": 1.8,
          "qty_display": "1.8",
          "unit": "ст.л.",
-         "category": "Прочее"
+         "category": "Прочее",
+         "from_assist": false
         },
         {
          "ingredient_id": 7,
@@ -21082,7 +21471,8 @@
          "qty": 18.0,
          "qty_display": "18",
          "unit": "мл",
-         "category": "Овощи"
+         "category": "Овощи",
+         "from_assist": false
         }
        ]
       }

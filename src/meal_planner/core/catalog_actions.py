@@ -3,7 +3,8 @@
 С 8.4b правка рецепта может менять и состав позиций цикла (plan_for):
 новый обед/ужин раскладывается сам, архивный убирается — с цикла first.
 С 8.6a рецепт от Assist — черновик: в позиции он встаёт только после
-confirm_draft.
+confirm_draft. С 8.6b он может принести новые ингредиенты, а количества
+переводятся в единицы справочника (core/units.py).
 
 Чистые функции: каталог и запрос → что записать. Ошибки собираются все
 сразу (форма рецепта показывает их у полей); loc — путь к полю в теле
@@ -12,6 +13,8 @@ confirm_draft.
 
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
+from decimal import Decimal
+from types import MappingProxyType
 
 from meal_planner.core.catalog import spec_of
 from meal_planner.core.models import (
@@ -36,9 +39,14 @@ from meal_planner.core.slot_pool import (
     remove_recipe,
     replace_slot,
 )
+from meal_planner.core.units import rounded, to_ingredient_unit, unconvertible_line
 
-UNITS = ("г", "мл", "шт", "ст.л.", "зубчик")
+UNITS = ("г", "мл", "шт", "ч.л.", "ст.л.", "зубчик")
 WEIGHT_UNITS = ("г", "мл")  # граммы в единице не нужны: 1:1
+# Единицы новых ингредиентов от Assist — правило 6.7; шт и зубчик — только
+# у существующих (яйца, чеснок).
+ASSIST_UNITS = ("г", "мл", "ч.л.", "ст.л.")
+ASSIST_SOURCE = "Assist: "
 ID_PREFIX = {MealKind.BREAKFAST: "b", MealKind.LUNCH: "l", MealKind.DINNER: "d"}
 STORAGE_LABELS = {
     "keep": "Как хранить",
@@ -82,10 +90,29 @@ class RecipeInput:
 
 @dataclass(frozen=True, slots=True)
 class ProposedLine:
-    """Строка рецепта от Assist (8.6a): ингредиент — названием справочника."""
+    """Строка рецепта от Assist (8.6a): ингредиент — названием справочника.
+
+    Единица — любая из units.LINE_UNITS: в единицу ингредиента переводит
+    core (8.6b).
+    """
 
     name: str
     qty: float
+    unit: str
+
+
+@dataclass(frozen=True, slots=True)
+class NewIngredient:
+    """Ингредиент, которого нет в справочнике (8.6b): ккал — оценка модели."""
+
+    name: str
+    unit: str  # одна из ASSIST_UNITS
+    category: str
+    kcal_100g: float
+    protein_100g: float
+    grams_per_unit: float | None = None  # вес ложки, г — для ч.л./ст.л.
+    store_piece: float | None = None  # штука в магазине, в unit
+    source: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -96,6 +123,15 @@ class RecipeProposal:
     steps: tuple[str, ...]
     storage: RecipeStorage | None
     is_fish: bool = False
+    new_ingredients: tuple[NewIngredient, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class Proposed:
+    """Что записать по рецепту от Assist: черновик и новые ингредиенты."""
+
+    recipe: RecipeSpec
+    ingredients: tuple[CatalogIngredient, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -307,31 +343,119 @@ def restore_recipe(catalog: Catalog, recipe_id: str) -> RecipeSpec:
     return replace(_not_draft(_existing(catalog, recipe_id)), status="active")
 
 
-def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> RecipeSpec:
+def from_assist(ingredient: CatalogIngredient) -> bool:
+    """Добавлен Assist (8.6b): ккал на 100 г — оценка модели, стоит проверить.
+
+    Источник поправили в редакторе — метки больше нет.
+    """
+    return (ingredient.source or "").startswith(ASSIST_SOURCE)
+
+
+def _key(name: str) -> str:
+    return name.strip().casefold()
+
+
+def _with_ingredient(catalog: Catalog, ingredient: CatalogIngredient) -> Catalog:
+    return replace(
+        catalog,
+        ingredients=MappingProxyType(
+            {**catalog.ingredients, ingredient.name: ingredient}
+        ),
+    )
+
+
+def _new_ingredients(
+    catalog: Catalog, proposal: RecipeProposal, errors: list[FieldError]
+) -> tuple[Catalog, list[CatalogIngredient], set[str]]:
+    """Справочник с новыми ингредиентами и названия непринятых.
+
+    Уже известные берутся из справочника как есть.
+    """
+    known = {_key(name) for name in catalog.ingredients}
+    added: list[CatalogIngredient] = []
+    seen: set[str] = set()
+    for n, new in enumerate(proposal.new_ingredients):
+        key = _key(new.name)
+        if key in known:
+            continue  # модель не знала справочник — берём существующий
+        loc = ("new_ingredients", n)
+        if key in seen:
+            errors.append(FieldError((*loc, "name"), f"«{new.name}» уже описан"))
+            continue
+        seen.add(key)
+        if new.unit not in ASSIST_UNITS:
+            errors.append(
+                FieldError(
+                    (*loc, "unit"),
+                    f"Единица нового ингредиента — одна из: {', '.join(ASSIST_UNITS)}",
+                )
+            )
+            continue
+        try:
+            ingredient = save_ingredient(
+                catalog,
+                IngredientInput(
+                    id=None,
+                    name=new.name,
+                    unit=new.unit,
+                    category=new.category,
+                    kcal_100g=new.kcal_100g,
+                    protein_100g=new.protein_100g,
+                    source=ASSIST_SOURCE + (_text(new.source) or "оценка модели"),
+                    grams_per_unit=new.grams_per_unit,
+                    store_piece=new.store_piece,
+                ),
+            )
+        except CatalogError as e:
+            errors.extend(FieldError((*loc, *err.loc), err.message) for err in e.errors)
+            continue
+        catalog = _with_ingredient(catalog, ingredient)
+        added.append(ingredient)
+    return catalog, added, seen - {_key(i.name) for i in added}
+
+
+def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> Proposed:
     """Новый черновик от Assist (8.6a): проверки — как у save_recipe.
 
-    Существующие рецепты так не меняются. Ингредиенты — названиями
-    справочника без учёта регистра; незнакомое — ошибка у строки.
+    Существующие рецепты так не меняются. Ингредиенты — названиями без учёта
+    регистра: из справочника или из new_ingredients (8.6b). Количество
+    переводится в единицу ингредиента и округляется (core/units.py).
     """
     if proposal.kind == MealKind.BREAKFAST:
         raise CatalogError(
             [FieldError(("kind",), "Assist предлагает только обеды и ужины")]
         )
-    by_name = {name.casefold(): i for name, i in catalog.ingredients.items()}
     errors: list[FieldError] = []
+    catalog, added, rejected = _new_ingredients(catalog, proposal, errors)
+    by_name = {_key(name): i for name, i in catalog.ingredients.items()}
+    line_errors = False
     lines = []
     for n, line in enumerate(proposal.ingredients):
-        ingredient = by_name.get(line.name.strip().casefold())
+        ingredient = by_name.get(_key(line.name))
         if ingredient is None:
+            line_errors = True
+            if _key(line.name) in rejected:
+                continue  # ошибка уже у его описания в new_ingredients
             errors.append(
                 FieldError(
                     ("ingredients", n, "name"),
-                    f"«{line.name}» нет в справочнике — добавьте его в приложении"
-                    " или замените",
+                    f"«{line.name}» нет в справочнике — опишите его в new_ingredients",
                 )
             )
-        else:
-            lines.append(RecipeLineInput(ingredient.id, line.qty))
+            continue
+        qty = to_ingredient_unit(ingredient, Decimal(str(line.qty)), line.unit)
+        if qty is None:
+            line_errors = True
+            errors.append(
+                FieldError(
+                    ("ingredients", n, "unit"),
+                    unconvertible_line(ingredient.name, line.unit, ingredient.unit),
+                )
+            )
+            continue
+        lines.append(
+            RecipeLineInput(ingredient.id, float(rounded(ingredient.unit, qty)))
+        )
     try:
         spec = save_recipe(
             catalog,
@@ -346,15 +470,15 @@ def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> RecipeSpec:
             ),
         )
     except CatalogError as e:
-        # Номера строк save_recipe — среди известных: свои ошибки строк
-        # уже у названий, у остальных строк номер мог бы съехать.
-        if errors:
-            errors.extend(err for err in e.errors if err.loc[0] != "ingredients")
-            raise CatalogError(errors) from e
-        raise
+        # Номера строк save_recipe — среди принятых: при своих ошибках строк
+        # номер мог бы съехать, их ошибки строк не показываем.
+        errors.extend(
+            err for err in e.errors if not (line_errors and err.loc[0] == "ingredients")
+        )
+        raise CatalogError(errors) from e
     if errors:
         raise CatalogError(errors)
-    return replace(spec, status="draft")
+    return Proposed(replace(spec, status="draft"), tuple(added))
 
 
 def confirm_draft(catalog: Catalog, recipe_id: str) -> RecipeSpec:

@@ -1034,12 +1034,13 @@ function DishesSection({ recipes, onEdit, recipeAction, discardDraft }: DishesSe
     showResult(id, await recipeAction(name, { id }));
   const discard = async (id: string) => showResult(id, await discardDraft(id));
 
-  const row = (r: Recipe, actions: React.ReactNode, kindName?: string) => (
+  const row = (r: Recipe, actions: React.ReactNode, kindName?: string, note?: React.ReactNode) => (
     <li key={r.id} style={{ marginBottom: 6 }}>
       {r.name}{' '}
       <span style={{ fontSize: 12, color: COLORS.inkSoft }}>
         {kindName && `${kindName} · `}≈{r.kcal} ккал · {r.protein}г белка
       </span>
+      {note}
       <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>{actions}</div>
       {errors[r.id] && (
         <p role="alert" style={errorTextStyle}>
@@ -1074,6 +1075,7 @@ function DishesSection({ recipes, onEdit, recipeAction, discardDraft }: DishesSe
                   </button>
                 </>,
                 KIND_NAME[r.kind],
+                <AssistIngredientsNote recipe={r} />,
               ),
             )}
           </ul>
@@ -1125,6 +1127,17 @@ function DishesSection({ recipes, onEdit, recipeAction, discardDraft }: DishesSe
         </div>
       )}
     </section>
+  );
+}
+
+/** Новые ингредиенты черновика от Assist (8.6b): их ккал на 100 г — оценка модели. */
+function AssistIngredientsNote({ recipe }: { recipe: Recipe }) {
+  const names = recipe.ingredients.filter((i) => i.from_assist).map((i) => i.name);
+  if (names.length === 0) return null;
+  return (
+    <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '2px 0 0' }}>
+      Новые ингредиенты от Assist: {names.join(', ')} — ккал и белок на 100 г оценены моделью, проверьте в справочнике.
+    </p>
   );
 }
 
@@ -1626,7 +1639,7 @@ function IngredientsSection({ catalog, loadIngredients, onEdit }: IngredientsSec
                 <li key={i.id} style={{ marginBottom: 4 }}>
                   {i.name}{' '}
                   <span style={{ fontSize: 12, color: COLORS.inkSoft }}>
-                    {i.unit} · {i.kcal_100g} ккал · {i.protein_100g}г белка на 100 г
+                    {i.unit} · {i.kcal_100g} ккал · {i.protein_100g}г белка на 100 г{i.from_assist && ' · от Assist'}
                   </span>{' '}
                   <button onClick={() => onEdit(i.id)} style={smallBtnStyle}>
                     Изменить

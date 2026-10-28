@@ -14,10 +14,12 @@ from pydantic import BaseModel, Field
 from meal_planner.core.catalog_actions import (
     UNITS,
     IngredientInput,
+    NewIngredient,
     ProposedLine,
     RecipeInput,
     RecipeLineInput,
     RecipeProposal,
+    from_assist,
     used_in,
 )
 from meal_planner.core.cooking import (
@@ -74,6 +76,7 @@ class IngredientOut(BaseModel):
     qty_display: str
     unit: str
     category: str
+    from_assist: bool  # добавлен Assist (8.6b): ккал на 100 г — оценка модели
 
 
 class RecipeStorageOut(BaseModel):
@@ -109,6 +112,7 @@ class CatalogIngredientOut(BaseModel):
     grams_per_unit: float | None  # для единиц не г/мл
     store_piece: float | None  # штука в магазине, в unit — «≈ N шт»
     used_in: list[str]  # id рецептов: единицу при них не поменять
+    from_assist: bool  # добавлен Assist (8.6b): значения — оценка модели
 
 
 class IngredientsOut(BaseModel):
@@ -251,8 +255,25 @@ class SaveRecipeIn(BaseModel):
 
 
 class ProposedLineIn(BaseModel):
-    name: str  # название из справочника, регистр не важен — сверяет core
-    qty: float  # в единице ингредиента; «больше нуля» проверяет core
+    name: str  # из справочника или new_ingredients, регистр не важен
+    qty: float  # «больше нуля» проверяет core
+    unit: str  # г, кг, мл, л, стакан, ч.л., ст.л., шт, зубчик — переводит core
+
+
+class NewIngredientIn(BaseModel):
+    """Ингредиента нет в справочнике — описание от Assist (8.6b)."""
+
+    name: str
+    unit: str  # г — твёрдое, мл — жидкое, ч.л./ст.л. — специи, масла, соусы
+    category: str  # из категорий списка покупок — проверяет core
+    kcal_100g: float
+    protein_100g: float
+    grams_per_unit: float | None = None  # вес ложки, г — для ч.л./ст.л.
+    store_piece: float | None = None  # штука в магазине, в unit
+    source: str | None = None  # откуда значения; core допишет «Assist: »
+
+    def to_new(self) -> NewIngredient:
+        return NewIngredient(**self.model_dump())
 
 
 class ProposeRecipeIn(BaseModel):
@@ -264,18 +285,22 @@ class ProposeRecipeIn(BaseModel):
     ingredients: list[ProposedLineIn]
     steps: list[str]
     storage: RecipeStorageIn | None = None
+    new_ingredients: list[NewIngredientIn] = []
 
     def to_proposal(self) -> RecipeProposal:
         storage = self.storage
         return RecipeProposal(
             name=self.name,
             kind=self.kind,
-            ingredients=tuple(ProposedLine(i.name, i.qty) for i in self.ingredients),
+            ingredients=tuple(
+                ProposedLine(i.name, i.qty, i.unit) for i in self.ingredients
+            ),
             steps=tuple(self.steps),
             storage=None
             if storage is None
             else RecipeStorage(storage.keep, storage.pan, storage.micro, storage.after),
             is_fish=self.is_fish,
+            new_ingredients=tuple(i.to_new() for i in self.new_ingredients),
         )
 
 
@@ -570,13 +595,15 @@ def to_settings_out(s: Settings) -> SettingsOut:
 
 
 def to_ingredient_out(catalog: Catalog, i: Ingredient) -> IngredientOut:
+    ingredient = catalog.ingredients[i.name]
     return IngredientOut(
-        ingredient_id=catalog.ingredients[i.name].id,
+        ingredient_id=ingredient.id,
         name=i.name,
         qty=i.qty,
         qty_display=format_qty(i.qty),
         unit=i.unit,
         category=i.category,
+        from_assist=from_assist(ingredient),
     )
 
 
@@ -614,6 +641,7 @@ def to_catalog_ingredient_out(
         grams_per_unit=i.grams_per_unit,
         store_piece=i.store_piece,
         used_in=used_in(catalog, i.name),
+        from_assist=from_assist(i),
     )
 
 

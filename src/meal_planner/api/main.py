@@ -604,14 +604,19 @@ def create_app() -> FastAPI:
         date_to: DateTo = None,
     ) -> RecipeActionOut:
         # Для Assist (8.6): черновик — ни в позициях, ни в покупках, пока его
-        # не подтвердят в UI.
-        return recipe_action(
+        # не подтвердят в UI. Новые ингредиенты — в справочник сразу (8.6b).
+        state, updated, result = apply_catalog_action(
             repo,
             catalog,
             today,
             date_from,
             date_to,
-            lambda c: catalog_actions.propose_recipe(c, body.to_proposal()),
+            lambda c, _: catalog_actions.propose_recipe(c, body.to_proposal()),
+            lambda p: repo.save_proposal(p.recipe, p.ingredients),
+        )
+        return RecipeActionOut(
+            state=state,
+            recipe=to_recipe_out(updated, updated.recipes[result.recipe.id]),
         )
 
     @app.post("/api/actions/confirm-draft", response_model=RecipeActionOut)

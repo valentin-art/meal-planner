@@ -606,6 +606,8 @@ describe('черновики от Assist (8.6a)', () => {
     expect(ui.text()).toContain('Черновики (1)');
     expect(buttons(dishRow(ui, d6.name), 'В архив')).toHaveLength(0);
     expect([...field<HTMLSelectElement>(ui, 'Ужин №2').options].map((o) => o.value)).not.toContain('d6');
+    // 8.6b: новый ингредиент от Assist назван у черновика.
+    expect(dishRow(ui, d6.name).textContent).toContain('Новые ингредиенты от Assist: паприка копчёная');
     ui.unmount();
   });
 

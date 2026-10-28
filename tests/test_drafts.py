@@ -1,5 +1,8 @@
 """Черновики рецептов от Assist (8.6a): propose, confirm, discard.
 
+С 8.6b рецепт может принести новые ингредиенты, а количества core переводит
+в единицу справочника.
+
 Новое правило, а не порт JSX: ожидания записаны как правило. Без черновиков
 каталог прежний — это держат golden-тесты.
 """
@@ -13,6 +16,7 @@ from meal_planner.core import catalog_actions as ca
 from meal_planner.core.catalog import build_catalog
 from meal_planner.core.catalog_actions import (
     CatalogError,
+    NewIngredient,
     ProposedLine,
     RecipeProposal,
 )
@@ -42,8 +46,8 @@ def proposal(**changes) -> RecipeProposal:
         name="Говядина с гречкой",
         kind=MealKind.DINNER,
         ingredients=(
-            ProposedLine("  Говядина ", 180),
-            ProposedLine("ГРЕЧКА", 80),
+            ProposedLine("  Говядина ", 180, "г"),
+            ProposedLine("ГРЕЧКА", 80, "г"),
         ),
         steps=("Отварите гречку.", "Потушите говядину."),
         storage=STORAGE,
@@ -63,7 +67,7 @@ def with_specs(*extra: RecipeSpec) -> Catalog:
     )
 
 
-DRAFT = ca.propose_recipe(SEED_CATALOG, proposal())
+DRAFT = ca.propose_recipe(SEED_CATALOG, proposal()).recipe
 WITH_DRAFT = with_specs(DRAFT)
 
 
@@ -84,20 +88,20 @@ def test_proposal_becomes_draft_with_catalog_names():
 
 
 def test_unknown_ingredient_is_named():
-    lines = (ProposedLine("говядина", 180), ProposedLine("тофу", 0))
+    lines = (ProposedLine("говядина", 180, "г"), ProposedLine("тофу", 0, "г"))
     assert errors(
         lambda: ca.propose_recipe(SEED_CATALOG, proposal(ingredients=lines, name=""))
     ) == [
         (
             ("ingredients", 1, "name"),
-            "«тофу» нет в справочнике — добавьте его в приложении или замените",
+            "«тофу» нет в справочнике — опишите его в new_ingredients",
         ),
         (("name",), "Название не может быть пустым"),
     ]
 
 
 def test_other_errors_are_those_of_save_recipe():
-    lines = (ProposedLine("говядина", 0), ProposedLine("Говядина", 10))
+    lines = (ProposedLine("говядина", 0, "г"), ProposedLine("Говядина", 10, "г"))
     assert errors(
         lambda: ca.propose_recipe(SEED_CATALOG, proposal(ingredients=lines))
     ) == [
@@ -183,10 +187,13 @@ def test_confirmed_fish_goes_only_to_fish_slot():
         SEED_CATALOG,
         proposal(
             name="Лосось с рисом",
-            ingredients=(ProposedLine("лосось", 150), ProposedLine("рис басмати", 70)),
+            ingredients=(
+                ProposedLine("лосось", 150, "г"),
+                ProposedLine("рис басмати", 70, "г"),
+            ),
             is_fish=True,
         ),
-    )
+    ).recipe
     catalog = with_specs(fish)
     is_fish = lambda rid: catalog.recipes[rid].is_fish
     slots = fish_slots(catalog.slot_versions, 0, is_fish)
@@ -206,3 +213,133 @@ def test_confirm_and_discard_need_a_draft(action):
 
 def test_discard_returns_id():
     assert ca.discard_draft(WITH_DRAFT, "d6") == "d6"
+
+
+# --- новые ингредиенты и единицы (8.6b) ---
+
+TOFU = NewIngredient("Тофу", "г", "Белок", 76, 8.08, source="fdc 172475")
+SOY = NewIngredient("соевый соус", "ст.л.", "Прочее", 53, 8.14, grams_per_unit=16)
+
+
+def test_new_ingredients_join_catalog_with_the_draft():
+    lines = (
+        ProposedLine("тофу", 0.2, "кг"),
+        ProposedLine("Соевый соус", 1.5, "ст.л."),
+        ProposedLine("гречка", 80, "г"),
+    )
+    proposed = ca.propose_recipe(
+        SEED_CATALOG, proposal(ingredients=lines, new_ingredients=(TOFU, SOY))
+    )
+    next_id = max(i.id for i in SEED_CATALOG.ingredients.values()) + 1
+    assert [(i.id, i.name, i.unit, i.source) for i in proposed.ingredients] == [
+        (next_id, "Тофу", "г", "Assist: fdc 172475"),
+        (next_id + 1, "соевый соус", "ст.л.", "Assist: оценка модели"),
+    ]
+    assert all(ca.from_assist(i) for i in proposed.ingredients)
+    assert not ca.from_assist(SEED_CATALOG.ingredients["гречка"])
+    assert [(i.name, i.qty, i.unit) for i in proposed.recipe.ingredients] == [
+        ("Тофу", 200, "г"),
+        ("соевый соус", 1.5, "ст.л."),
+        ("гречка", 80, "г"),
+    ]
+    catalog = build_catalog(
+        [*seed_ingredients(), *proposed.ingredients],
+        [*RECIPE_SPECS.values(), proposed.recipe],
+        seed_slot_versions(),
+    )
+    # 200 г × 0.76 + 1.5 × 16 г × 0.53 + 80 г × 3.46 = 152 + 12.7 + 276.8 → 440
+    assert catalog.recipes["d6"].kcal == 440
+
+
+def test_known_name_in_new_ingredients_takes_the_catalog_one():
+    known = NewIngredient("Гречка", "мл", "Крупы", 1, 1)
+    proposed = ca.propose_recipe(SEED_CATALOG, proposal(new_ingredients=(known,)))
+    assert proposed.ingredients == ()
+    assert proposed.recipe.ingredients[1].name == "гречка"
+
+
+def test_new_ingredient_rules():
+    piece = NewIngredient("кабачковая икра", "шт", "Овощи", 90, 1.2)
+    spoon = NewIngredient("паприка", "ч.л.", "Прочее", 282, 14.1)
+    lines = (
+        ProposedLine("говядина", 180, "г"),
+        ProposedLine("паприка", 0.5, "ч.л."),
+    )
+    assert errors(
+        lambda: ca.propose_recipe(
+            SEED_CATALOG,
+            proposal(ingredients=lines, new_ingredients=(piece, spoon, TOFU, TOFU)),
+        )
+    ) == [
+        (
+            ("new_ingredients", 0, "unit"),
+            "Единица нового ингредиента — одна из: г, мл, ч.л., ст.л.",
+        ),
+        (
+            ("new_ingredients", 1, "grams_per_unit"),
+            "Сколько граммов в «ч.л.» — нужно число больше нуля",
+        ),
+        (("new_ingredients", 3, "name"), "«Тофу» уже описан"),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("line", "expected"),
+    [
+        (ProposedLine("говядина", 0.25, "кг"), ("говядина", 250, "г")),
+        (ProposedLine("цукини", 1, "шт"), ("цукини", 280, "г")),  # store_piece
+        (ProposedLine("сок лимона", 1, "ч.л."), ("сок лимона", 5, "мл")),
+        (
+            ProposedLine("оливковое масло", 1, "ч.л."),
+            ("оливковое масло", 0.25, "ст.л."),
+        ),
+        (ProposedLine("оливковое масло", 20, "г"), ("оливковое масло", 1.5, "ст.л.")),
+        (ProposedLine("чеснок", 2, "зубчик"), ("чеснок", 2, "зубчик")),
+        (ProposedLine("говядина", 180.4, "г"), ("говядина", 180, "г")),
+    ],
+)
+def test_line_is_converted_to_catalog_unit(line, expected):
+    lines = (line, ProposedLine("гречка", 80, "г"))
+    recipe = ca.propose_recipe(SEED_CATALOG, proposal(ingredients=lines)).recipe
+    first = recipe.ingredients[0]
+    assert (first.name, first.qty, first.unit) == expected
+
+
+def test_unconvertible_line_is_refused():
+    lines = (
+        ProposedLine("говядина", 1, "ч.л."),
+        ProposedLine("гречка", 1, "щепотка"),
+        ProposedLine("брокколи", 1, "шт"),
+    )
+    assert errors(
+        lambda: ca.propose_recipe(SEED_CATALOG, proposal(ingredients=lines))
+    ) == [
+        (("ingredients", 0, "unit"), "«говядина»: не перевести ч.л. в г — укажите в г"),
+        (
+            ("ingredients", 1, "unit"),
+            (
+                "«гречка»: единица — одна из: г, кг, мл, л, стакан, ч.л., ст.л., шт,"
+                " зубчик"
+            ),
+        ),
+        (
+            ("ingredients", 2, "unit"),
+            (
+                "«брокколи»: не перевести шт в г — у ингредиента нет веса штуки"
+                " — укажите в г"
+            ),
+        ),
+    ]
+
+
+def test_line_of_rejected_new_ingredient_has_no_second_error():
+    piece = NewIngredient("кабачковая икра", "шт", "Овощи", 90, 1.2)
+    lines = (ProposedLine("кабачковая икра", 1, "шт"),)
+    assert [
+        loc
+        for loc, _ in errors(
+            lambda: ca.propose_recipe(
+                SEED_CATALOG, proposal(ingredients=lines, new_ingredients=(piece,))
+            )
+        )
+    ] == [("new_ingredients", 0, "unit")]

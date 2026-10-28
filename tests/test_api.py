@@ -642,7 +642,10 @@ def test_archive_and_restore(client, repo):
 PROPOSED = {
     "name": "Говядина с гречкой",
     "kind": "dinner",
-    "ingredients": [{"name": "Говядина", "qty": 180}, {"name": "гречка", "qty": 80}],
+    "ingredients": [
+        {"name": "Говядина", "qty": 0.18, "unit": "кг"},
+        {"name": "гречка", "qty": 80, "unit": "г"},
+    ],
     "steps": ["Отварите гречку.", "Потушите говядину."],
     "storage": {"keep": "До 3 дней", "pan": "Уровень 4", "micro": "2 мин"},
 }
@@ -675,18 +678,57 @@ def test_draft_propose_confirm_discard(client, repo):
 
 def test_propose_unknown_ingredient_writes_nothing(client, repo):
     repo.save_settings(DEFAULT_2X)
-    lines = [*PROPOSED["ingredients"], {"name": "тофу", "qty": 100}]
+    lines = [*PROPOSED["ingredients"], {"name": "тофу", "qty": 100, "unit": "г"}]
     r = post(client, "propose-recipe", {**PROPOSED, "ingredients": lines})
     assert r.status_code == 422
     assert r.json()["detail"] == [
         {
             "type": "value_error",
             "loc": ["body", "ingredients", 2, "name"],
-            "msg": "«тофу» нет в справочнике — добавьте его в приложении или замените",
+            "msg": "«тофу» нет в справочнике — опишите его в new_ingredients",
         }
     ]
     assert repo.get_settings().version == 1
     assert "d6" not in repo.get_catalog().recipes
+
+
+def test_propose_with_new_ingredient(client, repo):
+    # 8.6b: новый ингредиент — в справочник вместе с черновиком и остаётся.
+    repo.save_settings(DEFAULT_2X)
+    tofu = {
+        "name": "тофу",
+        "unit": "г",
+        "category": "Белок",
+        "kcal_100g": 76,
+        "protein_100g": 8.08,
+    }
+    lines = [*PROPOSED["ingredients"], {"name": "Тофу", "qty": 0.1, "unit": "кг"}]
+    body = post(
+        client,
+        "propose-recipe",
+        {**PROPOSED, "ingredients": lines, "new_ingredients": [tofu]},
+    ).json()
+    line = body["recipe"]["ingredients"][2]
+    assert (line["name"], line["qty"], line["from_assist"]) == ("тофу", 100, True)
+    assert body["recipe"]["ingredients"][0]["qty"] == 180  # 0.18 кг
+    assert body["state"]["version"] == 2  # ингредиент и рецепт — одна запись
+
+    def listed() -> dict:
+        catalog = client.get("/api/ingredients").json()["ingredients"]
+        return {i["name"]: i for i in catalog}
+
+    tofu_out = listed()["тофу"]
+    assert (tofu_out["source"], tofu_out["from_assist"]) == (
+        "Assist: оценка модели",
+        True,
+    )
+    post(client, "discard-draft", {"id": body["recipe"]["id"]})
+    assert "тофу" in listed()
+
+    bad = {**tofu, "name": "мисо", "unit": "шт"}
+    r = post(client, "propose-recipe", {**PROPOSED, "new_ingredients": [bad]})
+    assert r.json()["detail"][0]["loc"] == ["body", "new_ingredients", 0, "unit"]
+    assert repo.get_settings().version == 3
 
 
 def test_set_cycle_slot(client, repo):
@@ -716,7 +758,7 @@ def test_set_cycle_slot(client, repo):
 
 def test_ingredients_and_save_ingredient(client, repo):
     catalog = client.get("/api/ingredients").json()
-    assert catalog["units"] == ["г", "мл", "шт", "ст.л.", "зубчик"]
+    assert catalog["units"] == ["г", "мл", "шт", "ч.л.", "ст.л.", "зубчик"]
     assert catalog["categories"][0] == "Белок"
     listed = catalog["ingredients"]
     assert [i["name"] for i in listed] == list(SEED_CATALOG.ingredients)

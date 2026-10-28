@@ -1786,6 +1786,10 @@
             },
             "type": "array",
             "title": "Used In"
+          },
+          "from_assist": {
+            "type": "boolean",
+            "title": "From Assist"
           }
         },
         "type": "object",
@@ -1799,7 +1803,8 @@
           "source",
           "grams_per_unit",
           "store_piece",
-          "used_in"
+          "used_in",
+          "from_assist"
         ],
         "title": "CatalogIngredientOut",
         "description": "Ингредиент справочника (5.4) — GET /api/ingredients, save-ingredient."
@@ -2276,6 +2281,10 @@
           "category": {
             "type": "string",
             "title": "Category"
+          },
+          "from_assist": {
+            "type": "boolean",
+            "title": "From Assist"
           }
         },
         "type": "object",
@@ -2285,7 +2294,8 @@
           "qty",
           "qty_display",
           "unit",
-          "category"
+          "category",
+          "from_assist"
         ],
         "title": "IngredientOut"
       },
@@ -2330,6 +2340,73 @@
           "dinner"
         ],
         "title": "MealKind"
+      },
+      "NewIngredientIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "kcal_100g": {
+            "type": "number",
+            "title": "Kcal 100G"
+          },
+          "protein_100g": {
+            "type": "number",
+            "title": "Protein 100G"
+          },
+          "grams_per_unit": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams Per Unit"
+          },
+          "store_piece": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Store Piece"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "unit",
+          "category",
+          "kcal_100g",
+          "protein_100g"
+        ],
+        "title": "NewIngredientIn",
+        "description": "Ингредиента нет в справочнике — описание от Assist (8.6b)."
       },
       "NutritionOut": {
         "properties": {
@@ -2424,6 +2501,14 @@
                 "type": "null"
               }
             ]
+          },
+          "new_ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/NewIngredientIn"
+            },
+            "type": "array",
+            "title": "New Ingredients",
+            "default": []
           }
         },
         "type": "object",
@@ -2445,12 +2530,17 @@
           "qty": {
             "type": "number",
             "title": "Qty"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
           }
         },
         "type": "object",
         "required": [
           "name",
-          "qty"
+          "qty",
+          "unit"
         ],
         "title": "ProposedLineIn"
       },

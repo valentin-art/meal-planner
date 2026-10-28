@@ -18,6 +18,7 @@ from meal_planner.api.schemas import (
 )
 from meal_planner.core.catalog import build_catalog, spec_of
 from meal_planner.core.catalog_actions import (
+    NewIngredient,
     ProposedLine,
     RecipeProposal,
     propose_recipe,
@@ -38,27 +39,34 @@ from meal_planner.core.seed import SEED_CATALOG
 PAGE_SIZE = 14  # как PAGE_SIZE/LOAD_STEP во фронтенде
 
 # Черновик ужина от Assist (8.6a) — только в справочнике рецептов: в план
-# черновик не попадает, сценарии его не видят.
-DRAFT = propose_recipe(
+# черновик не попадает, сценарии его не видят. Паприка — новый ингредиент
+# (8.6b), морковь «1 шт» и «0.18 кг» переводит core.
+PROPOSED = propose_recipe(
     SEED_CATALOG,
     RecipeProposal(
         name="Говядина с гречкой и морковью",
         kind=MealKind.DINNER,
         ingredients=(
-            ProposedLine("Говядина", 180),
-            ProposedLine("гречка", 80),
-            ProposedLine("морковь", 100),
-            ProposedLine("масло растительное", 1),
+            ProposedLine("Говядина", 0.18, "кг"),
+            ProposedLine("гречка", 80, "г"),
+            ProposedLine("морковь", 1, "шт"),
+            ProposedLine("масло растительное", 1, "ст.л."),
+            ProposedLine("паприка копчёная", 0.5, "ч.л."),
         ),
         steps=("Обжарить говядину с морковью.", "Сварить гречку и смешать."),
         storage=RecipeStorage(
             "до 4 дней в холодильнике", "5–7 минут под крышкой", "2–3 минуты"
         ),
+        new_ingredients=(
+            NewIngredient(
+                "паприка копчёная", "ч.л.", "Прочее", 282, 14.1, grams_per_unit=2.3
+            ),
+        ),
     ),
 )
 RECIPES_CATALOG = build_catalog(
-    SEED_CATALOG.ingredients.values(),
-    [*map(spec_of, SEED_CATALOG.recipes.values()), DRAFT],
+    [*SEED_CATALOG.ingredients.values(), *PROPOSED.ingredients],
+    [*map(spec_of, SEED_CATALOG.recipes.values()), PROPOSED.recipe],
     SEED_CATALOG.slot_versions,
 )
 
@@ -191,7 +199,7 @@ def build() -> dict:
         for rid, r in to_recipes_out(RECIPES_CATALOG).items()
     }
     # Ответ GET /api/ingredients — для редактора рецепта (5.5).
-    ingredients = to_ingredients_out(SEED_CATALOG).model_dump(mode="json")
+    ingredients = to_ingredients_out(RECIPES_CATALOG).model_dump(mode="json")
     return {"recipes": recipes, "ingredients": ingredients, "scenarios": scenarios}
 
 

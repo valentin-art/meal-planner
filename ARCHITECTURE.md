@@ -99,6 +99,7 @@ AppState = f(Catalog, Settings, today, window_days)
 | GET | `/api/ingredients` | Справочник ингредиентов, единицы и категории для формы |
 | POST | `/api/recipes/preview` | Ккал и белок черновика рецепта — только чтение |
 | GET | `/api/summary` | Сегодня, завтра и ближайшая закупка — компактно, для HA |
+| GET | `/api/cookbook` | Ближайшая готовка и активные рецепты по видам — для вкладки «Рецепты» HA (9.1), только чтение |
 | POST | `/api/shopping/remaining` | Ближайшая закупка за вычетом остатков из HA (8.2) — только чтение, остатки не хранятся |
 | GET | `/api/health` | Живость для `HEALTHCHECK` (только чтение БД) |
 | POST | `/api/actions/{action_name}` | Атомарное действие (не generic PATCH — см. ниже); с фазы 5 и каталог: `save-recipe`, `archive-recipe`, `restore-recipe`, `set-cycle-slot`, `save-ingredient`; с 8.3b — `mark-cooked`, `unmark-cooked` (отметка «приготовлено» и новые значения счётчиков HA) |

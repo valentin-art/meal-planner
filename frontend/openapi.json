@@ -105,6 +105,24 @@
         }
       }
     },
+    "/api/cookbook": {
+      "get": {
+        "summary": "Get Cookbook",
+        "operationId": "get_cookbook_api_cookbook_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookbookOut"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/shopping/remaining": {
       "post": {
         "summary": "Shopping Remaining",
@@ -1915,6 +1933,213 @@
           "dinner_scale"
         ],
         "title": "CookItemOut"
+      },
+      "CookbookCookOut": {
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date",
+            "title": "Date"
+          },
+          "is_today": {
+            "type": "boolean",
+            "title": "Is Today"
+          },
+          "dishes": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookDishOut"
+            },
+            "type": "array",
+            "title": "Dishes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "date",
+          "is_today",
+          "dishes"
+        ],
+        "title": "CookbookCookOut"
+      },
+      "CookbookDishOut": {
+        "properties": {
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MealKind"
+          },
+          "planned_portions": {
+            "type": "integer",
+            "title": "Planned Portions"
+          },
+          "scale": {
+            "type": "number",
+            "title": "Scale"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein": {
+            "type": "integer",
+            "title": "Protein"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookIngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "name",
+          "kind",
+          "planned_portions",
+          "scale",
+          "kcal",
+          "protein",
+          "ingredients"
+        ],
+        "title": "CookbookDishOut"
+      },
+      "CookbookIngredientOut": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "qty_display": {
+            "type": "string",
+            "title": "Qty Display"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "qty_display",
+          "unit"
+        ],
+        "title": "CookbookIngredientOut"
+      },
+      "CookbookOut": {
+        "properties": {
+          "today": {
+            "type": "string",
+            "format": "date",
+            "title": "Today"
+          },
+          "cook": {
+            "$ref": "#/components/schemas/CookbookCookOut"
+          },
+          "lunch": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookRecipeOut"
+            },
+            "type": "array",
+            "title": "Lunch"
+          },
+          "dinner": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookRecipeOut"
+            },
+            "type": "array",
+            "title": "Dinner"
+          },
+          "breakfast": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookRecipeOut"
+            },
+            "type": "array",
+            "title": "Breakfast"
+          }
+        },
+        "type": "object",
+        "required": [
+          "today",
+          "cook",
+          "lunch",
+          "dinner",
+          "breakfast"
+        ],
+        "title": "CookbookOut",
+        "description": "Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.\n\nШаги и хранение — только в группах: плитка ближайшей готовки берёт их\nпо recipe_id. Ингредиенты — без id и категории, сенсор и так большой."
+      },
+      "CookbookRecipeOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MealKind"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein": {
+            "type": "integer",
+            "title": "Protein"
+          },
+          "is_fish": {
+            "type": "boolean",
+            "title": "Is Fish"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookIngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStorageOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "kcal",
+          "protein",
+          "is_fish",
+          "ingredients",
+          "steps",
+          "storage"
+        ],
+        "title": "CookbookRecipeOut"
       },
       "CookedActionOut": {
         "properties": {

@@ -55,6 +55,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/cookbook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Cookbook */
+        get: operations["get_cookbook_api_cookbook_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/shopping/remaining": {
         parameters: {
             query?: never;
@@ -569,6 +586,85 @@ export interface components {
             lunch_scale: number;
             /** Dinner Scale */
             dinner_scale: number;
+        };
+        /** CookbookCookOut */
+        CookbookCookOut: {
+            /**
+             * Date
+             * Format: date
+             */
+            date: string;
+            /** Is Today */
+            is_today: boolean;
+            /** Dishes */
+            dishes: components["schemas"]["CookbookDishOut"][];
+        };
+        /** CookbookDishOut */
+        CookbookDishOut: {
+            /** Recipe Id */
+            recipe_id: string;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["MealKind"];
+            /** Planned Portions */
+            planned_portions: number;
+            /** Scale */
+            scale: number;
+            /** Kcal */
+            kcal: number;
+            /** Protein */
+            protein: number;
+            /** Ingredients */
+            ingredients: components["schemas"]["CookbookIngredientOut"][];
+        };
+        /** CookbookIngredientOut */
+        CookbookIngredientOut: {
+            /** Name */
+            name: string;
+            /** Qty Display */
+            qty_display: string;
+            /** Unit */
+            unit: string;
+        };
+        /**
+         * CookbookOut
+         * @description Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.
+         *
+         *     Шаги и хранение — только в группах: плитка ближайшей готовки берёт их
+         *     по recipe_id. Ингредиенты — без id и категории, сенсор и так большой.
+         */
+        CookbookOut: {
+            /**
+             * Today
+             * Format: date
+             */
+            today: string;
+            cook: components["schemas"]["CookbookCookOut"];
+            /** Lunch */
+            lunch: components["schemas"]["CookbookRecipeOut"][];
+            /** Dinner */
+            dinner: components["schemas"]["CookbookRecipeOut"][];
+            /** Breakfast */
+            breakfast: components["schemas"]["CookbookRecipeOut"][];
+        };
+        /** CookbookRecipeOut */
+        CookbookRecipeOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            kind: components["schemas"]["MealKind"];
+            /** Kcal */
+            kcal: number;
+            /** Protein */
+            protein: number;
+            /** Is Fish */
+            is_fish: boolean;
+            /** Ingredients */
+            ingredients: components["schemas"]["CookbookIngredientOut"][];
+            /** Steps */
+            steps: string[];
+            storage: components["schemas"]["RecipeStorageOut"] | null;
         };
         /** CookedActionOut */
         CookedActionOut: {
@@ -1426,6 +1522,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SummaryOut"];
+                };
+            };
+        };
+    };
+    get_cookbook_api_cookbook_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbookOut"];
                 };
             };
         };

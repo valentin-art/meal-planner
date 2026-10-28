@@ -2,10 +2,12 @@
 
 Только перекладка полей. Дни и cook items ссылаются на рецепты по id —
 справочник — отдельно, GET /api/recipes (клиент берёт его один раз).
-Исключение — SummaryOut для HA: там названия и готовые строки, как в UI.
+Исключения — SummaryOut и CookbookOut для HA: там названия и готовые
+строки, как в UI.
 """
 
 import datetime as dt
+from collections.abc import Mapping
 from datetime import date
 from typing import Literal
 
@@ -22,6 +24,7 @@ from meal_planner.core.catalog_actions import (
     from_assist,
     used_in,
 )
+from meal_planner.core.cookbook import UpcomingCook
 from meal_planner.core.cooking import (
     MAX_PORTIONS,
     MIN_PORTIONS,
@@ -507,6 +510,56 @@ class SummaryCookingOut(BaseModel):
     breakfast: SummaryBreakfastOut | None  # завтрак сегодня, null — блюд нет
 
 
+class CookbookIngredientOut(BaseModel):
+    name: str
+    qty_display: str  # format_qty, как в карточке рецепта
+    unit: str
+
+
+class CookbookDishOut(BaseModel):
+    recipe_id: str
+    name: str
+    kind: MealKind
+    planned_portions: int  # сколько дней блюдо едят по плану
+    scale: float  # порция под цель (8.5); 1 — без масштаба
+    kcal: int  # одной порции — с масштабом
+    protein: int
+    ingredients: list[CookbookIngredientOut]  # на 1 порцию, с масштабом
+
+
+class CookbookCookOut(BaseModel):
+    # Поле date перекрывает тип date для полей ниже.
+    date: dt.date  # ближайшая готовка: не раньше сегодня
+    is_today: bool
+    dishes: list[CookbookDishOut]  # обеды и ужины, по рецепту
+
+
+class CookbookRecipeOut(BaseModel):
+    id: str
+    name: str
+    kind: MealKind
+    kcal: int
+    protein: int
+    is_fish: bool
+    ingredients: list[CookbookIngredientOut]  # базовая порция ×1
+    steps: list[str]
+    storage: RecipeStorageOut | None
+
+
+class CookbookOut(BaseModel):
+    """Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.
+
+    Шаги и хранение — только в группах: плитка ближайшей готовки берёт их
+    по recipe_id. Ингредиенты — без id и категории, сенсор и так большой.
+    """
+
+    today: date
+    cook: CookbookCookOut
+    lunch: list[CookbookRecipeOut]
+    dinner: list[CookbookRecipeOut]
+    breakfast: list[CookbookRecipeOut]
+
+
 class SkippedCookOut(BaseModel):
     cook_date: date
     pause_start: date
@@ -613,8 +666,15 @@ def to_ingredient_out(catalog: Catalog, i: Ingredient) -> IngredientOut:
     )
 
 
+def to_storage_out(storage: RecipeStorage | None) -> RecipeStorageOut | None:
+    if storage is None:
+        return None
+    return RecipeStorageOut(
+        keep=storage.keep, pan=storage.pan, micro=storage.micro, after=storage.after
+    )
+
+
 def to_recipe_out(catalog: Catalog, r: Recipe) -> RecipeOut:
-    storage = r.storage
     return RecipeOut(
         id=r.id,
         name=r.name,
@@ -623,11 +683,7 @@ def to_recipe_out(catalog: Catalog, r: Recipe) -> RecipeOut:
         protein=r.protein,
         ingredients=[to_ingredient_out(catalog, i) for i in r.ingredients],
         steps=list(r.steps),
-        storage=None
-        if storage is None
-        else RecipeStorageOut(
-            keep=storage.keep, pan=storage.pan, micro=storage.micro, after=storage.after
-        ),
+        storage=to_storage_out(r.storage),
         is_fish=r.is_fish,
         status=r.status,
     )
@@ -860,6 +916,59 @@ def to_shopping_remaining_out(s: StockedTrip) -> ShoppingRemainingOut:
     return ShoppingRemainingOut(
         **to_summary_trip_out(s.trip).model_dump(),
         ignored=[to_stock_ignored_out(i) for i in s.ignored],
+    )
+
+
+def to_cookbook_ingredient_out(i: Ingredient) -> CookbookIngredientOut:
+    return CookbookIngredientOut(
+        name=i.name, qty_display=format_qty(i.qty), unit=i.unit
+    )
+
+
+def to_cookbook_recipe_out(r: Recipe) -> CookbookRecipeOut:
+    return CookbookRecipeOut(
+        id=r.id,
+        name=r.name,
+        kind=r.kind,
+        kcal=r.kcal,
+        protein=r.protein,
+        is_fish=r.is_fish,
+        ingredients=[to_cookbook_ingredient_out(i) for i in r.ingredients],
+        steps=list(r.steps),
+        storage=to_storage_out(r.storage),
+    )
+
+
+def to_cookbook_out(
+    today: date, cook: UpcomingCook, book: Mapping[MealKind, tuple[Recipe, ...]]
+) -> CookbookOut:
+    def group(kind: MealKind) -> list[CookbookRecipeOut]:
+        return [to_cookbook_recipe_out(r) for r in book[kind]]
+
+    return CookbookOut(
+        today=today,
+        cook=CookbookCookOut(
+            date=cook.cook_date,
+            is_today=cook.cook_date == today,
+            dishes=[
+                CookbookDishOut(
+                    recipe_id=d.recipe.id,
+                    name=d.recipe.name,
+                    kind=d.recipe.kind,
+                    planned_portions=d.planned_portions,
+                    scale=d.recipe.scale,
+                    kcal=d.recipe.kcal,
+                    protein=d.recipe.protein,
+                    ingredients=[
+                        to_cookbook_ingredient_out(i) for i in d.recipe.ingredients
+                    ],
+                )
+                for d in cook.dishes
+            ],
+        ),
+        lunch=group(MealKind.LUNCH),
+        dinner=group(MealKind.DINNER),
+        breakfast=group(MealKind.BREAKFAST),
     )
 
 

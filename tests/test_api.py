@@ -8,6 +8,7 @@ from scenario_settings import settings_of
 
 from meal_planner.api.main import create_app, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
+from meal_planner.core.cookbook import upcoming_cook
 from meal_planner.core.models import CycleShuffle, Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
@@ -1009,6 +1010,74 @@ def test_summary_lists_cooking(client, repo):
     breakfast = cooking["breakfast"]
     assert (breakfast["date"], breakfast["cooked"]) == ("2026-11-09", False)
     assert breakfast["name"] == SEED_CATALOG.recipes[breakfast["recipe_id"]].name
+
+
+def test_cookbook_lists_upcoming_cook_and_recipes(client, repo):
+    # 9.1: сегодня Пн 09.11, готовка Ср/Сб — ближайшая Ср 11.11.
+    repo.save_settings(DEFAULT_2X)
+    book = client.get("/api/cookbook").json()
+    assert book["today"] == "2026-11-09"
+    cook = book["cook"]
+    assert (cook["date"], cook["is_today"]) == ("2026-11-11", False)
+    expected = upcoming_cook(SEED_CATALOG, DEFAULT_2X, TODAY).dishes
+    assert [(d["recipe_id"], d["planned_portions"]) for d in cook["dishes"]] == [
+        (d.recipe.id, d.planned_portions) for d in expected
+    ]
+    assert all(d["scale"] == 1 for d in cook["dishes"])
+    assert [r["id"] for r in book["lunch"]] == [f"l{i}" for i in range(1, 6)]
+    assert [r["id"] for r in book["dinner"]] == [f"d{i}" for i in range(1, 6)]
+    assert [r["id"] for r in book["breakfast"]] == ["b1", "b2", "b3"]
+    l1, b1 = book["lunch"][0], book["breakfast"][0]
+    seed_l1 = SEED_CATALOG.recipes["l1"]
+    assert l1["steps"] == list(seed_l1.steps)
+    assert l1["storage"]["keep"] == seed_l1.storage.keep
+    assert b1["storage"] is None
+    ingredients = [i for r in book["lunch"] for i in r["ingredients"]]
+    ingredients += [i for d in cook["dishes"] for i in d["ingredients"]]
+    assert all(set(i) == {"name", "qty_display", "unit"} for i in ingredients)
+    assert repo.get_settings().version == 1  # только чтение
+
+
+def test_cookbook_on_cook_day(repo):
+    repo.save_settings(DEFAULT_2X)
+    cook = make_client(repo, date(2026, 11, 11)).get("/api/cookbook").json()["cook"]
+    assert (cook["date"], cook["is_today"]) == ("2026-11-11", True)
+
+
+def test_cookbook_first_request_saves_defaults(client, repo):
+    assert client.get("/api/cookbook").status_code == 200
+    assert repo.get_settings() == StoredSettings(default_settings(TODAY), 1)
+
+
+def test_cookbook_hides_drafts_and_archive(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    assert post(client, "propose-recipe", PROPOSED).json()["recipe"]["id"] == "d6"
+    post(client, "archive-recipe", {"id": "b3"})
+    book = client.get("/api/cookbook").json()
+    assert "d6" not in [r["id"] for r in book["dinner"]]
+    assert [r["id"] for r in book["breakfast"]] == ["b1", "b2"]
+
+
+def test_cookbook_dishes_have_target_portion(client, repo):
+    # 8.5: масштаб с чт 12.11 — партия Ср 11.11 уже под цель, группы — ×1.
+    repo.save_settings(DEFAULT_2X)
+    post(
+        client,
+        "set-nutrition-target",
+        {"daily_kcal_target": 2700, "daily_protein_target": None},
+    )
+    post(client, "set-portion-scaling", {"enabled": True})
+    book = client.get("/api/cookbook").json()
+    groups = {r["id"]: r for kind in ("lunch", "dinner") for r in book[kind]}
+    core = upcoming_cook(repo.get_catalog(), repo.get_settings().settings, TODAY)
+    assert len(book["cook"]["dishes"]) == len(core.dishes)
+    for dish, expected in zip(book["cook"]["dishes"], core.dishes, strict=True):
+        assert dish["scale"] == expected.recipe.scale != 1
+        assert dish["kcal"] == expected.recipe.kcal != groups[dish["recipe_id"]]["kcal"]
+        assert [i["qty_display"] for i in dish["ingredients"]] == [
+            format_qty(i.qty) for i in expected.recipe.ingredients
+        ]
+        assert dish["ingredients"] != groups[dish["recipe_id"]]["ingredients"]
 
 
 def test_mark_and_unmark_cooked(client, repo):

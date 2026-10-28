@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 
 from meal_planner.api.schemas import (
     AppStateOut,
+    CookbookOut,
     CookedActionOut,
     CookedIn,
     DiscardDraftOut,
@@ -46,6 +47,7 @@ from meal_planner.api.schemas import (
     UpdateDraftIn,
     to_app_state_out,
     to_catalog_ingredient_out,
+    to_cookbook_out,
     to_cooked_action_out,
     to_ingredients_out,
     to_recipe_out,
@@ -53,7 +55,7 @@ from meal_planner.api.schemas import (
     to_shopping_remaining_out,
     to_summary_out,
 )
-from meal_planner.core import actions, catalog_actions, cooking
+from meal_planner.core import actions, catalog_actions, cookbook, cooking
 from meal_planner.core.catalog_actions import CatalogError
 from meal_planner.core.models import (
     Catalog,
@@ -332,6 +334,17 @@ def create_app() -> FastAPI:
             cooking.cooking(
                 catalog, settings, today, repo.get_cooked(), repo.get_dish_portions()
             ),
+        )
+
+    @app.get("/api/cookbook", response_model=CookbookOut)
+    def get_cookbook(repo: Repo, catalog: CatalogDep, today: Today) -> CookbookOut:
+        # Для вкладки «Рецепты» HA (9.1). Первый запрос, как и summary,
+        # сохраняет дефолты — иначе якорь плыл бы (6.4).
+        settings, _ = stored_or_initial(repo, today)
+        return to_cookbook_out(
+            today,
+            cookbook.upcoming_cook(catalog, settings, today),
+            cookbook.cookbook_recipes(catalog),
         )
 
     @app.post("/api/shopping/remaining", response_model=ShoppingRemainingOut)

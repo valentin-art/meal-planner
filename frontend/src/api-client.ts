@@ -20,6 +20,7 @@ export type IngredientPayload = Schemas['SaveIngredientIn'];
 export type IngredientActionResult = Schemas['IngredientActionOut'];
 export type RecipePayload = Schemas['SaveRecipeIn'];
 export type RecipeActionResult = Schemas['RecipeActionOut'];
+export type DiscardDraftResult = Schemas['DiscardDraftOut'];
 export type Nutrition = Schemas['NutritionOut'];
 export type PreviewLine = Schemas['RecipePreviewLineIn'];
 
@@ -45,6 +46,8 @@ export type RecipeActionPayloads = {
   'save-recipe': RecipePayload;
   'archive-recipe': Schemas['RecipeIdIn'];
   'restore-recipe': Schemas['RecipeIdIn'];
+  // черновик от Assist (8.6a) — в пул; позицию выбирает сервер
+  'confirm-draft': Schemas['RecipeIdIn'];
 };
 export type RecipeActionName = keyof RecipeActionPayloads;
 
@@ -124,6 +127,11 @@ export function callRecipeAction<N extends RecipeActionName>(
   range?: DateRange,
 ): Promise<RecipeActionResult> {
   return post(withRange(`api/actions/${name}`, range), payload);
+}
+
+/** Отбросить черновик (8.6a): рецепт удаляется — в ответе только его id. */
+export function discardDraft(id: string, range?: DateRange): Promise<DiscardDraftResult> {
+  return post(withRange('api/actions/discard-draft', range), { id });
 }
 
 export function callIngredientAction(payload: IngredientPayload, range?: DateRange): Promise<IngredientActionResult> {

@@ -16,10 +16,18 @@ from meal_planner.api.schemas import (
     to_ingredients_out,
     to_recipes_out,
 )
+from meal_planner.core.catalog import build_catalog, spec_of
+from meal_planner.core.catalog_actions import (
+    ProposedLine,
+    RecipeProposal,
+    propose_recipe,
+)
 from meal_planner.core.models import (
     Catalog,
     CycleShuffle,
+    MealKind,
     PortionScale,
+    RecipeStorage,
     Settings,
     SlotVersion,
     default_settings,
@@ -28,6 +36,31 @@ from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
 
 PAGE_SIZE = 14  # как PAGE_SIZE/LOAD_STEP во фронтенде
+
+# Черновик ужина от Assist (8.6a) — только в справочнике рецептов: в план
+# черновик не попадает, сценарии его не видят.
+DRAFT = propose_recipe(
+    SEED_CATALOG,
+    RecipeProposal(
+        name="Говядина с гречкой и морковью",
+        kind=MealKind.DINNER,
+        ingredients=(
+            ProposedLine("Говядина", 180),
+            ProposedLine("гречка", 80),
+            ProposedLine("морковь", 100),
+            ProposedLine("масло растительное", 1),
+        ),
+        steps=("Обжарить говядину с морковью.", "Сварить гречку и смешать."),
+        storage=RecipeStorage(
+            "до 4 дней в холодильнике", "5–7 минут под крышкой", "2–3 минуты"
+        ),
+    ),
+)
+RECIPES_CATALOG = build_catalog(
+    SEED_CATALOG.ingredients.values(),
+    [*map(spec_of, SEED_CATALOG.recipes.values()), DRAFT],
+    SEED_CATALOG.slot_versions,
+)
 
 # Позиция 1 с двумя обедами с цикла 3 (8.4b): l4 стоит и в позиции 4 —
 # новых рецептов не нужно, справочник общий для всех сценариев.
@@ -155,7 +188,7 @@ def build() -> dict:
     # Ответ GET /api/recipes — один на все сценарии.
     recipes = {
         rid: r.model_dump(mode="json")
-        for rid, r in to_recipes_out(SEED_CATALOG).items()
+        for rid, r in to_recipes_out(RECIPES_CATALOG).items()
     }
     # Ответ GET /api/ingredients — для редактора рецепта (5.5).
     ingredients = to_ingredients_out(SEED_CATALOG).model_dump(mode="json")

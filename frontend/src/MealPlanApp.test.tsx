@@ -594,6 +594,45 @@ describe('архив рецептов', () => {
   });
 });
 
+describe('черновики от Assist (8.6a)', () => {
+  const d6 = RECIPES.d6;
+
+  it('черновик — только в блоке «Черновики», не в «Меню» и не в позициях', async () => {
+    expect(d6.status).toBe('draft');
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Меню')[0]);
+    expect(ui.text()).not.toContain(d6.name);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    expect(ui.text()).toContain('Черновики (1)');
+    expect(buttons(dishRow(ui, d6.name), 'В архив')).toHaveLength(0);
+    expect([...field<HTMLSelectElement>(ui, 'Ужин №2').options].map((o) => o.value)).not.toContain('d6');
+    ui.unmount();
+  });
+
+  it('«В план» — confirm-draft, ответ сервера переносит рецепт к ужинам', async () => {
+    handler = (url) => (url === 'api/actions/confirm-draft' ? saved({ ...d6, status: 'active' }) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    await click(buttons(dishRow(ui, d6.name), 'В план')[0]);
+    expect(calls.at(-1)).toEqual({ url: 'api/actions/confirm-draft', method: 'POST', body: { id: 'd6' } });
+    expect(ui.text()).not.toContain('Черновики (');
+    expect(buttons(dishRow(ui, d6.name), 'В архив')).toHaveLength(1);
+    ui.unmount();
+  });
+
+  it('«Отбросить» — discard-draft, рецепт пропадает', async () => {
+    handler = (url) =>
+      url === 'api/actions/discard-draft' ? jsonResponse({ state: BASE, id: 'd6' }) : jsonResponse(BASE);
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    await click(buttons(dishRow(ui, d6.name), 'Отбросить')[0]);
+    expect(calls.at(-1)).toEqual({ url: 'api/actions/discard-draft', method: 'POST', body: { id: 'd6' } });
+    expect(findRow(ui, d6.name)).toBeUndefined();
+    expect(ui.text()).not.toContain('Черновики (');
+    ui.unmount();
+  });
+});
+
 // ---------- Цикл и справочник ингредиентов (5.6) ----------
 
 describe('позиции цикла', () => {

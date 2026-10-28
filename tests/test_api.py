@@ -639,6 +639,56 @@ def test_archive_and_restore(client, repo):
     assert restored["state"]["version"] == 3
 
 
+PROPOSED = {
+    "name": "Говядина с гречкой",
+    "kind": "dinner",
+    "ingredients": [{"name": "Говядина", "qty": 180}, {"name": "гречка", "qty": 80}],
+    "steps": ["Отварите гречку.", "Потушите говядину."],
+    "storage": {"keep": "До 3 дней", "pan": "Уровень 4", "micro": "2 мин"},
+}
+
+
+def test_draft_propose_confirm_discard(client, repo):
+    # 8.6a: черновик от Assist — в справочнике, но не в плане.
+    repo.save_settings(DEFAULT_2X)
+    plan = client.get("/api/state").json()
+    body = post(client, "propose-recipe", PROPOSED).json()
+    draft = body["recipe"]
+    assert (draft["id"], draft["status"]) == ("d6", "draft")
+    assert draft["kcal"] > 0 and draft["protein"] > 0
+    assert body["state"]["schedule"] == plan["schedule"]
+    assert body["state"]["cycle_slots"] == plan["cycle_slots"]
+
+    confirmed = post(client, "confirm-draft", {"id": "d6"}).json()
+    assert confirmed["recipe"]["status"] == "active"
+    assert any("d6" in s["dinner_ids"] for s in confirmed["state"]["cycle_slots"])
+
+    post(client, "propose-recipe", {**PROPOSED, "name": "Ещё"})
+    discarded = post(client, "discard-draft", {"id": "d7"})
+    assert discarded.json()["id"] == "d7"
+    assert discarded.json()["state"]["version"] == 5
+    assert "d7" not in client.get("/api/recipes").json()
+    r = post(client, "discard-draft", {"id": "d6"})
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["loc"] == ["body", "id"]
+
+
+def test_propose_unknown_ingredient_writes_nothing(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    lines = [*PROPOSED["ingredients"], {"name": "тофу", "qty": 100}]
+    r = post(client, "propose-recipe", {**PROPOSED, "ingredients": lines})
+    assert r.status_code == 422
+    assert r.json()["detail"] == [
+        {
+            "type": "value_error",
+            "loc": ["body", "ingredients", 2, "name"],
+            "msg": "«тофу» нет в справочнике — добавьте его в приложении или замените",
+        }
+    ]
+    assert repo.get_settings().version == 1
+    assert "d6" not in repo.get_catalog().recipes
+
+
 def test_set_cycle_slot(client, repo):
     # 8.4b: состав — с первого некупленного цикла. Пн 09.11: закупка ср 11.11
     # не куплена — цикл 2, его партия с вс 15.11.

@@ -361,6 +361,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/propose-recipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Propose Recipe */
+        post: operations["propose_recipe_api_actions_propose_recipe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/confirm-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Draft */
+        post: operations["confirm_draft_api_actions_confirm_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/discard-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Discard Draft */
+        post: operations["discard_draft_api_actions_discard_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/archive-recipe": {
         parameters: {
             query?: never;
@@ -605,6 +656,12 @@ export interface components {
             /** Dinner Scale */
             dinner_scale: number;
         };
+        /** DiscardDraftOut */
+        DiscardDraftOut: {
+            state: components["schemas"]["AppStateOut"];
+            /** Id */
+            id: string;
+        };
         /** DishPortionsOut */
         DishPortionsOut: {
             /** Version */
@@ -687,6 +744,32 @@ export interface components {
             /** Changes From */
             changes_from: string | null;
         };
+        /**
+         * ProposeRecipeIn
+         * @description Рецепт от Assist (8.6a): только новый черновик, обед или ужин.
+         */
+        ProposeRecipeIn: {
+            /** Name */
+            name: string;
+            kind: components["schemas"]["MealKind"];
+            /**
+             * Is Fish
+             * @default false
+             */
+            is_fish: boolean;
+            /** Ingredients */
+            ingredients: components["schemas"]["ProposedLineIn"][];
+            /** Steps */
+            steps: string[];
+            storage?: components["schemas"]["RecipeStorageIn"] | null;
+        };
+        /** ProposedLineIn */
+        ProposedLineIn: {
+            /** Name */
+            name: string;
+            /** Qty */
+            qty: number;
+        };
         /** RecipeActionOut */
         RecipeActionOut: {
             state: components["schemas"]["AppStateOut"];
@@ -726,7 +809,7 @@ export interface components {
              * Status
              * @enum {string}
              */
-            status: "active" | "archived";
+            status: "active" | "archived" | "draft";
         };
         /** RecipePreviewIn */
         RecipePreviewIn: {
@@ -1845,6 +1928,114 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    propose_recipe_api_actions_propose_recipe_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposeRecipeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_draft_api_actions_confirm_draft_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeIdIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_draft_api_actions_discard_draft_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeIdIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscardDraftOut"];
                 };
             };
             /** @description Validation Error */

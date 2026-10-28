@@ -14,8 +14,10 @@ from pydantic import BaseModel, Field
 from meal_planner.core.catalog_actions import (
     UNITS,
     IngredientInput,
+    ProposedLine,
     RecipeInput,
     RecipeLineInput,
+    RecipeProposal,
     used_in,
 )
 from meal_planner.core.cooking import (
@@ -240,6 +242,35 @@ class SaveRecipeIn(BaseModel):
             ingredients=tuple(
                 RecipeLineInput(i.ingredient_id, i.qty) for i in self.ingredients
             ),
+            steps=tuple(self.steps),
+            storage=None
+            if storage is None
+            else RecipeStorage(storage.keep, storage.pan, storage.micro, storage.after),
+            is_fish=self.is_fish,
+        )
+
+
+class ProposedLineIn(BaseModel):
+    name: str  # название из справочника, регистр не важен — сверяет core
+    qty: float  # в единице ингредиента; «больше нуля» проверяет core
+
+
+class ProposeRecipeIn(BaseModel):
+    """Рецепт от Assist (8.6a): только новый черновик, обед или ужин."""
+
+    name: str
+    kind: MealKind  # завтрак отклоняет core — по-русски
+    is_fish: bool = False
+    ingredients: list[ProposedLineIn]
+    steps: list[str]
+    storage: RecipeStorageIn | None = None
+
+    def to_proposal(self) -> RecipeProposal:
+        storage = self.storage
+        return RecipeProposal(
+            name=self.name,
+            kind=self.kind,
+            ingredients=tuple(ProposedLine(i.name, i.qty) for i in self.ingredients),
             steps=tuple(self.steps),
             storage=None
             if storage is None
@@ -513,6 +544,11 @@ class AppStateOut(BaseModel):
 class RecipeActionOut(BaseModel):
     state: AppStateOut
     recipe: RecipeOut
+
+
+class DiscardDraftOut(BaseModel):
+    state: AppStateOut
+    id: str  # удалённый черновик — убрать из справочника рецептов
 
 
 class IngredientActionOut(BaseModel):

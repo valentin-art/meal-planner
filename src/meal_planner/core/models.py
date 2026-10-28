@@ -14,9 +14,10 @@ class MealKind(StrEnum):
 
 
 ShoppingTiming = Literal["same", "before"]
-# Архивный рецепт не удаляется: на него могли ссылаться слоты (5.1). В 8.6
-# добавится "draft".
-RecipeStatus = Literal["active", "archived"]
+# Архивный рецепт не удаляется: на него могли ссылаться слоты (5.1).
+# Черновик (8.6a) — рецепт от Assist: ни в позициях, ни в плане, пока его не
+# подтвердят в UI.
+RecipeStatus = Literal["active", "archived", "draft"]
 # Рецепт в плане (5.1): "bought" — съедается до окна ближайшей закупки,
 # продукты уже куплены; "next_trip" — в окне ближайшей закупки.
 PlanUse = Literal["bought", "next_trip"]

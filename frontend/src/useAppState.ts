@@ -23,6 +23,7 @@ import {
   callAction,
   callIngredientAction,
   callRecipeAction,
+  discardDraft as postDiscardDraft,
   getIngredients,
   getRecipes,
   getState,
@@ -168,10 +169,32 @@ export function useAppState() {
     [range, loadRecipes],
   );
 
+  /** Отбросить черновик (8.6a); null — удалён, иначе ошибки. */
+  const discardDraft = useCallback(
+    async (recipeId: string): Promise<FieldErrors | null> => {
+      const id = ++latest.current;
+      try {
+        const { state: fresh, id: removed } = await postDiscardDraft(recipeId, toQuery(range));
+        setRecipes((all) => {
+          if (!all) return all;
+          const { [removed]: _, ...rest } = all;
+          return rest;
+        });
+        setCatalog(null); // used_in ингредиентов устарел
+        if (id === latest.current) setState(fresh);
+        return null;
+      } catch (e) {
+        return fieldErrors(e);
+      }
+    },
+    [range],
+  );
+
   return {
     state,
     recipes,
     catalog,
+    discardDraft,
     ingredientAction,
     loadIngredients,
     recipeAction,

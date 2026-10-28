@@ -19,11 +19,13 @@ from meal_planner.api.schemas import (
     AppStateOut,
     CookedActionOut,
     CookedIn,
+    DiscardDraftOut,
     DishPortionsOut,
     HealthOut,
     IngredientActionOut,
     IngredientsOut,
     NutritionOut,
+    ProposeRecipeIn,
     RecipeActionOut,
     RecipeIdIn,
     RecipeOut,
@@ -591,6 +593,64 @@ def create_app() -> FastAPI:
             date_to,
             lambda c: catalog_actions.save_recipe(c, body.to_input()),
         )
+
+    @app.post("/api/actions/propose-recipe", response_model=RecipeActionOut)
+    def propose_recipe(
+        body: ProposeRecipeIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> RecipeActionOut:
+        # Для Assist (8.6): черновик — ни в позициях, ни в покупках, пока его
+        # не подтвердят в UI.
+        return recipe_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.propose_recipe(c, body.to_proposal()),
+        )
+
+    @app.post("/api/actions/confirm-draft", response_model=RecipeActionOut)
+    def confirm_draft(
+        body: RecipeIdIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> RecipeActionOut:
+        return recipe_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c: catalog_actions.confirm_draft(c, body.id),
+        )
+
+    @app.post("/api/actions/discard-draft", response_model=DiscardDraftOut)
+    def discard_draft(
+        body: RecipeIdIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> DiscardDraftOut:
+        state, _, rid = apply_catalog_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c, _: catalog_actions.discard_draft(c, body.id),
+            repo.delete_recipe,
+        )
+        return DiscardDraftOut(state=state, id=rid)
 
     @app.post("/api/actions/archive-recipe", response_model=RecipeActionOut)
     def archive_recipe(

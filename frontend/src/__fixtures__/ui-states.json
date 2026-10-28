@@ -905,6 +905,59 @@
    },
    "is_fish": false,
    "status": "active"
+  },
+  "d6": {
+   "id": "d6",
+   "name": "Говядина с гречкой и морковью",
+   "kind": "dinner",
+   "kcal": 670,
+   "protein": 49,
+   "ingredients": [
+    {
+     "ingredient_id": 13,
+     "name": "говядина",
+     "qty": 180.0,
+     "qty_display": "180",
+     "unit": "г",
+     "category": "Белок"
+    },
+    {
+     "ingredient_id": 14,
+     "name": "гречка",
+     "qty": 80.0,
+     "qty_display": "80",
+     "unit": "г",
+     "category": "Крупы"
+    },
+    {
+     "ingredient_id": 16,
+     "name": "морковь",
+     "qty": 100.0,
+     "qty_display": "100",
+     "unit": "г",
+     "category": "Овощи"
+    },
+    {
+     "ingredient_id": 17,
+     "name": "масло растительное",
+     "qty": 1.0,
+     "qty_display": "1",
+     "unit": "ст.л.",
+     "category": "Прочее"
+    }
+   ],
+   "steps": [
+    "Обжарить говядину с морковью.",
+    "Сварить гречку и смешать."
+   ],
+   "storage": {
+    "keep": "до 4 дней в холодильнике",
+    "pan": "5–7 минут под крышкой",
+    "micro": "2–3 минуты",
+    "after": null
+   },
+   "is_fish": false,
+   "status": "draft"
   }
  },
  "ingredients": {

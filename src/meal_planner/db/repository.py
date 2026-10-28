@@ -344,6 +344,17 @@ class Repository:
             _write_slot_versions(conn, versions)
             return _bump_version(conn)
 
+    def delete_recipe(self, recipe_id: str) -> int:
+        """Отброшенный черновик (8.6a). Что это черновик, проверяет core."""
+        with self._connect() as conn:
+            for table, column in (
+                ("recipe_steps", "recipe_id"),
+                ("recipe_ingredients", "recipe_id"),
+                ("recipes", "id"),
+            ):
+                conn.execute(f"DELETE FROM {table} WHERE {column} = ?", (recipe_id,))
+            return _bump_version(conn)
+
     def get_cooked(self) -> frozenset[tuple[date, str]]:
         """Отметки «приготовлено» (8.3b): (день, recipe_id)."""
         with self._connect() as conn:

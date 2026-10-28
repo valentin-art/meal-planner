@@ -2,6 +2,8 @@
 
 С 8.4b правка рецепта может менять и состав позиций цикла (plan_for):
 новый обед/ужин раскладывается сам, архивный убирается — с цикла first.
+С 8.6a рецепт от Assist — черновик: в позиции он встаёт только после
+confirm_draft.
 
 Чистые функции: каталог и запрос → что записать. Ошибки собираются все
 сразу (форма рецепта показывает их у полей); loc — путь к полю в теле
@@ -79,6 +81,24 @@ class RecipeInput:
 
 
 @dataclass(frozen=True, slots=True)
+class ProposedLine:
+    """Строка рецепта от Assist (8.6a): ингредиент — названием справочника."""
+
+    name: str
+    qty: float
+
+
+@dataclass(frozen=True, slots=True)
+class RecipeProposal:
+    name: str
+    kind: MealKind
+    ingredients: tuple[ProposedLine, ...]
+    steps: tuple[str, ...]
+    storage: RecipeStorage | None
+    is_fish: bool = False
+
+
+@dataclass(frozen=True, slots=True)
 class RecipeChange:
     """Что записать при правке рецепта: сам рецепт и состав позиций (8.4b)."""
 
@@ -100,7 +120,9 @@ class IngredientInput:
 
 
 def next_recipe_id(catalog: Catalog, kind: MealKind) -> str:
-    # Номера не переиспользуются: архивные рецепты тоже в каталоге.
+    # Архивные рецепты тоже в каталоге — их номера не переиспользуются.
+    # Номер отброшенного черновика может достаться следующему: ссылок на
+    # черновик нет (8.6a).
     prefix = ID_PREFIX[kind]
     numbers = [int(rid[1:]) for rid in catalog.recipes if rid.startswith(prefix)]
     return f"{prefix}{max(numbers, default=0) + 1}"
@@ -248,12 +270,31 @@ def _existing(catalog: Catalog, recipe_id: str) -> RecipeSpec:
     return spec_of(recipe)
 
 
+def _not_draft(spec: RecipeSpec) -> RecipeSpec:
+    if spec.status == "draft":
+        raise CatalogError(
+            [
+                FieldError(
+                    ("id",), f"«{spec.name}» — черновик: подтвердите или отбросьте его"
+                )
+            ]
+        )
+    return spec
+
+
+def _draft(catalog: Catalog, recipe_id: str) -> RecipeSpec:
+    spec = _existing(catalog, recipe_id)
+    if spec.status != "draft":
+        raise CatalogError([FieldError(("id",), f"«{spec.name}» — не черновик")])
+    return spec
+
+
 def archive_recipe(catalog: Catalog, recipe_id: str) -> RecipeSpec:
     """В архив: из пула пропадает, но не удаляется (5.1). Повтор — не ошибка.
 
     Из позиций цикла рецепт убирает plan_for (8.4b).
     """
-    spec = _existing(catalog, recipe_id)
+    spec = _not_draft(_existing(catalog, recipe_id))
     if recipe_id in ROTATION_BREAKFASTS:
         raise CatalogError(
             [FieldError(("id",), f"«{spec.name}» — завтрак в ротации, в архив нельзя")]
@@ -262,18 +303,80 @@ def archive_recipe(catalog: Catalog, recipe_id: str) -> RecipeSpec:
 
 
 def restore_recipe(catalog: Catalog, recipe_id: str) -> RecipeSpec:
-    return replace(_existing(catalog, recipe_id), status="active")
+    # Черновик — только через confirm_draft, не в обход подтверждения.
+    return replace(_not_draft(_existing(catalog, recipe_id)), status="active")
+
+
+def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> RecipeSpec:
+    """Новый черновик от Assist (8.6a): проверки — как у save_recipe.
+
+    Существующие рецепты так не меняются. Ингредиенты — названиями
+    справочника без учёта регистра; незнакомое — ошибка у строки.
+    """
+    if proposal.kind == MealKind.BREAKFAST:
+        raise CatalogError(
+            [FieldError(("kind",), "Assist предлагает только обеды и ужины")]
+        )
+    by_name = {name.casefold(): i for name, i in catalog.ingredients.items()}
+    errors: list[FieldError] = []
+    lines = []
+    for n, line in enumerate(proposal.ingredients):
+        ingredient = by_name.get(line.name.strip().casefold())
+        if ingredient is None:
+            errors.append(
+                FieldError(
+                    ("ingredients", n, "name"),
+                    f"«{line.name}» нет в справочнике — добавьте его в приложении"
+                    " или замените",
+                )
+            )
+        else:
+            lines.append(RecipeLineInput(ingredient.id, line.qty))
+    try:
+        spec = save_recipe(
+            catalog,
+            RecipeInput(
+                id=None,
+                name=proposal.name,
+                kind=proposal.kind,
+                ingredients=tuple(lines),
+                steps=proposal.steps,
+                storage=proposal.storage,
+                is_fish=proposal.is_fish,
+            ),
+        )
+    except CatalogError as e:
+        # Номера строк save_recipe — среди известных: свои ошибки строк
+        # уже у названий, у остальных строк номер мог бы съехать.
+        if errors:
+            errors.extend(err for err in e.errors if err.loc[0] != "ingredients")
+            raise CatalogError(errors) from e
+        raise
+    if errors:
+        raise CatalogError(errors)
+    return replace(spec, status="draft")
+
+
+def confirm_draft(catalog: Catalog, recipe_id: str) -> RecipeSpec:
+    """Черновик — в пул; в позицию его ставит plan_for, как новый рецепт."""
+    return replace(_draft(catalog, recipe_id), status="active")
+
+
+def discard_draft(catalog: Catalog, recipe_id: str) -> str:
+    """Черновик удаляется (не в архив): в плане его не было, ссылок нет."""
+    return _draft(catalog, recipe_id).id
 
 
 def plan_for(catalog: Catalog, spec: RecipeSpec, first: int) -> RecipeChange:
     """Состав позиций после сохранения spec (8.4b) — с цикла first.
 
-    Новый или вернувшийся из архива обед/ужин встаёт в позицию сам; ушедший
-    в архив убирается из позиций, если он там не единственный своего типа.
-    Рецепт, ставший рыбным, не должен дать лишнюю рыбную позицию.
+    Новый, вернувшийся из архива или подтверждённый черновик (8.6a) обед/ужин
+    встаёт в позицию сам; черновик — никуда; ушедший в архив убирается из
+    позиций, если он там не единственный своего типа. Рецепт, ставший
+    рыбным, не должен дать лишнюю рыбную позицию.
     """
     versions = catalog.slot_versions
-    if spec.kind == MealKind.BREAKFAST:
+    if spec.kind == MealKind.BREAKFAST or spec.status == "draft":
         return RecipeChange(spec, versions)
     existing = catalog.recipes.get(spec.id)
     fish_before = catalog_fish(catalog)
@@ -294,7 +397,7 @@ def plan_for(catalog: Catalog, spec: RecipeSpec, first: int) -> RecipeChange:
                     )
                 ]
             )
-    elif existing is None or existing.status == "archived":
+    elif existing is None or existing.status != "active":
         versions = place_recipe(catalog, versions, spec, first)
     if breaks_fish_rule(
         catalog.slot_versions, versions, first, fish_before, fish_after
@@ -328,6 +431,12 @@ def set_cycle_slot(
                 errors.append(FieldError((field, n), f"Рецепта {rid} нет"))
             elif recipe.kind != kind:
                 errors.append(FieldError((field, n), f"«{recipe.name}» — не {what}"))
+            elif recipe.status == "draft":
+                errors.append(
+                    FieldError(
+                        (field, n), f"«{recipe.name}» — черновик, сначала подтвердите"
+                    )
+                )
             elif recipe.status != "active":
                 errors.append(
                     FieldError(

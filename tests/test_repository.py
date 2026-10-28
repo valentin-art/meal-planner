@@ -187,6 +187,22 @@ def test_catalog_writes_bump_version(tmp_path):
     assert (copy.ingredients, copy.status) == (l1.ingredients[:1], "archived")
 
 
+def test_delete_recipe(tmp_path):
+    # Отброшенный черновик (8.6a) — без строк и шагов.
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    l1 = SEED_CATALOG.recipes["l1"]
+    repo.save_recipe(replace(spec_of(l1), id="l6", status="draft"))
+    assert repo.delete_recipe("l6") == 3
+    assert "l6" not in repo.get_catalog().recipes
+    with closing(sqlite3.connect(repo.db_path)) as conn:
+        for table in ("recipe_ingredients", "recipe_steps"):
+            count = conn.execute(
+                f"SELECT count(*) FROM {table} WHERE recipe_id = 'l6'"
+            ).fetchone()
+            assert count == (0,)
+
+
 def test_catalog_write_without_settings_writes_nothing(tmp_path):
     repo = Repository(tmp_path / "db.sqlite")
     renamed = replace(spec_of(SEED_CATALOG.recipes["l1"]), name="Другое")

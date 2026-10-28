@@ -61,6 +61,7 @@ type SkippedCook = NonNullable<AppState['skipped_cook']>;
 type MealDay = Day & { cycle_index: number; breakfast_id: string; lunch_id: string; dinner_id: string };
 type RunAction = <N extends ActionName>(name: N, payload: ActionPayloads[N]) => Promise<void>;
 type RecipeAction = <N extends RecipeActionName>(name: N, payload: RecipeActionPayloads[N]) => Promise<FieldErrors | null>;
+type DiscardDraft = (id: string) => Promise<FieldErrors | null>;
 type Kind = Recipe['kind'];
 type PlanUse = AppState['recipe_plan_use'][string];
 /** Что открыто в редакторе рецепта: id — правка, null — новый рецепт. */
@@ -81,6 +82,7 @@ export default function MealPlanApp() {
     catalog,
     loadIngredients,
     recipeAction,
+    discardDraft,
     ingredientAction,
     range,
     loadError,
@@ -248,6 +250,7 @@ export default function MealPlanApp() {
             runAction={runAction}
             onEdit={setEditing}
             recipeAction={recipeAction}
+            discardDraft={discardDraft}
             slots={state.cycle_slots}
             cycleOrder={state.cycle_order}
             portionScaling={state.portion_scaling}
@@ -763,6 +766,7 @@ type SettingsTabProps = {
   runAction: RunAction;
   onEdit: (editing: Editing) => void;
   recipeAction: RecipeAction;
+  discardDraft: DiscardDraft;
   slots: AppState['cycle_slots'];
   cycleOrder: AppState['cycle_order'];
   portionScaling: AppState['portion_scaling'];
@@ -780,6 +784,7 @@ function SettingsTab({
   runAction,
   onEdit,
   recipeAction,
+  discardDraft,
   slots,
   cycleOrder,
   portionScaling,
@@ -923,7 +928,7 @@ function SettingsTab({
       <NutritionTargetSection settings={settings} scaling={portionScaling} saveError={saveError} runAction={runAction} />
 
       <CycleSection slots={slots} order={cycleOrder} recipes={recipes} saveError={saveError} runAction={runAction} />
-      <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
+      <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} discardDraft={discardDraft} />
       <IngredientsSection catalog={catalog} loadIngredients={loadIngredients} onEdit={onEditIngredient} />
     </div>
   );
@@ -1008,27 +1013,33 @@ function NutritionTargetSection({ settings, scaling, saveError, runAction }: Nut
   );
 }
 
-// ---------- Блюда: список рецептов, архив (5.5) ----------
+// ---------- Блюда: черновики (8.6a), список рецептов, архив (5.5) ----------
 type DishesSectionProps = {
   recipes: Recipes;
   onEdit: (editing: Editing) => void;
   recipeAction: RecipeAction;
+  discardDraft: DiscardDraft;
 };
 
-function DishesSection({ recipes, onEdit, recipeAction }: DishesSectionProps) {
+function DishesSection({ recipes, onEdit, recipeAction, discardDraft }: DishesSectionProps) {
   // Ошибка архива — у своего рецепта (например, «стоит в цикле, позиция 3»).
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [archiveOpen, setArchiveOpen] = useState(false);
   const archived = KINDS.flatMap(({ kind }) => recipesOfKind(recipes, kind, 'archived'));
+  const drafts = KINDS.flatMap(({ kind }) => recipesOfKind(recipes, kind, 'draft'));
 
-  const run = async (name: 'archive-recipe' | 'restore-recipe', id: string) => {
-    const result = await recipeAction(name, { id });
+  const showResult = (id: string, result: FieldErrors | null) =>
     setErrors((all) => ({ ...all, [id]: result ? Object.values(result).join('; ') : '' }));
-  };
+  const run = async (name: 'archive-recipe' | 'restore-recipe' | 'confirm-draft', id: string) =>
+    showResult(id, await recipeAction(name, { id }));
+  const discard = async (id: string) => showResult(id, await discardDraft(id));
 
-  const row = (r: Recipe, actions: React.ReactNode) => (
+  const row = (r: Recipe, actions: React.ReactNode, kindName?: string) => (
     <li key={r.id} style={{ marginBottom: 6 }}>
-      {r.name} <span style={{ fontSize: 12, color: COLORS.inkSoft }}>≈{r.kcal} ккал · {r.protein}г белка</span>
+      {r.name}{' '}
+      <span style={{ fontSize: 12, color: COLORS.inkSoft }}>
+        {kindName && `${kindName} · `}≈{r.kcal} ккал · {r.protein}г белка
+      </span>
       <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>{actions}</div>
       {errors[r.id] && (
         <p role="alert" style={errorTextStyle}>
@@ -1041,6 +1052,33 @@ function DishesSection({ recipes, onEdit, recipeAction }: DishesSectionProps) {
   return (
     <section style={cardStyle}>
       <h2 style={{ ...sectionHeading, marginTop: 0 }}>Блюда</h2>
+      {drafts.length > 0 && (
+        <div style={{ marginBottom: 12, padding: 10, borderRadius: 10, background: COLORS.accentSoft }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft }}>Черновики ({drafts.length})</div>
+          <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '2px 0 6px' }}>
+            Предложены Assist. В план и покупки попадут только после «В план».
+          </p>
+          <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
+            {drafts.map((r) =>
+              row(
+                r,
+                <>
+                  <button onClick={() => run('confirm-draft', r.id)} style={smallBtnStyle}>
+                    В план
+                  </button>
+                  <button onClick={() => onEdit({ id: r.id, kind: r.kind })} style={smallBtnStyle}>
+                    Изменить
+                  </button>
+                  <button onClick={() => discard(r.id)} style={smallBtnStyle}>
+                    Отбросить
+                  </button>
+                </>,
+                KIND_NAME[r.kind],
+              ),
+            )}
+          </ul>
+        </div>
+      )}
       {KINDS.map(({ kind, title, add }) => (
         <div key={kind} style={{ marginBottom: 12 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 4 }}>{title}</div>
@@ -1219,7 +1257,7 @@ function RecipeEditor({ editing, recipe, planUse, catalog, loadIngredients, reci
         <button onClick={onClose} style={{ ...ghostBtnStyle, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           <ArrowLeft size={14} /> Назад
         </button>
-        <h2 style={{ ...sectionHeading, margin: 0, flex: 1 }}>{recipe ? 'Изменить рецепт' : `${KIND_NAME[draft.kind]}: новый рецепт`}</h2>
+        <h2 style={{ ...sectionHeading, margin: 0, flex: 1 }}>{recipe ? (recipe.status === 'draft' ? 'Изменить черновик' : 'Изменить рецепт') : `${KIND_NAME[draft.kind]}: новый рецепт`}</h2>
         <button onClick={save} disabled={saving} style={{ ...primaryBtnStyle, opacity: saving ? 0.6 : 1 }}>
           Сохранить
         </button>

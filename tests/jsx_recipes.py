@@ -51,7 +51,7 @@ JSX_CATALOG = Catalog(
         for r in JSX_RECIPES.values()
         for i in r.ingredients
     },
-    slots=SEED_CATALOG.slots,
+    slot_versions=SEED_CATALOG.slot_versions,
 )
 
 

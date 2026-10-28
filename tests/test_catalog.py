@@ -7,11 +7,11 @@ from golden_scheduling import SCENARIOS
 from scenario_settings import settings_of
 
 from meal_planner.core.catalog import build_catalog
-from meal_planner.core.models import CycleSlot, MealKind, RecipeSpec
+from meal_planner.core.models import MealKind, RecipeSpec, SlotVersion
 from meal_planner.core.planner import next_shopping_trip
 from meal_planner.core.recipes_data import RECIPE_SPECS
 from meal_planner.core.scheduling import build_schedule
-from meal_planner.core.seed import SEED_CATALOG, seed_ingredients, seed_slots
+from meal_planner.core.seed import SEED_CATALOG, seed_ingredients, seed_slot_versions
 from meal_planner.db.repository import Repository
 
 DEFAULT_2X = settings_of(next(s for s in SCENARIOS if s["name"] == "default_2x"))
@@ -21,7 +21,10 @@ def with_slots(slots: list[tuple[str, str]]):
     return build_catalog(
         seed_ingredients(),
         RECIPE_SPECS.values(),
-        [CycleSlot(k, lunch, dinner) for k, (lunch, dinner) in enumerate(slots, 1)],
+        [
+            SlotVersion(k, 0, (lunch,), (dinner,))
+            for k, (lunch, dinner) in enumerate(slots, 1)
+        ],
     )
 
 
@@ -40,7 +43,7 @@ def test_order_is_kind_then_number():
     ]
     l10 = replace(RECIPE_SPECS["l1"], id="l10")
     specs = [l10, *reversed(RECIPE_SPECS.values())]
-    catalog = build_catalog(seed_ingredients(), specs, seed_slots())
+    catalog = build_catalog(seed_ingredients(), specs, seed_slot_versions())
     assert list(catalog.recipes)[-6:] == ["l10", "d1", "d2", "d3", "d4", "d5"]
 
 
@@ -49,7 +52,7 @@ def test_kcal_follow_ingredient_table():
         replace(i, kcal_100g=0, protein_100g=0) if i.name == "яйца" else i
         for i in seed_ingredients()
     ]
-    catalog = build_catalog(eggs, RECIPE_SPECS.values(), seed_slots())
+    catalog = build_catalog(eggs, RECIPE_SPECS.values(), seed_slot_versions())
     # b1 без яиц: масло 14.2 г и хлеб 60 г.
     assert (catalog.recipes["b1"].kcal, catalog.recipes["b1"].protein) == (255, 8)
     assert SEED_CATALOG.recipes["b1"].kcal == 540

@@ -250,7 +250,6 @@ export default function MealPlanApp() {
             recipeAction={recipeAction}
             slots={state.cycle_slots}
             cycleOrder={state.cycle_order}
-            planUse={state.recipe_plan_use}
             catalog={catalog}
             loadIngredients={loadIngredients}
             onEditIngredient={setEditingIngredient}
@@ -750,7 +749,6 @@ type SettingsTabProps = {
   recipeAction: RecipeAction;
   slots: AppState['cycle_slots'];
   cycleOrder: AppState['cycle_order'];
-  planUse: AppState['recipe_plan_use'];
   catalog: IngredientsCatalog | null;
   loadIngredients: () => Promise<void>;
   onEditIngredient: (id: number | 'new') => void;
@@ -767,7 +765,6 @@ function SettingsTab({
   recipeAction,
   slots,
   cycleOrder,
-  planUse,
   catalog,
   loadIngredients,
   onEditIngredient,
@@ -907,14 +904,7 @@ function SettingsTab({
 
       <NutritionTargetSection settings={settings} saveError={saveError} runAction={runAction} />
 
-      <CycleSection
-        slots={slots}
-        order={cycleOrder}
-        recipes={recipes}
-        planUse={planUse}
-        saveError={saveError}
-        runAction={runAction}
-      />
+      <CycleSection slots={slots} order={cycleOrder} recipes={recipes} saveError={saveError} runAction={runAction} />
       <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
       <IngredientsSection catalog={catalog} loadIngredients={loadIngredients} onEdit={onEditIngredient} />
     </div>
@@ -1384,65 +1374,105 @@ function ErrorText({ errors, at }: { errors: FieldErrors; at: string }) {
   );
 }
 
-// ---------- Цикл: обед и ужин по позициям (5.6) ----------
-const SLOT_WARNING: Record<PlanUse, string> = {
-  bought: 'Продукты на эту позицию уже куплены: замена изменит текущие дни.',
-  next_trip: 'Позиция в ближайшей закупке: список покупок изменится.',
-};
-
+// ---------- Цикл: обеды и ужины по позициям (5.6, 8.4b) ----------
 type CycleSectionProps = {
   slots: AppState['cycle_slots'];
   order: AppState['cycle_order'];
   recipes: Recipes;
-  planUse: AppState['recipe_plan_use'];
   saveError: SaveError | null;
   runAction: RunAction;
 };
 
-function CycleSection({ slots, order, recipes, planUse, saveError, runAction }: CycleSectionProps) {
-  const lunches = recipesOfKind(recipes, 'lunch');
-  const dinners = recipesOfKind(recipes, 'dinner');
+type Slot = AppState['cycle_slots'][number];
+
+function CycleSection({ slots, order, recipes, saveError, runAction }: CycleSectionProps) {
+  // Состав позиции — списками целиком; с какого цикла он действует, решает сервер.
+  const save = (slot: Slot, change: { lunch_ids?: string[]; dinner_ids?: string[] }) =>
+    runAction('set-cycle-slot', { slot: slot.slot, lunch_ids: slot.lunch_ids, dinner_ids: slot.dinner_ids, ...change });
   return (
     <section style={cardStyle}>
       <h2 style={{ ...sectionHeading, marginTop: 0 }}>Цикл из 5 блюд</h2>
-      {slots.map((slot) => {
-        // «Куплено» важнее «в закупке» — как у признака на сервере.
-        const uses = [planUse[slot.lunch_id], planUse[slot.dinner_id]];
-        const use = uses.includes('bought') ? 'bought' : uses.includes('next_trip') ? 'next_trip' : undefined;
-        const pick = (change: { lunch_id?: string; dinner_id?: string }) =>
-          runAction('set-cycle-slot', { slot: slot.slot, lunch_id: slot.lunch_id, dinner_id: slot.dinner_id, ...change });
-        return (
-          <div key={slot.slot} style={{ marginBottom: 10 }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 4 }}>Блюдо №{slot.slot}</div>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <select
-                aria-label={`Обед №${slot.slot}`}
-                value={slot.lunch_id}
-                onChange={(e) => pick({ lunch_id: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              >
-                {lunches.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-              <select
-                aria-label={`Ужин №${slot.slot}`}
-                value={slot.dinner_id}
-                onChange={(e) => pick({ dinner_id: e.target.value })}
-                style={{ ...inputStyle, flex: 1 }}
-              >
-                {dinners.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
-            </div>
-            {use && <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>{SLOT_WARNING[use]}</p>}
+      <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '0 0 8px' }}>
+        Несколько вариантов в позиции идут по кругу, по одному на цикл. Новый обед или ужин встаёт в позицию сам.
+      </p>
+      {slots.map((slot) => (
+        <div key={slot.slot} style={{ marginBottom: 10 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: COLORS.primarySoft, marginBottom: 4 }}>Блюдо №{slot.slot}</div>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <VariantList
+              label="Обед"
+              add="+ обед"
+              slot={slot.slot}
+              ids={slot.lunch_ids}
+              options={recipesOfKind(recipes, 'lunch')}
+              onChange={(lunch_ids) => save(slot, { lunch_ids })}
+            />
+            <VariantList
+              label="Ужин"
+              add="+ ужин"
+              slot={slot.slot}
+              ids={slot.dinner_ids}
+              options={recipesOfKind(recipes, 'dinner')}
+              onChange={(dinner_ids) => save(slot, { dinner_ids })}
+            />
           </div>
-        );
-      })}
+          {slot.changes_from && (
+            <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>
+              Изменение — с {weekdayShort(slot.changes_from)} {fmtDate(slot.changes_from)}, купленное не меняется.
+            </p>
+          )}
+        </div>
+      ))}
       <FieldError error={saveError} action="set-cycle-slot" />
       <CycleOrderControls order={order} saveError={saveError} runAction={runAction} />
     </section>
+  );
+}
+
+type VariantListProps = {
+  label: string;
+  add: string;
+  slot: number;
+  ids: string[];
+  options: Recipe[];
+  onChange: (ids: string[]) => void;
+};
+
+function VariantList({ label, add, slot, ids, options, onChange }: VariantListProps) {
+  // «+» добавляет первый рецепт, которого ещё нет в позиции, — дальше его меняют в списке.
+  const unused = options.find((r) => !ids.includes(r.id));
+  const smallBtn = { ...ghostBtnStyle, padding: '2px 8px', fontSize: 12 };
+  return (
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+      {ids.map((id, i) => (
+        <div key={i} style={{ display: 'flex', gap: 4 }}>
+          <select
+            aria-label={`${label} №${slot}${ids.length > 1 ? `, вариант ${i + 1}` : ''}`}
+            value={id}
+            onChange={(e) => onChange(ids.map((x, j) => (j === i ? e.target.value : x)))}
+            style={{ ...inputStyle, flex: 1, minWidth: 0 }}
+          >
+            {options.map((r) => (
+              <option key={r.id} value={r.id}>{r.name}</option>
+            ))}
+          </select>
+          {ids.length > 1 && (
+            <button
+              aria-label={`Убрать вариант ${i + 1} (${label.toLowerCase()} №${slot})`}
+              onClick={() => onChange(ids.filter((_, j) => j !== i))}
+              style={smallBtn}
+            >
+              ×
+            </button>
+          )}
+        </div>
+      ))}
+      {unused && (
+        <button onClick={() => onChange([...ids, unused.id])} style={{ ...smallBtn, alignSelf: 'flex-start' }}>
+          {add}
+        </button>
+      )}
+    </div>
   );
 }
 

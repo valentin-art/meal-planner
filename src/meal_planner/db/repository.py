@@ -18,12 +18,12 @@ from meal_planner.core.models import (
     Catalog,
     CatalogIngredient,
     CycleShuffle,
-    CycleSlot,
     Ingredient,
     MealKind,
     RecipeSpec,
     RecipeStorage,
     Settings,
+    SlotVersion,
 )
 from meal_planner.db.schema import migrate
 
@@ -151,12 +151,38 @@ def _read_catalog(conn: sqlite3.Connection) -> Catalog:
             " storage_micro, storage_after FROM recipes"
         )
     ]
-    slots = [
-        CycleSlot(*row)
-        for row in conn.execute("SELECT slot, lunch_id, dinner_id FROM cycle_slots")
-    ]
     # Порядок рецептов задаёт build_catalog, не rowid (его меняет VACUUM).
-    return build_catalog(ingredients, recipes, slots)
+    return build_catalog(ingredients, recipes, _read_slot_versions(conn))
+
+
+def _read_slot_versions(conn: sqlite3.Connection) -> list[SlotVersion]:
+    ids: dict[tuple[int, int], dict[str, list[str]]] = {}
+    for slot, from_cycle, kind, recipe_id in conn.execute(
+        "SELECT slot, from_cycle, kind, recipe_id FROM slot_versions"
+        " ORDER BY slot, from_cycle, kind, position"
+    ):
+        lists = ids.setdefault((slot, from_cycle), {"lunch": [], "dinner": []})
+        lists[kind].append(recipe_id)
+    return [
+        SlotVersion(slot, from_cycle, tuple(lists["lunch"]), tuple(lists["dinner"]))
+        for (slot, from_cycle), lists in ids.items()
+    ]
+
+
+def _write_slot_versions(
+    conn: sqlite3.Connection, versions: tuple[SlotVersion, ...]
+) -> None:
+    conn.execute("DELETE FROM slot_versions")
+    conn.executemany(
+        "INSERT INTO slot_versions (slot, from_cycle, kind, position, recipe_id)"
+        " VALUES (?, ?, ?, ?, ?)",
+        [
+            (v.slot, v.from_cycle, kind, position, recipe_id)
+            for v in versions
+            for kind, ids in (("lunch", v.lunch_ids), ("dinner", v.dinner_ids))
+            for position, recipe_id in enumerate(ids, start=1)
+        ],
+    )
 
 
 _SAVE_RECIPE = """
@@ -253,8 +279,14 @@ class Repository:
     # Запись каталога (5.4): проверено в core/catalog_actions; каждая — одна
     # транзакция вместе с версией и возвращает новую версию.
 
-    def save_recipe(self, recipe: RecipeSpec) -> int:
-        """Рецепт целиком: ингредиенты и шаги заменяются; статус — тоже здесь."""
+    def save_recipe(
+        self, recipe: RecipeSpec, slot_versions: tuple[SlotVersion, ...] | None = None
+    ) -> int:
+        """Рецепт целиком: ингредиенты и шаги заменяются; статус — тоже здесь.
+
+        slot_versions — состав позиций после правки (8.4b), в той же транзакции;
+        None — не трогать.
+        """
         storage = recipe.storage
         with self._connect() as conn:
             conn.execute(
@@ -290,14 +322,14 @@ class Repository:
                     for position, text in enumerate(recipe.steps, start=1)
                 ],
             )
+            if slot_versions is not None:
+                _write_slot_versions(conn, slot_versions)
             return _bump_version(conn)
 
-    def set_cycle_slot(self, slot: CycleSlot) -> int:
+    def save_slot_versions(self, versions: tuple[SlotVersion, ...]) -> int:
+        """Состав позиций цикла целиком (8.4b)."""
         with self._connect() as conn:
-            conn.execute(
-                "UPDATE cycle_slots SET lunch_id = ?, dinner_id = ? WHERE slot = ?",
-                (slot.lunch_id, slot.dinner_id, slot.slot),
-            )
+            _write_slot_versions(conn, versions)
             return _bump_version(conn)
 
     def get_cooked(self) -> frozenset[tuple[date, str]]:

@@ -1,5 +1,8 @@
 """Действия над каталогом (5.4): правила правки рецептов, слотов и справочника.
 
+С 8.4b правка рецепта может менять и состав позиций цикла (plan_for):
+новый обед/ужин раскладывается сам, архивный убирается — с цикла first.
+
 Чистые функции: каталог и запрос → что записать. Ошибки собираются все
 сразу (форма рецепта показывает их у полей); loc — путь к полю в теле
 запроса. Ккал и белок не принимаются — их считает build_catalog (5.1).
@@ -12,16 +15,25 @@ from meal_planner.core.catalog import spec_of
 from meal_planner.core.models import (
     Catalog,
     CatalogIngredient,
-    CycleSlot,
     Ingredient,
     MealKind,
     RecipeSpec,
     RecipeStatus,
     RecipeStorage,
+    SlotVersion,
 )
 from meal_planner.core.nutrition import nutrition
 from meal_planner.core.scheduling import ROTATION_BREAKFASTS
 from meal_planner.core.shopping import CATEGORY_ORDER
+from meal_planner.core.slot_pool import (
+    FISH_MESSAGE,
+    KIND_WHAT,
+    breaks_fish_rule,
+    catalog_fish,
+    place_recipe,
+    remove_recipe,
+    replace_slot,
+)
 
 UNITS = ("г", "мл", "шт", "ст.л.", "зубчик")
 WEIGHT_UNITS = ("г", "мл")  # граммы в единице не нужны: 1:1
@@ -64,6 +76,14 @@ class RecipeInput:
     steps: tuple[str, ...]
     storage: RecipeStorage | None
     is_fish: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class RecipeChange:
+    """Что записать при правке рецепта: сам рецепт и состав позиций (8.4b)."""
+
+    recipe: RecipeSpec
+    slot_versions: tuple[SlotVersion, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -229,19 +249,11 @@ def _existing(catalog: Catalog, recipe_id: str) -> RecipeSpec:
 
 
 def archive_recipe(catalog: Catalog, recipe_id: str) -> RecipeSpec:
-    """В архив: из пула пропадает, но не удаляется (5.1). Повтор — не ошибка."""
+    """В архив: из пула пропадает, но не удаляется (5.1). Повтор — не ошибка.
+
+    Из позиций цикла рецепт убирает plan_for (8.4b).
+    """
     spec = _existing(catalog, recipe_id)
-    for slot in catalog.slots:
-        if recipe_id in (slot.lunch_id, slot.dinner_id):
-            raise CatalogError(
-                [
-                    FieldError(
-                        ("id",),
-                        f"«{spec.name}» стоит в цикле, позиция {slot.slot} —"
-                        " сначала замените его",
-                    )
-                ]
-            )
     if recipe_id in ROTATION_BREAKFASTS:
         raise CatalogError(
             [FieldError(("id",), f"«{spec.name}» — завтрак в ротации, в архив нельзя")]
@@ -253,30 +265,86 @@ def restore_recipe(catalog: Catalog, recipe_id: str) -> RecipeSpec:
     return replace(_existing(catalog, recipe_id), status="active")
 
 
-def set_cycle_slot(
-    catalog: Catalog, slot: int, lunch_id: str, dinner_id: str
-) -> CycleSlot:
-    errors = []
-    if not 1 <= slot <= len(catalog.slots):
-        errors.append(
-            FieldError(("slot",), f"Позиция цикла — от 1 до {len(catalog.slots)}")
-        )
-    for field, rid, kind, what in (
-        ("lunch_id", lunch_id, MealKind.LUNCH, "обед"),
-        ("dinner_id", dinner_id, MealKind.DINNER, "ужин"),
-    ):
-        recipe = catalog.recipes.get(rid)
-        if recipe is None:
-            errors.append(FieldError((field,), f"Рецепта {rid} нет"))
-        elif recipe.kind != kind:
-            errors.append(FieldError((field,), f"«{recipe.name}» — не {what}"))
-        elif recipe.status != "active":
-            errors.append(
-                FieldError((field,), f"«{recipe.name}» в архиве — сначала верните его")
+def plan_for(catalog: Catalog, spec: RecipeSpec, first: int) -> RecipeChange:
+    """Состав позиций после сохранения spec (8.4b) — с цикла first.
+
+    Новый или вернувшийся из архива обед/ужин встаёт в позицию сам; ушедший
+    в архив убирается из позиций, если он там не единственный своего типа.
+    Рецепт, ставший рыбным, не должен дать лишнюю рыбную позицию.
+    """
+    versions = catalog.slot_versions
+    if spec.kind == MealKind.BREAKFAST:
+        return RecipeChange(spec, versions)
+    existing = catalog.recipes.get(spec.id)
+    fish_before = catalog_fish(catalog)
+
+    def fish_after(rid: str) -> bool:
+        return spec.is_fish if rid == spec.id else fish_before(rid)
+
+    if spec.status == "archived":
+        versions, only = remove_recipe(catalog, versions, spec.id, first)
+        if only:
+            what = KIND_WHAT[spec.kind]
+            raise CatalogError(
+                [
+                    FieldError(
+                        ("id",),
+                        f"«{spec.name}» — единственный {what} позиции"
+                        f" №{only[0]} — сначала поставьте туда другой",
+                    )
+                ]
             )
+    elif existing is None or existing.status == "archived":
+        versions = place_recipe(catalog, versions, spec, first)
+    if breaks_fish_rule(
+        catalog.slot_versions, versions, first, fish_before, fish_after
+    ):
+        raise CatalogError([FieldError(("is_fish",), FISH_MESSAGE)])
+    return RecipeChange(spec, versions)
+
+
+def set_cycle_slot(
+    catalog: Catalog,
+    slot: int,
+    lunch_ids: tuple[str, ...],
+    dinner_ids: tuple[str, ...],
+    first: int,
+) -> tuple[SlotVersion, ...]:
+    """Состав позиции целиком (8.4b) — с цикла first; списки ≥ 1, без повторов."""
+    errors = []
+    count = catalog.slot_count
+    if not 1 <= slot <= count:
+        errors.append(FieldError(("slot",), f"Позиция цикла — от 1 до {count}"))
+    for field, ids, kind in (
+        ("lunch_ids", lunch_ids, MealKind.LUNCH),
+        ("dinner_ids", dinner_ids, MealKind.DINNER),
+    ):
+        what = KIND_WHAT[kind]
+        if not ids:
+            errors.append(FieldError((field,), f"Нужен хотя бы один {what}"))
+        for n, rid in enumerate(ids):
+            recipe = catalog.recipes.get(rid)
+            if recipe is None:
+                errors.append(FieldError((field, n), f"Рецепта {rid} нет"))
+            elif recipe.kind != kind:
+                errors.append(FieldError((field, n), f"«{recipe.name}» — не {what}"))
+            elif recipe.status != "active":
+                errors.append(
+                    FieldError(
+                        (field, n), f"«{recipe.name}» в архиве — сначала верните его"
+                    )
+                )
+            elif rid in ids[:n]:
+                errors.append(
+                    FieldError((field, n), f"«{recipe.name}» уже в этой позиции")
+                )
     if errors:
         raise CatalogError(errors)
-    return CycleSlot(slot=slot, lunch_id=lunch_id, dinner_id=dinner_id)
+    versions = replace_slot(catalog.slot_versions, slot, first, lunch_ids, dinner_ids)
+    fish = catalog_fish(catalog)
+    if breaks_fish_rule(catalog.slot_versions, versions, first, fish, fish):
+        raise CatalogError([FieldError(("slot",), FISH_MESSAGE)])
+    return versions
 
 
 def save_ingredient(catalog: Catalog, ingredient: IngredientInput) -> CatalogIngredient:

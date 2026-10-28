@@ -58,6 +58,7 @@ from meal_planner.core.models import (
     default_settings,
 )
 from meal_planner.core.planner import recompute, shopping_with_stock
+from meal_planner.core.scheduling import first_free_cycle, settle_skip
 from meal_planner.core.validation import (
     SEED_LIMIT,
     settings_errors,
@@ -210,17 +211,20 @@ def apply_catalog_action[T](
     today: date,
     date_from: date | None,
     date_to: date | None,
-    change: Callable[[Catalog], T],
+    change: Callable[[Catalog, int], T],
     write: Callable[[T], int],
 ) -> tuple[AppStateOut, Catalog, T]:
     """Правка каталога (5.4): core проверяет, репозиторий пишет с версией.
 
-    Возвращает новое состояние, перечитанный каталог (ккал пересчитаны) и
-    то, что записано.
+    change получает и первый некупленный цикл: с него меняется состав
+    позиций (8.4b). Возвращает новое состояние, перечитанный каталог (ккал
+    пересчитаны) и то, что записано.
     """
     check_range(today, date_from, date_to)
+    current, _ = current_settings(repo, today)
+    first = first_free_cycle(settle_skip(current, today), today)
     try:
-        result = change(catalog)
+        result = change(catalog, first)
     except CatalogError as e:
         raise unprocessable(
             *((["body", *err.loc], err.message) for err in e.errors)
@@ -242,11 +246,18 @@ def recipe_action(
     date_to: date | None,
     change: Callable[[Catalog], RecipeSpec],
 ) -> RecipeActionOut:
-    state, updated, spec = apply_catalog_action(
-        repo, catalog, today, date_from, date_to, change, repo.save_recipe
+    """Правка рецепта и, если нужно, состава позиций (8.4b) — одной записью."""
+    state, updated, result = apply_catalog_action(
+        repo,
+        catalog,
+        today,
+        date_from,
+        date_to,
+        lambda c, first: catalog_actions.plan_for(c, change(c), first),
+        lambda r: repo.save_recipe(r.recipe, r.slot_versions),
     )
     return RecipeActionOut(
-        state=state, recipe=to_recipe_out(updated, updated.recipes[spec.id])
+        state=state, recipe=to_recipe_out(updated, updated.recipes[result.recipe.id])
     )
 
 
@@ -613,10 +624,10 @@ def create_app() -> FastAPI:
             today,
             date_from,
             date_to,
-            lambda c: catalog_actions.set_cycle_slot(
-                c, body.slot, body.lunch_id, body.dinner_id
+            lambda c, first: catalog_actions.set_cycle_slot(
+                c, body.slot, tuple(body.lunch_ids), tuple(body.dinner_ids), first
             ),
-            repo.set_cycle_slot,
+            repo.save_slot_versions,
         )
         return state
 
@@ -635,7 +646,7 @@ def create_app() -> FastAPI:
             today,
             date_from,
             date_to,
-            lambda c: catalog_actions.save_ingredient(c, body.to_input()),
+            lambda c, _: catalog_actions.save_ingredient(c, body.to_input()),
             repo.save_ingredient,
         )
         ingredient = next(i for i in updated.ingredients.values() if i.id == saved.id)

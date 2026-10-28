@@ -19,7 +19,7 @@ from meal_planner.core.models import MealKind, RecipeStorage
 from meal_planner.core.planner import next_shopping_trip, recompute
 from meal_planner.core.recipes_data import RECIPE_SPECS
 from meal_planner.core.scheduling import build_schedule
-from meal_planner.core.seed import SEED_CATALOG, seed_ingredients, seed_slots
+from meal_planner.core.seed import SEED_CATALOG, seed_ingredients, seed_slot_versions
 
 DEFAULT_2X = settings_of(next(s for s in SCENARIOS if s["name"] == "default_2x"))
 ID = {i.name: i.id for i in SEED_CATALOG.ingredients.values()}
@@ -51,7 +51,7 @@ def errors(call) -> list[tuple[tuple, str]]:
 
 def with_specs(*extra):
     return build_catalog(
-        seed_ingredients(), [*RECIPE_SPECS.values(), *extra], seed_slots()
+        seed_ingredients(), [*RECIPE_SPECS.values(), *extra], seed_slot_versions()
     )
 
 
@@ -161,13 +161,16 @@ def test_archive_and_restore_unscheduled():
     assert ca.restore_recipe(SEED_CATALOG, "b3").status == "active"
 
 
-def test_slot_recipe_is_not_archived():
-    assert errors(lambda: ca.archive_recipe(SEED_CATALOG, "d3")) == [
+def test_only_slot_recipe_is_not_archived():
+    # С 8.4b рецепт из цикла уходит в архив, если у позиции есть другой
+    # вариант (test_slot_pool); единственный — нет.
+    archived = ca.archive_recipe(SEED_CATALOG, "d3")
+    assert errors(lambda: ca.plan_for(SEED_CATALOG, archived, 2)) == [
         (
             ("id",),
             (
-                "«Тёплый салат с креветками» стоит в цикле, позиция 3 — сначала"
-                " замените его"
+                "«Тёплый салат с креветками» — единственный ужин позиции №3 —"
+                " сначала поставьте туда другой"
             ),
         )
     ]
@@ -189,20 +192,31 @@ def test_archive_unknown():
 
 
 def test_set_cycle_slot():
-    slot = ca.set_cycle_slot(SEED_CATALOG, 2, "l1", "d5")
-    assert (slot.slot, slot.lunch_id, slot.dinner_id) == (2, "l1", "d5")
+    # Состав позиции целиком — новой версией с цикла first (8.4b).
+    versions = ca.set_cycle_slot(SEED_CATALOG, 2, ("l1",), ("d5",), 3)
+    catalog = replace(SEED_CATALOG, slot_versions=versions)
+    assert catalog.slot_at(2, 2) == SEED_CATALOG.slot_at(2, 2)
+    assert (catalog.slot_at(2, 3).lunch_id, catalog.slot_at(2, 3).dinner_id) == (
+        "l1",
+        "d5",
+    )
 
 
 def test_cycle_slot_errors():
     archived = replace(RECIPE_SPECS["d1"], id="d6", status="archived")
-    assert errors(lambda: ca.set_cycle_slot(with_specs(archived), 6, "d1", "d6")) == [
+    catalog = with_specs(archived)
+    assert errors(lambda: ca.set_cycle_slot(catalog, 6, ("d1",), ("d6",), 0)) == [
         (("slot",), "Позиция цикла — от 1 до 5"),
-        (("lunch_id",), "«Салат с курицей гриль» — не обед"),
-        (("dinner_id",), "«Салат с курицей гриль» в архиве — сначала верните его"),
+        (("lunch_ids", 0), "«Салат с курицей гриль» — не обед"),
+        (("dinner_ids", 0), "«Салат с курицей гриль» в архиве — сначала верните его"),
     ]
-    assert errors(lambda: ca.set_cycle_slot(SEED_CATALOG, 1, "l9", "d1")) == [
-        (("lunch_id",), "Рецепта l9 нет")
+    assert errors(lambda: ca.set_cycle_slot(SEED_CATALOG, 1, ("l9",), (), 0)) == [
+        (("lunch_ids", 0), "Рецепта l9 нет"),
+        (("dinner_ids",), "Нужен хотя бы один ужин"),
     ]
+    assert errors(
+        lambda: ca.set_cycle_slot(SEED_CATALOG, 1, ("l1", "l1"), ("d1",), 0)
+    ) == [(("lunch_ids", 1), "«Курица с киноа и овощами» уже в этой позиции")]
 
 
 # --- save-ingredient ---

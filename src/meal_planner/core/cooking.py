@@ -105,9 +105,8 @@ def batch_dishes(
     """
     days = build_schedule(catalog, settings, *cook_window(settings, cook_date))
     portions: dict[str, int] = {}
-    for k, n in slot_portions(days).items():
-        slot = catalog.slot(k)
-        for recipe_id in (slot.lunch_id, slot.dinner_id):
+    for pair, n in slot_portions(days).items():
+        for recipe_id in pair:
             portions[recipe_id] = portions.get(recipe_id, 0) + n
     return [(catalog.recipes[rid], n) for rid, n in portions.items()]
 

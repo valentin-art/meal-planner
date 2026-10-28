@@ -28,7 +28,9 @@ def test_dish_index_and_breakfast_match_golden(scenario):
 
 
 def test_fish_priority_matches_golden():
-    assert {k: fish_priority(SEED_CATALOG, k) for k in range(1, 6)} == FISH_PRIORITY
+    assert {
+        k: fish_priority(SEED_CATALOG, SEED_CATALOG.slot_at(k, 0)) for k in range(1, 6)
+    } == FISH_PRIORITY
 
 
 @pytest.mark.parametrize(

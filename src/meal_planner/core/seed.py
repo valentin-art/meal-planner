@@ -6,7 +6,12 @@ golden и тесты core/ (5.3).
 """
 
 from meal_planner.core.catalog import build_catalog
-from meal_planner.core.models import CatalogIngredient, CycleSlot, Ingredient
+from meal_planner.core.models import (
+    CatalogIngredient,
+    CycleSlot,
+    Ingredient,
+    SlotVersion,
+)
 from meal_planner.core.nutrition import GRAMS_PER_UNIT, PER_100G
 from meal_planner.core.recipes_data import RECIPE_SPECS, STORE_PIECES
 
@@ -54,4 +59,13 @@ def seed_slots() -> tuple[CycleSlot, ...]:
     )
 
 
-SEED_CATALOG = build_catalog(seed_ingredients(), RECIPE_SPECS.values(), seed_slots())
+def seed_slot_versions() -> tuple[SlotVersion, ...]:
+    """Слоты сида как версии с цикла 0, по одному варианту (8.4b)."""
+    return tuple(
+        SlotVersion(s.slot, 0, (s.lunch_id,), (s.dinner_id,)) for s in seed_slots()
+    )
+
+
+SEED_CATALOG = build_catalog(
+    seed_ingredients(), RECIPE_SPECS.values(), seed_slot_versions()
+)

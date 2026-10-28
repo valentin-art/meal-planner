@@ -9,10 +9,15 @@ from pathlib import Path
 
 import pytest
 
-from meal_planner.core.models import Settings
+from meal_planner.core.models import Settings, SlotVersion
 from meal_planner.core.nutrition import GRAMS_PER_UNIT, PER_100G
 from meal_planner.core.recipes_data import RECIPE_SPECS, STORE_PIECES
-from meal_planner.core.seed import DINNER_IDS, LUNCH_IDS, seed_ingredients
+from meal_planner.core.seed import (
+    DINNER_IDS,
+    LUNCH_IDS,
+    SEED_CATALOG,
+    seed_ingredients,
+)
 from meal_planner.db import schema
 from meal_planner.db.repository import Repository, StoredSettings
 from meal_planner.db.schema import MIGRATIONS, SchemaTooNewError, user_version
@@ -24,7 +29,7 @@ CATALOG_TABLES = {
     "recipes",
     "recipe_ingredients",
     "recipe_steps",
-    "cycle_slots",
+    "slot_versions",  # 8.4b, вместо cycle_slots
 }
 ALL_TABLES = {
     "settings",
@@ -93,7 +98,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 6
+        assert user_version(conn) == len(MIGRATIONS) == 7
     assert tables(db) == ALL_TABLES
 
 
@@ -123,7 +128,9 @@ def test_seeded_ingredients_match_constants(db):
 def test_seeded_slots_and_statuses(db):
     with connect(db) as conn:
         slots = conn.execute(
-            "SELECT slot, lunch_id, dinner_id FROM cycle_slots ORDER BY slot"
+            "SELECT l.slot, l.recipe_id, d.recipe_id FROM slot_versions l"
+            " JOIN slot_versions d ON d.slot = l.slot AND d.kind = 'dinner'"
+            " WHERE l.kind = 'lunch' AND l.from_cycle = 0 ORDER BY l.slot"
         ).fetchall()
         statuses = dict(conn.execute("SELECT id, status FROM recipes"))
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
@@ -188,8 +195,22 @@ def test_cycle_shuffles_migration_keeps_settings(tmp_path, monkeypatch):
         )
     repo = Repository(path)
     with connect(path) as conn:
-        assert user_version(conn) == 6
+        assert user_version(conn) == len(MIGRATIONS)
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
+
+
+def test_slot_versions_migration_keeps_slots(tmp_path, monkeypatch):
+    # БД на v6 (до 8.4b) с правленым слотом: он переезжает версией с цикла 0.
+    path = tmp_path / "v6.db"
+    monkeypatch.setattr(schema, "MIGRATIONS", MIGRATIONS[:6])
+    Repository(path)
+    monkeypatch.undo()
+    with connect(path) as conn, conn:
+        conn.execute("UPDATE cycle_slots SET lunch_id = 'l4' WHERE slot = 1")
+    catalog = Repository(path).get_catalog()
+    assert "cycle_slots" not in tables(path)
+    assert catalog.slot_versions[0] == SlotVersion(1, 0, ("l4",), ("d1",))
+    assert catalog.slot_versions[1:] == SEED_CATALOG.slot_versions[1:]
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):
@@ -222,7 +243,6 @@ def test_foreign_keys_are_enforced(db):
     repo = Repository(db)
     with pytest.raises(sqlite3.IntegrityError), repo._connect() as conn:
         conn.execute(
-            "INSERT INTO cycle_slots (slot, lunch_id, dinner_id)"
-            " VALUES (1, 'нет', 'd1') ON CONFLICT (slot) DO UPDATE"
-            " SET lunch_id = excluded.lunch_id"
+            "INSERT INTO slot_versions (slot, from_cycle, kind, position, recipe_id)"
+            " VALUES (1, 2, 'lunch', 1, 'нет')"
         )

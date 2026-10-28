@@ -121,8 +121,11 @@ class IngredientsOut(BaseModel):
 
 class CycleSlotOut(BaseModel):
     slot: int  # 1..5 — позиция ротации
-    lunch_id: str
-    dinner_id: str
+    # Варианты по кругу, цикл за циклом (8.4b); последняя версия состава.
+    lunch_ids: list[str]
+    dinner_ids: list[str]
+    # С какого дня действует последняя правка позиции; null — уже действует.
+    changes_from: date | None
 
 
 class DayOut(BaseModel):
@@ -261,8 +264,9 @@ class RecipeIdIn(BaseModel):
 
 class SetCycleSlotIn(BaseModel):
     slot: int = Field(ge=1, le=5)
-    lunch_id: str
-    dinner_id: str
+    # Состав позиции целиком (8.4b); пустой список отклоняет core — по-русски.
+    lunch_ids: list[str]
+    dinner_ids: list[str]
 
 
 class SaveIngredientIn(BaseModel):
@@ -471,7 +475,7 @@ class AppStateOut(BaseModel):
     # Рецепты в плане (5.1): "bought" — продукты уже куплены, "next_trip" — в
     # ближайшей закупке; остальных нет. Правка такого рецепта меняет план.
     recipe_plan_use: dict[str, PlanUse]
-    cycle_slots: list[CycleSlotOut]  # какой обед и ужин в каждой позиции (5.6)
+    cycle_slots: list[CycleSlotOut]  # обеды и ужины каждой позиции (5.6, 8.4b)
     cycle_order: CycleOrderOut
 
 
@@ -649,7 +653,12 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         can_skip_next_cook=s.can_skip_next_cook,
         recipe_plan_use=dict(s.plan_use),
         cycle_slots=[
-            CycleSlotOut(slot=c.slot, lunch_id=c.lunch_id, dinner_id=c.dinner_id)
+            CycleSlotOut(
+                slot=c.slot,
+                lunch_ids=list(c.lunch_ids),
+                dinner_ids=list(c.dinner_ids),
+                changes_from=c.changes_from,
+            )
             for c in s.slots
         ],
         cycle_order=CycleOrderOut(

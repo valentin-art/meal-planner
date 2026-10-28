@@ -8,6 +8,7 @@ getIngredients().
 """
 
 import json
+from dataclasses import replace
 from datetime import date, timedelta
 
 from meal_planner.api.schemas import (
@@ -15,15 +16,32 @@ from meal_planner.api.schemas import (
     to_ingredients_out,
     to_recipes_out,
 )
-from meal_planner.core.models import CycleShuffle, Settings, default_settings
+from meal_planner.core.models import (
+    Catalog,
+    CycleShuffle,
+    Settings,
+    SlotVersion,
+    default_settings,
+)
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
 
 PAGE_SIZE = 14  # как PAGE_SIZE/LOAD_STEP во фронтенде
 
+# Позиция 1 с двумя обедами с цикла 3 (8.4b): l4 стоит и в позиции 4 —
+# новых рецептов не нужно, справочник общий для всех сценариев.
+SLOT_POOL_CATALOG = replace(
+    SEED_CATALOG,
+    slot_versions=(
+        SlotVersion(1, 0, ("l1",), ("d1",)),
+        SlotVersion(1, 3, ("l1", "l4"), ("d1",)),
+        *SEED_CATALOG.slot_versions[1:],
+    ),
+)
+
 # (имя, сегодня, сохранённые настройки или None — первый запуск: первый GET
-# сохраняет дефолты, version 1)
-SCENARIOS = [
+# сохраняет дефолты, version 1[, каталог — по умолчанию сид])
+SCENARIOS: list[tuple] = [
     # день 0 сегодня: якорь по умолчанию — завтра
     ("defaults", date(2026, 11, 9), None),
     # сегодня — день готовки
@@ -73,27 +91,40 @@ SCENARIOS = [
             cycle_shuffles=(CycleShuffle(1, 42), CycleShuffle(3, 7)),
         ),
     ),
+    # два обеда в позиции 1 с цикла 3: партия с чт 19.11 (8.4b)
+    (
+        "slot_pool",
+        date(2026, 11, 9),
+        Settings(date(2026, 11, 5), 2, 3, 6, "same"),
+        SLOT_POOL_CATALOG,
+    ),
 ]
 
 
 def state_json(
-    settings: Settings, today: date, version: int, date_from=None, date_to=None
+    catalog: Catalog,
+    settings: Settings,
+    today: date,
+    version: int,
+    date_from=None,
+    date_to=None,
 ) -> dict:
     out = to_app_state_out(
-        recompute(SEED_CATALOG, settings, today, date_from, date_to, version)
+        recompute(catalog, settings, today, date_from, date_to, version)
     )
     return out.model_dump(mode="json")
 
 
 def build() -> dict:
     scenarios = []
-    for name, today, saved in SCENARIOS:
+    for name, today, saved, *rest in SCENARIOS:
+        catalog = rest[0] if rest else SEED_CATALOG
         settings = saved or default_settings(today)
         more_to = today + timedelta(days=2 * PAGE_SIZE - 1)
         responses = {
-            "api/state": state_json(settings, today, 1),
+            "api/state": state_json(catalog, settings, today, 1),
             f"api/state?from={today}&to={more_to}": state_json(
-                settings, today, 1, today, more_to
+                catalog, settings, today, 1, today, more_to
             ),
         }
         scenarios.append(

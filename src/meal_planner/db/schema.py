@@ -201,6 +201,30 @@ def _cycle_shuffles(conn: sqlite3.Connection) -> None:
     )
 
 
+def _slot_versions(conn: sqlite3.Connection) -> None:
+    # Варианты у позиций цикла (8.4b): состав позиции с цикла from_cycle —
+    # до следующей версии. Прежние слоты — версии с цикла 0, по одному
+    # варианту; cycle_slots больше не нужна.
+    conn.execute(
+        """
+        CREATE TABLE slot_versions (
+            slot INTEGER NOT NULL CHECK (slot BETWEEN 1 AND 5),
+            from_cycle INTEGER NOT NULL CHECK (from_cycle >= 0),
+            kind TEXT NOT NULL CHECK (kind IN ('lunch', 'dinner')),
+            position INTEGER NOT NULL,
+            recipe_id TEXT NOT NULL REFERENCES recipes (id),
+            PRIMARY KEY (slot, from_cycle, kind, position)
+        )
+        """
+    )
+    for kind, column in (("lunch", "lunch_id"), ("dinner", "dinner_id")):
+        conn.execute(
+            "INSERT INTO slot_versions (slot, from_cycle, kind, position, recipe_id)"
+            f" SELECT slot, 0, '{kind}', 1, {column} FROM cycle_slots"
+        )
+    conn.execute("DROP TABLE cycle_slots")
+
+
 MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _settings,  # 1: settings — схема до фазы 5
     _catalog,  # 2: каталог рецептов и сид (5.2)
@@ -208,6 +232,7 @@ MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _cooked,  # 4: отметки «приготовлено» (8.3b)
     _dish_portions,  # 5: порции блюда для списания (8.3b)
     _cycle_shuffles,  # 6: перемешивание цикла (8.4a)
+    _slot_versions,  # 7: варианты у позиций цикла (8.4b)
 )
 
 

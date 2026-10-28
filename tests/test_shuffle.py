@@ -26,7 +26,6 @@ from meal_planner.core.scheduling import (
     cook_window,
     first_free_cycle,
     first_free_day,
-    fish_priority,
     meals_for_date,
     slot_for_index,
     tape_date,
@@ -133,7 +132,7 @@ def test_batches_have_no_repeats_and_fish_first(weekdays, seed):
         ks = [d.cycle_index for d in days]
         if len(ks) <= 4:
             assert len(set(ks)) == len(ks), (weekdays, days[0].date)
-        fish = [fish_priority(SEED_CATALOG, k) for k in ks]
+        fish = [d.lunch.is_fish + d.dinner.is_fish for d in days]
         assert fish == sorted(fish, reverse=True)
 
 

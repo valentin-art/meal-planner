@@ -40,7 +40,7 @@ def test_restore_from_scratch(db, tmp_path):
         assert conn.execute("SELECT count(*) FROM recipes").fetchone() == (
             len(RECIPE_SPECS),
         )
-        assert conn.execute("SELECT count(*) FROM cycle_slots").fetchone() == (5,)
+        assert conn.execute("SELECT count(*) FROM slot_versions").fetchone() == (10,)
 
 
 def test_keeps_last_n_and_ignores_other_files(db, tmp_path):

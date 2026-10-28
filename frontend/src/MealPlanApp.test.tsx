@@ -577,8 +577,8 @@ describe('архив рецептов', () => {
 // ---------- Цикл и справочник ингредиентов (5.6) ----------
 
 describe('позиции цикла', () => {
-  it('выбор ужина сразу уходит в set-cycle-slot с обедом позиции', async () => {
-    const moved = { ...BASE, cycle_slots: BASE.cycle_slots.map((c) => (c.slot === 2 ? { ...c, dinner_id: 'd5' } : c)) };
+  it('выбор ужина сразу уходит в set-cycle-slot со списками позиции', async () => {
+    const moved = { ...BASE, cycle_slots: BASE.cycle_slots.map((c) => (c.slot === 2 ? { ...c, dinner_ids: ['d5'] } : c)) };
     handler = (url) => (url === 'api/actions/set-cycle-slot' ? jsonResponse(moved) : jsonResponse(BASE));
     const ui = await render(<MealPlanApp />);
     await click(buttons(ui.container, 'Настройки')[0]);
@@ -589,27 +589,41 @@ describe('позиции цикла', () => {
     expect(calls.at(-1)).toEqual({
       url: 'api/actions/set-cycle-slot',
       method: 'POST',
-      body: { slot: 2, lunch_id: 'l2', dinner_id: 'd5' },
+      body: { slot: 2, lunch_ids: ['l2'], dinner_ids: ['d5'] },
     });
     expect(field<HTMLSelectElement>(ui, 'Ужин №2').value).toBe('d5'); // из ответа сервера
     ui.unmount();
   });
 
-  it('предупреждения — по признаку сервера, ошибка — в карточке цикла', async () => {
+  it('варианты (8.4b): «+ обед» добавляет первый свободный, «×» убирает, дата — с сервера', async () => {
+    const pool = fullState(SCENARIOS.find((s) => s.name === 'slot_pool')!);
+    handler = () => jsonResponse(pool);
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    const card = field(ui, 'Обед №1, вариант 1').closest('section')!;
+    expect(card.textContent).toContain('Изменение — с Чт 19 нояб., купленное не меняется.');
+    expect(field<HTMLSelectElement>(ui, 'Обед №1, вариант 2').value).toBe('l4');
+    expect(buttons(ui.container, '×')).toHaveLength(2); // только у позиции с двумя обедами
+
+    await click(buttons(ui.container, '+ обед')[0]);
+    expect(calls.at(-1)!.body).toEqual({ slot: 1, lunch_ids: ['l1', 'l4', 'l2'], dinner_ids: ['d1'] });
+    await click(buttons(ui.container, '×')[0]);
+    expect(calls.at(-1)!.body).toEqual({ slot: 1, lunch_ids: ['l4'], dinner_ids: ['d1'] });
+    ui.unmount();
+  });
+
+  it('ошибка сервера — в карточке цикла', async () => {
     handler = (url) =>
       url === 'api/actions/set-cycle-slot'
-        ? jsonResponse({ detail: [{ type: 'value_error', loc: ['body', 'lunch_id'], msg: '«X» в архиве — сначала верните его' }] }, 422)
+        ? jsonResponse({ detail: [{ type: 'value_error', loc: ['body', 'slot'], msg: 'Рыба — не больше чем в 3 позициях цикла из 5' }] }, 422)
         : jsonResponse(BASE);
     const ui = await render(<MealPlanApp />);
     await click(buttons(ui.container, 'Настройки')[0]);
-    const row = (k: number) => field(ui, `Обед №${k}`).closest('div')!.parentElement!.textContent;
-    expect(row(1)).toContain('уже куплены'); // l1/d1 — bought в default_2x
-    expect(row(3)).toContain('в ближайшей закупке');
-    expect(row(2)).not.toContain('куплены');
+    expect(field(ui, 'Обед №1').closest('section')!.textContent).not.toContain('куплены');
 
-    await change(field<HTMLSelectElement>(ui, 'Обед №2'), 'l3');
+    await change(field<HTMLSelectElement>(ui, 'Ужин №1'), 'd2');
     const card = field(ui, 'Обед №1').closest('section')!;
-    expect(card.textContent).toContain('Не удалось сохранить: «X» в архиве — сначала верните его');
+    expect(card.textContent).toContain('Не удалось сохранить: Рыба — не больше чем в 3 позициях цикла из 5');
     ui.unmount();
   });
 });

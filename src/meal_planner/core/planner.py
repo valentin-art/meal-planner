@@ -15,6 +15,8 @@ from meal_planner.core.models import (
     Settings,
     ShoppingTrip,
     SkippedCook,
+    SlotState,
+    SlotVersion,
 )
 from meal_planner.core.scheduling import (
     batch_start,
@@ -48,16 +50,16 @@ def next_shopping_trip(
     cook_date = trip_cook_date(settings, today)
     window_start, window_end = cook_window(settings, cook_date)
     days = build_schedule(catalog, settings, window_start, window_end)
-    # Готовится по позициям ротации в порядке первого появления; обед и ужин —
-    # из слота (JS брал ужин по позиции обеда — то же, пока обеды в слотах
-    # разные; с 5.3 один рецепт может стоять в нескольких слотах).
+    # Готовится по парам «обед + ужин» в порядке первого появления (JS брал
+    # ужин по позиции обеда; с 5.3 рецепт может стоять в нескольких слотах,
+    # с 8.4b у позиции бывает несколько вариантов).
     cook_items = tuple(
         CookItem(
-            lunch=catalog.recipes[catalog.slot(k).lunch_id],
-            dinner=catalog.recipes[catalog.slot(k).dinner_id],
+            lunch=catalog.recipes[lunch_id],
+            dinner=catalog.recipes[dinner_id],
             portions=n,
         )
-        for k, n in slot_portions(days).items()
+        for (lunch_id, dinner_id), n in slot_portions(days).items()
     )
     return ShoppingTrip(
         shopping_date=shopping_date_for(settings, cook_date),
@@ -114,17 +116,44 @@ def skipped_cook(settings: Settings, today: date) -> SkippedCook | None:
     )
 
 
+def changes_from(settings: Settings, today: date, from_cycle: int) -> date | None:
+    """С какого дня действует правка с цикла from_cycle; None — уже действует.
+
+    С начала партии первого дня цикла: рыба переставляет дни внутри партии.
+    """
+    start = batch_start(settings, tape_date(settings, from_cycle * CYCLE_LEN))
+    return start if start > today else None
+
+
+def slot_states(
+    catalog: Catalog, settings: Settings, today: date
+) -> tuple[SlotState, ...]:
+    """Последняя версия каждой позиции (8.4b) — то, что правят в UI."""
+    latest: dict[int, SlotVersion] = {}
+    for v in catalog.slot_versions:  # по позиции и from_cycle
+        latest[v.slot] = v
+    return tuple(
+        SlotState(
+            slot=k,
+            lunch_ids=v.lunch_ids,
+            dinner_ids=v.dinner_ids,
+            # С цикла 0 — состав с начала: купленного до него нет, дата не нужна.
+            changes_from=changes_from(settings, today, v.from_cycle)
+            if v.from_cycle > 0
+            else None,
+        )
+        for k, v in sorted(latest.items())
+    )
+
+
 def cycle_order_state(settings: Settings, today: date) -> CycleOrder:
     shuffles = settings.cycle_shuffles
     if not shuffles:
         return CycleOrder(shuffled=False, changes_from=None)
     last = shuffles[-1]
-    # Порядок меняется с начала партии, в которую попал первый день цикла:
-    # рыба переставляет дни внутри партии.
-    start = batch_start(settings, tape_date(settings, last.from_cycle * CYCLE_LEN))
     return CycleOrder(
         shuffled=last.seed is not None,
-        changes_from=start if start > today else None,
+        changes_from=changes_from(settings, today, last.from_cycle),
     )
 
 
@@ -160,6 +189,6 @@ def recompute(
         skipped_cook=skipped_cook(settings, today),
         can_skip_next_cook=skip_next_cook_error(settings, today) is None,
         plan_use=MappingProxyType(plan_use(catalog, settings, today, trip)),
-        slots=catalog.slots,
+        slots=slot_states(catalog, settings, today),
         cycle_order=cycle_order_state(settings, today),
     )

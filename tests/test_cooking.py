@@ -16,11 +16,11 @@ from meal_planner.core.cooking import (
     set_portions,
 )
 from meal_planner.core.models import (
-    CycleSlot,
     Ingredient,
     MealKind,
     Recipe,
     Settings,
+    SlotVersion,
 )
 from meal_planner.core.planner import recompute
 from meal_planner.core.scheduling import build_schedule
@@ -81,16 +81,16 @@ def test_batch_is_what_the_trip_cooks(timing):
 
 def test_recipe_in_two_slots_is_one_dish():
     # Обед позиции 1 поставлен и в позицию 2 (с 5.3 так можно).
-    slots = list(SEED_CATALOG.slots)
-    slots[1] = CycleSlot(2, slots[0].lunch_id, slots[1].dinner_id)
-    catalog = replace(SEED_CATALOG, slots=tuple(slots))
+    versions = list(SEED_CATALOG.slot_versions)
+    versions[1] = SlotVersion(2, 0, versions[0].lunch_ids, versions[1].dinner_ids)
+    catalog = replace(SEED_CATALOG, slot_versions=tuple(versions))
     # Партия Сб 07.11 ест Вс–Ср: позиции 5, 2, 4, 1.
     batch = cooking(catalog, SETTINGS, date(2026, 11, 9), set()).batch
     expected: dict[str, int] = {}
     for d in build_schedule(catalog, SETTINGS, date(2026, 11, 8), date(2026, 11, 11)):
         for recipe in (d.lunch, d.dinner):
             expected[recipe.id] = expected.get(recipe.id, 0) + 1
-    assert expected[slots[0].lunch_id] == 2
+    assert expected[versions[0].lunch_ids[0]] == 2
     ids = [d.recipe.id for d in batch.dishes]
     assert len(ids) == len(set(ids))
     assert {d.recipe.id: d.portions for d in batch.dishes} == expected

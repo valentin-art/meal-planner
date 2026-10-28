@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from meal_planner.core.catalog import spec_of
-from meal_planner.core.models import CycleShuffle, CycleSlot, Settings
+from meal_planner.core.models import CycleShuffle, Settings, SlotVersion
 from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.db.repository import (
     DEFAULT_DB_PATH,
@@ -140,7 +140,12 @@ def test_catalog_writes_bump_version(tmp_path):
         steps=("Один",),
     )
     assert repo.save_recipe(spec) == 2
-    assert repo.set_cycle_slot(CycleSlot(1, "l6", "d1")) == 3
+    versions = (
+        SlotVersion(1, 0, ("l1",), ("d1",)),
+        SlotVersion(1, 2, ("l1", "l6"), ("d1",)),
+        *SEED_CATALOG.slot_versions[1:],
+    )
+    assert repo.save_slot_versions(versions) == 3
     eggs = SEED_CATALOG.ingredients["яйца"]
     assert repo.save_ingredient(replace(eggs, name="яйца куриные")) == 4
 
@@ -151,7 +156,7 @@ def test_catalog_writes_bump_version(tmp_path):
         ("Один",),
         l1.ingredients[:2],
     )
-    assert catalog.slots[0] == CycleSlot(1, "l6", "d1")
+    assert catalog.slot_versions == versions
     # Рецепты ссылаются на ингредиент по id — переименование видно в них.
     assert "яйца куриные" in {i.name for i in catalog.recipes["b1"].ingredients}
 

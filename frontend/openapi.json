@@ -1682,20 +1682,39 @@
             "type": "integer",
             "title": "Slot"
           },
-          "lunch_id": {
-            "type": "string",
-            "title": "Lunch Id"
+          "lunch_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lunch Ids"
           },
-          "dinner_id": {
-            "type": "string",
-            "title": "Dinner Id"
+          "dinner_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dinner Ids"
+          },
+          "changes_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes From"
           }
         },
         "type": "object",
         "required": [
           "slot",
-          "lunch_id",
-          "dinner_id"
+          "lunch_ids",
+          "dinner_ids",
+          "changes_from"
         ],
         "title": "CycleSlotOut"
       },
@@ -2432,20 +2451,26 @@
             "minimum": 1.0,
             "title": "Slot"
           },
-          "lunch_id": {
-            "type": "string",
-            "title": "Lunch Id"
+          "lunch_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lunch Ids"
           },
-          "dinner_id": {
-            "type": "string",
-            "title": "Dinner Id"
+          "dinner_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Dinner Ids"
           }
         },
         "type": "object",
         "required": [
           "slot",
-          "lunch_id",
-          "dinner_id"
+          "lunch_ids",
+          "dinner_ids"
         ],
         "title": "SetCycleSlotIn"
       },

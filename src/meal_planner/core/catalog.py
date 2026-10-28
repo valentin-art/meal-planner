@@ -1,4 +1,4 @@
-"""Каталог (5.3): рецепты с ккал по справочнику и слоты цикла.
+"""Каталог (5.3): рецепты с ккал по справочнику и состав позиций цикла.
 
 Данные приходят параметром — из БД (API) или сида (тесты); глобальных
 справочников в core/ нет.
@@ -10,10 +10,10 @@ from types import MappingProxyType
 from meal_planner.core.models import (
     Catalog,
     CatalogIngredient,
-    CycleSlot,
     MealKind,
     Recipe,
     RecipeSpec,
+    SlotVersion,
 )
 from meal_planner.core.nutrition import nutrition
 
@@ -42,7 +42,7 @@ def spec_of(recipe: Recipe) -> RecipeSpec:
 def build_catalog(
     ingredients: Iterable[CatalogIngredient],
     recipes: Iterable[RecipeSpec],
-    slots: Iterable[CycleSlot],
+    slot_versions: Iterable[SlotVersion],
 ) -> Catalog:
     by_name = {i.name: i for i in ingredients}
     built = {}
@@ -64,5 +64,7 @@ def build_catalog(
     return Catalog(
         recipes=MappingProxyType(built),
         ingredients=MappingProxyType(by_name),
-        slots=tuple(sorted(slots, key=lambda s: s.slot)),
+        slot_versions=tuple(
+            sorted(slot_versions, key=lambda v: (v.slot, v.from_cycle))
+        ),
     )

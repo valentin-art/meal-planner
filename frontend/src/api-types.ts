@@ -538,10 +538,12 @@ export interface components {
         CycleSlotOut: {
             /** Slot */
             slot: number;
-            /** Lunch Id */
-            lunch_id: string;
-            /** Dinner Id */
-            dinner_id: string;
+            /** Lunch Ids */
+            lunch_ids: string[];
+            /** Dinner Ids */
+            dinner_ids: string[];
+            /** Changes From */
+            changes_from: string | null;
         };
         /** DayOut */
         DayOut: {
@@ -791,10 +793,10 @@ export interface components {
         SetCycleSlotIn: {
             /** Slot */
             slot: number;
-            /** Lunch Id */
-            lunch_id: string;
-            /** Dinner Id */
-            dinner_id: string;
+            /** Lunch Ids */
+            lunch_ids: string[];
+            /** Dinner Ids */
+            dinner_ids: string[];
         };
         /**
          * SetDishPortionsIn

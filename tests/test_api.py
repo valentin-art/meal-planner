@@ -187,7 +187,9 @@ def test_state_and_recipes_come_from_db_catalog(client, repo):
     repo.save_settings(DEFAULT_2X)
     with repo._connect() as conn:
         conn.execute("UPDATE recipes SET name = 'Своя курица' WHERE id = 'l1'")
-        conn.execute("UPDATE cycle_slots SET lunch_id = 'l2' WHERE slot = 1")
+        conn.execute(
+            "UPDATE slot_versions SET recipe_id = 'l2' WHERE slot = 1 AND kind = 'lunch'"
+        )
     assert client.get("/api/recipes").json()["l1"]["name"] == "Своя курица"
     state = client.get("/api/state").json()
     lunches = {d["cycle_index"]: d["lunch_id"] for d in state["schedule"]}
@@ -622,7 +624,7 @@ def test_first_catalog_action_saves_defaults(client, repo):
 def test_archive_and_restore(client, repo):
     r = post(client, "archive-recipe", {"id": "d3"})
     assert r.status_code == 422
-    assert "стоит в цикле, позиция 3" in r.json()["detail"][0]["msg"]
+    assert "единственный ужин позиции №3" in r.json()["detail"][0]["msg"]
     assert repo.get_settings() is None  # невалидное действие ничего не пишет
 
     archived = post(client, "archive-recipe", {"id": "b3"}).json()
@@ -633,17 +635,28 @@ def test_archive_and_restore(client, repo):
 
 
 def test_set_cycle_slot(client, repo):
+    # 8.4b: состав — с первого некупленного цикла. Пн 09.11: закупка ср 11.11
+    # не куплена — цикл 2, его партия с вс 15.11.
     repo.save_settings(DEFAULT_2X)
     body = post(
-        client, "set-cycle-slot", {"slot": 1, "lunch_id": "l2", "dinner_id": "d1"}
+        client, "set-cycle-slot", {"slot": 1, "lunch_ids": ["l2"], "dinner_ids": ["d1"]}
     )
     state = body.json()
     assert state["version"] == 2
-    lunches = {d["cycle_index"]: d["lunch_id"] for d in state["schedule"]}
-    assert lunches[1] == "l2"
-    assert state["cycle_slots"][0] == {"slot": 1, "lunch_id": "l2", "dinner_id": "d1"}
-    r = post(client, "set-cycle-slot", {"slot": 1, "lunch_id": "d1", "dinner_id": "d1"})
-    assert r.json()["detail"][0]["loc"] == ["body", "lunch_id"]
+    assert state["cycle_slots"][0] == {
+        "slot": 1,
+        "lunch_ids": ["l2"],
+        "dinner_ids": ["d1"],
+        "changes_from": "2026-11-15",
+    }
+    for day in state["schedule"]:
+        if day["cycle_index"] == 1:
+            expected = "l2" if day["date"] >= "2026-11-15" else "l1"
+            assert day["lunch_id"] == expected, day["date"]
+    r = post(
+        client, "set-cycle-slot", {"slot": 1, "lunch_ids": ["d1"], "dinner_ids": ["d1"]}
+    )
+    assert r.json()["detail"][0]["loc"] == ["body", "lunch_ids", 0]
 
 
 def test_ingredients_and_save_ingredient(client, repo):
@@ -696,8 +709,28 @@ def test_recipe_preview_is_read_only(client, repo):
 def test_state_lists_cycle_slots(client, repo):
     slots = client.get("/api/state").json()["cycle_slots"]
     assert slots == [
-        {"slot": k, "lunch_id": f"l{k}", "dinner_id": f"d{k}"} for k in range(1, 6)
+        {
+            "slot": k,
+            "lunch_ids": [f"l{k}"],
+            "dinner_ids": [f"d{k}"],
+            "changes_from": None,
+        }
+        for k in range(1, 6)
     ]
+
+
+def test_new_lunch_is_placed_and_archived_with_alternative(client, repo):
+    # 8.4b: новый обед сам встаёт в позицию (с меньшим номером при равенстве),
+    # рецепт и состав пишутся одной записью; с вариантом его можно в архив.
+    repo.save_settings(DEFAULT_2X)
+    body = post(client, "save-recipe", NEW_LUNCH).json()
+    assert body["state"]["version"] == 2
+    assert body["state"]["cycle_slots"][0]["lunch_ids"] == ["l1", "l6"]
+    assert body["state"]["cycle_slots"][0]["changes_from"] == "2026-11-15"
+    assert repo.get_catalog().slot_at(1, 3).lunch_id == "l6"
+    archived = post(client, "archive-recipe", {"id": "l6"}).json()
+    assert archived["recipe"]["status"] == "archived"
+    assert archived["state"]["cycle_slots"][0]["lunch_ids"] == ["l1"]
 
 
 def test_empty_nutrition_is_a_field_error(client, repo):

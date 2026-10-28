@@ -83,24 +83,61 @@ class CatalogIngredient:
 
 @dataclass(frozen=True, slots=True)
 class CycleSlot:
+    """Обед и ужин позиции k в конкретном цикле (Catalog.slot_at)."""
+
     slot: int  # 1..5 — позиция ротации (cycle_index)
     lunch_id: str
     dinner_id: str
 
 
 @dataclass(frozen=True, slots=True)
+class SlotVersion:
+    """Состав позиции цикла с цикла from_cycle (8.4b) — до следующей версии.
+
+    Вариантов может быть несколько: цикл n берёт lunch_ids[n % len] и
+    dinner_ids[n % len], обеды и ужины независимо.
+    """
+
+    slot: int
+    from_cycle: int
+    lunch_ids: tuple[str, ...]
+    dinner_ids: tuple[str, ...]
+
+
+def version_at(versions: tuple[SlotVersion, ...], k: int, n: int) -> SlotVersion:
+    """Версия позиции k, действующая в цикле n; до первой — первая."""
+    own = [v for v in versions if v.slot == k]
+    current = own[0]
+    for v in own:  # по from_cycle
+        if v.from_cycle <= n:
+            current = v
+    return current
+
+
+@dataclass(frozen=True, slots=True)
 class Catalog:
-    """Рецепты, справочник ингредиентов и слоты цикла (5.3).
+    """Рецепты, справочник ингредиентов и состав позиций цикла (5.3, 8.4b).
 
     В API — из БД, в тестах — сид (core/seed.py). Собирает build_catalog.
     """
 
     recipes: Mapping[str, Recipe]  # завтраки, обеды, ужины; внутри — по номеру id
     ingredients: Mapping[str, CatalogIngredient]  # по названию
-    slots: tuple[CycleSlot, ...]  # slots[k - 1] — позиция ротации k
+    # По позиции, внутри — по from_cycle; у каждой позиции есть версия.
+    slot_versions: tuple[SlotVersion, ...]
 
-    def slot(self, k: int) -> CycleSlot:
-        return self.slots[k - 1]
+    @property
+    def slot_count(self) -> int:
+        return len({v.slot for v in self.slot_versions})
+
+    def slot_at(self, k: int, n: int) -> CycleSlot:
+        """Обед и ужин позиции k в цикле n — варианты по кругу."""
+        v = version_at(self.slot_versions, k, n)
+        return CycleSlot(
+            slot=k,
+            lunch_id=v.lunch_ids[n % len(v.lunch_ids)],
+            dinner_id=v.dinner_ids[n % len(v.dinner_ids)],
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -234,6 +271,17 @@ class CycleOrder:
 
 
 @dataclass(frozen=True, slots=True)
+class SlotState:
+    """Позиция цикла для UI: последняя версия состава (8.4b) и с какого дня
+    она действует — None, если уже действует или правок не было."""
+
+    slot: int
+    lunch_ids: tuple[str, ...]
+    dinner_ids: tuple[str, ...]
+    changes_from: date | None
+
+
+@dataclass(frozen=True, slots=True)
 class AppState:
     today: date  # от него считается поездка в магазин; UI берёт «сегодня» отсюда
     settings: Settings
@@ -244,5 +292,5 @@ class AppState:
     skipped_cook: SkippedCook | None
     can_skip_next_cook: bool
     plan_use: Mapping[str, PlanUse]  # только рецепты с признаком (5.4)
-    slots: tuple[CycleSlot, ...]  # состав цикла — для UI (5.6)
+    slots: tuple[SlotState, ...]  # состав цикла — для UI (5.6, 8.4b)
     cycle_order: CycleOrder

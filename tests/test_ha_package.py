@@ -13,6 +13,10 @@ from urllib.parse import urlsplit
 import pytest
 import yaml
 
+from meal_planner.core.catalog_actions import ASSIST_UNITS
+from meal_planner.core.shopping import CATEGORY_ORDER
+from meal_planner.core.units import LINE_UNITS
+
 ROOT = Path(__file__).resolve().parent.parent
 BASE = "http://127.0.0.1:8001"
 
@@ -187,3 +191,61 @@ def test_stock_template_passes_entity_id():
     assert '"entity_id": s.entity_id' in stock
     stock_line = resolve(SCHEMAS["StockLineIn"])["properties"]
     assert set(re.findall(r'"(\w+)":', stock)) == set(stock_line)
+
+
+def object_fields(script: dict, field: str) -> dict:
+    return script["fields"][field]["selector"]["object"]["fields"]
+
+
+def options(field: dict) -> list[str]:
+    return [
+        o["value"] if isinstance(o, dict) else o
+        for o in field["selector"]["select"]["options"]
+    ]
+
+
+def test_propose_recipe_fields_match_api():
+    # Рецепт от Assist (8.6c): поля скрипта — тело propose-recipe.
+    script = PACKAGE["script"]["meal_planner_propose_recipe"]
+    body = resolve(SCHEMAS["ProposeRecipeIn"])["properties"]
+    storage = set(resolve(SCHEMAS["RecipeStorageIn"])["properties"])
+    # storage — отдельными полями: модель заполняет их по одному.
+    assert set(script["fields"]) == (set(body) - {"storage"}) | storage
+    line = object_fields(script, "ingredients")
+    assert set(line) == set(resolve(SCHEMAS["ProposedLineIn"])["properties"])
+    new = object_fields(script, "new_ingredients")
+    assert set(new) == set(resolve(SCHEMAS["NewIngredientIn"])["properties"])
+    assert options(script["fields"]["kind"]) == ["lunch", "dinner"]
+
+
+def test_propose_recipe_rules_match_core():
+    # Подсказки модели — те же правила, что проверяет core (8.6b).
+    script = PACKAGE["script"]["meal_planner_propose_recipe"]
+    assert options(object_fields(script, "ingredients")["unit"]) == list(LINE_UNITS)
+    new = object_fields(script, "new_ingredients")
+    assert options(new["unit"]) == list(ASSIST_UNITS)
+    assert options(new["category"]) == list(CATEGORY_ORDER)
+    text = json.dumps(script, ensure_ascii=False)
+    assert "meal_planner_ingredients" in text and "«В план»" in text
+
+
+def test_ingredients_script_uses_catalog_fields():
+    script = json.dumps(
+        PACKAGE["script"]["meal_planner_ingredients"], ensure_ascii=False
+    )
+    used = set(re.findall(r"i\['(\w+)'\]", script))
+    assert used and used <= set(resolve(SCHEMAS["CatalogIngredientOut"])["properties"])
+    assert set(re.findall(r"resp\.content\.(\w+)", script)) <= set(
+        resolve(SCHEMAS["IngredientsOut"])["properties"]
+    )
+
+
+def test_propose_recipe_reads_recipe_fields():
+    script = json.dumps(
+        PACKAGE["script"]["meal_planner_propose_recipe"], ensure_ascii=False
+    )
+    recipe = resolve(SCHEMAS["RecipeOut"])["properties"]
+    assert set(re.findall(r"recipe\.(\w+)", script)) <= set(recipe)
+    line = resolve(SCHEMAS["IngredientOut"])["properties"]
+    assert set(re.findall(r"\bi\.(\w+)", script)) <= set(line)
+    assert "from_assist" in line

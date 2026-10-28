@@ -26,6 +26,13 @@
 # только выставляет; повторная отметка отклоняется — дважды не списать.
 # Скрипты действий шлют событие meal_planner_changed — по нему сразу
 # обновляется сенсор партии sensor.meal_planner_cook_batch.
+#
+# Рецепт от Assist (8.6): модель берёт названия из справочника
+# (meal_planner_ingredients — по запросу, не сенсором: атрибутов LLM не
+# видит, а сенсор опрашивал бы приложение и писал в recorder впустую) и после
+# согласия пользователя сохраняет рецепт черновиком
+# (meal_planner_propose_recipe). Ккал, перевод единиц и новые ингредиенты —
+# в приложении; в план и покупки черновик попадает только после «В план» в UI.
 
 homeassistant:
   customize:
@@ -196,6 +203,19 @@ rest_command:
       {{ {"cook_count": cook_count | int,
           "cook_weekday1": weekday1 | int,
           "cook_weekday2": weekday2 | int if weekday2 else none} | to_json }}
+  meal_planner_ingredients:
+    url: http://127.0.0.1:8001/api/ingredients
+    method: get
+    timeout: 10
+  meal_planner_propose_recipe:
+    url: http://127.0.0.1:8001/api/actions/propose-recipe
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {{ {"name": name, "kind": kind, "is_fish": is_fish,
+          "ingredients": ingredients, "new_ingredients": new_ingredients,
+          "steps": steps, "storage": storage} | to_json }}
 
 # Скрипты — инструменты для LLM: description и fields идут в схему tool.
 # Действия возвращают {ok: true} или {ok: false, error: "<текст из API>"};
@@ -657,6 +677,274 @@ script:
     sequence:
       - delay: 3
       - event: meal_planner_changed
+
+  # Рецепт от Assist (8.6): справочник — чтобы модель не плодила дубли
+  # («куриная грудка» рядом с «куриное филе»).
+  meal_planner_ingredients:
+    alias: Питание — справочник ингредиентов
+    description: >-
+      Справочник ингредиентов приложения питания: название и единица (unit).
+      Вызывай перед meal_planner_propose_recipe и называй ингредиенты
+      рецепта точно как здесь, иначе появятся дубли. Чего здесь нет,
+      описывается в new_ingredients того скрипта.
+    mode: parallel
+    sequence:
+      - action: rest_command.meal_planner_ingredients
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - variables:
+              result:
+                ingredients: >-
+                  {%- set ns = namespace(out=[]) %}
+                  {%- for i in resp.content.ingredients %}
+                    {%- set ns.out = ns.out + [{"name": i['name'], "unit": i['unit']}] %}
+                  {%- endfor %}
+                  {{ ns.out }}
+          - stop: Справочник получен
+            response_variable: result
+      - variables:
+          result:
+            error: Приложение питания недоступно
+      - stop: Ошибка
+        response_variable: result
+
+  # Черновик — только после согласия пользователя; ошибки — с путём поля
+  # (ingredients.2.unit: …), чтобы модель исправила нужную строку.
+  meal_planner_propose_recipe:
+    alias: Питание — сохранить рецепт черновиком
+    description: >-
+      Сохраняет придуманный тобой рецепт обеда или ужина черновиком в
+      приложении питания. Вызывай только после того, как пользователь
+      согласился сохранить предложенный рецепт («сохрани», «добавь»), — не
+      для идей. Перед вызовом получи названия из meal_planner_ingredients.
+      Количества — на одну порцию, в любой единице из списка: в единицу
+      справочника переводит приложение. Ингредиент, которого нет в
+      справочнике, опиши в new_ingredients (единица: г — твёрдое, мл —
+      жидкое, ч.л. или ст.л. — специи, масла, соусы; ккал и белок на 100 г —
+      твоя оценка). Ккал и белок порции считает приложение — перескажи их
+      из ответа. После успеха скажи, что черновик нужно подтвердить в
+      приложении: Настройки → Блюда → Черновики → «В план»; до этого его
+      нет ни в плане, ни в покупках. При ошибке исправь указанное поле и
+      повтори или перескажи ошибку.
+    mode: queued
+    fields:
+      name:
+        name: Название
+        description: Название блюда, например «Тофу с гречкой и овощами»
+        required: true
+        selector:
+          text:
+      kind:
+        name: Тип
+        description: lunch — обед, dinner — ужин (завтраки не предлагаются)
+        required: true
+        selector:
+          select:
+            options:
+              - value: lunch
+                label: Обед
+              - value: dinner
+                label: Ужин
+      is_fish:
+        name: Рыба
+        description: true, если основа блюда — рыба или морепродукты
+        required: false
+        selector:
+          boolean:
+      ingredients:
+        name: Ингредиенты
+        description: >-
+          Строки рецепта на одну порцию: name — название из справочника или
+          из new_ingredients, qty — количество, unit — единица
+        required: true
+        selector:
+          object:
+            multiple: true
+            fields:
+              name:
+                label: Название
+                required: true
+                selector:
+                  text:
+              qty:
+                label: Количество
+                required: true
+                selector:
+                  number:
+                    min: 0
+                    step: any
+                    mode: box
+              unit:
+                label: Единица
+                required: true
+                selector:
+                  select:
+                    options: [г, кг, мл, л, стакан, ч.л., ст.л., шт, зубчик]
+      new_ingredients:
+        name: Новые ингредиенты
+        description: >-
+          Только ингредиенты, которых нет в meal_planner_ingredients: unit —
+          г (твёрдое), мл (жидкое), ч.л. или ст.л. (специи, масла, соусы);
+          kcal_100g и protein_100g — на 100 г; grams_per_unit — вес одной
+          ложки в граммах, обязателен для ч.л. и ст.л.; store_piece — вес
+          штуки в магазине в unit, если продукт продаётся штуками; source —
+          откуда значения
+        required: false
+        selector:
+          object:
+            multiple: true
+            fields:
+              name:
+                label: Название
+                required: true
+                selector:
+                  text:
+              unit:
+                label: Единица
+                required: true
+                selector:
+                  select:
+                    options: [г, мл, ч.л., ст.л.]
+              category:
+                label: Категория
+                required: true
+                selector:
+                  select:
+                    options: [Белок, Крупы, Овощи, Яйца и молочное, Прочее]
+              kcal_100g:
+                label: Ккал на 100 г
+                required: true
+                selector:
+                  number:
+                    min: 0
+                    step: any
+                    mode: box
+              protein_100g:
+                label: Белок на 100 г, г
+                required: true
+                selector:
+                  number:
+                    min: 0
+                    max: 100
+                    step: any
+                    mode: box
+              grams_per_unit:
+                label: Вес ложки, г
+                required: false
+                selector:
+                  number:
+                    min: 0
+                    step: any
+                    mode: box
+              store_piece:
+                label: Вес штуки в магазине
+                required: false
+                selector:
+                  number:
+                    min: 0
+                    step: any
+                    mode: box
+              source:
+                label: Источник значений
+                required: false
+                selector:
+                  text:
+      steps:
+        name: Шаги
+        description: Шаги приготовления по порядку, каждый — отдельной строкой
+        required: true
+        selector:
+          text:
+            multiple: true
+      keep:
+        name: Хранение
+        description: Как и сколько хранить готовое блюдо
+        required: true
+        selector:
+          text:
+      pan:
+        name: Разогрев на сковороде
+        description: Как разогреть на сковороде
+        required: true
+        selector:
+          text:
+      micro:
+        name: Разогрев в микроволновке
+        description: Как разогреть в микроволновке
+        required: true
+        selector:
+          text:
+      after:
+        name: После разогрева
+        description: Что добавить после разогрева, если нужно
+        required: false
+        selector:
+          text:
+    sequence:
+      # Списки модель иногда передаёт строкой JSON — разбираем.
+      - variables:
+          lines: "{{ ingredients | from_json if ingredients is string else ingredients }}"
+          added: >-
+            {%- set n = new_ingredients | default([], true) %}
+            {{ n | from_json if n is string else n }}
+          step_list: >-
+            {%- if steps is string %}
+            {{ steps | from_json if steps.startswith('[') else [steps] }}
+            {%- else %}{{ steps }}{% endif %}
+          storage:
+            keep: "{{ keep | default('') }}"
+            pan: "{{ pan | default('') }}"
+            micro: "{{ micro | default('') }}"
+            after: "{{ after | default(none) }}"
+      - action: rest_command.meal_planner_propose_recipe
+        data:
+          name: "{{ name }}"
+          kind: "{{ kind }}"
+          is_fish: "{{ is_fish | default(false) | bool }}"
+          ingredients: "{{ lines }}"
+          new_ingredients: "{{ added }}"
+          steps: "{{ step_list }}"
+          storage: "{{ storage }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - variables:
+              recipe: "{{ resp.content.recipe }}"
+          - variables:
+              result:
+                ok: true
+                recipe_id: "{{ recipe.id }}"
+                name: "{{ recipe.name }}"
+                kcal: "{{ recipe.kcal }}"
+                protein: "{{ recipe.protein }}"
+                ingredients: >-
+                  {%- set ns = namespace(out=[]) %}
+                  {%- for i in recipe.ingredients %}
+                    {%- set ns.out = ns.out + [i.name ~ ' — ' ~ i.qty_display ~ ' ' ~ i.unit] %}
+                  {%- endfor %}
+                  {{ ns.out }}
+                new_ingredients: >-
+                  {{ recipe.ingredients | selectattr('from_assist') | map(attribute='name') | list }}
+                note: >-
+                  Черновик сохранён. В план и покупки он попадёт после
+                  подтверждения в приложении: Настройки → Блюда → Черновики →
+                  «В план».
+          - stop: Черновик сохранён
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: >-
+              {% if resp is not defined %}Приложение питания недоступно
+              {%- elif resp.content is mapping and resp.content.detail is string %}{{ resp.content.detail }}
+              {%- elif resp.content is mapping %}
+              {%- for e in resp.content.detail %}{{ e.loc[1:] | join('.') }}: {{ e.msg }}{{ '; ' if not loop.last }}{% endfor %}
+              {%- else %}Ошибка {{ resp.status }}{% endif %}
+      - stop: Ошибка
+        response_variable: result
 
   # Список покупок в to-do (7.8): пункты помечены в описании
   # «meal-planner <дата закупки>» — так видно свои пункты и их закупку.

@@ -1,5 +1,6 @@
 import dataclasses
 from datetime import date, timedelta
+from decimal import Decimal
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +10,7 @@ from scenario_settings import settings_of
 from meal_planner.api.main import create_app, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
 from meal_planner.core.cookbook import upcoming_cook
+from meal_planner.core.cooking import CookState
 from meal_planner.core.models import CycleShuffle, Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
@@ -1108,7 +1110,7 @@ def test_mark_and_unmark_cooked(client, repo):
         {"entity_id": "input_number.x", "value": 10000 - first.qty * dish["portions"]}
     ]
     assert len(out["untracked"]) == len(recipe.ingredients) - 1
-    assert repo.get_cooked() == {(date(2026, 11, 7), recipe.id)}
+    assert repo.get_cook_state().cooked == {(date(2026, 11, 7), recipe.id): TODAY}
     assert client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
 
     # Повтор — 422, ничего не записано: дважды не списать.
@@ -1122,7 +1124,7 @@ def test_mark_and_unmark_cooked(client, repo):
     assert r.json()["counters"] == [
         {"entity_id": "input_number.x", "value": 10000 + first.qty * dish["portions"]}
     ]
-    assert repo.get_cooked() == frozenset()
+    assert repo.get_cook_state().cooked == {}
 
 
 @pytest.mark.parametrize(
@@ -1141,7 +1143,7 @@ def test_cooked_errors_write_nothing(client, repo, action, recipe_id, msg):
     assert r.json()["detail"] == [
         {"type": "value_error", "loc": ["body", "recipe_id"], "msg": msg}
     ]
-    assert repo.get_cooked() == frozenset()
+    assert repo.get_cook_state().cooked == {}
     assert repo.get_settings().version == 1
 
 
@@ -1168,7 +1170,7 @@ def test_mark_cooked_refused_when_stock_is_short(client, repo):
     assert error["loc"] == ["body", "stock"]
     assert error["msg"].startswith(f"Не хватает продуктов: {first.name} — нужно")
     # Ничего не отмечено и не записано.
-    assert repo.get_cooked() == frozenset()
+    assert repo.get_cook_state().cooked == {}
     assert repo.get_settings().version == 1
 
 
@@ -1223,6 +1225,231 @@ def test_dish_portions_out_of_range_is_422(client, repo, portions):
     )
     assert r.status_code == 422
     assert repo.get_dish_portions() == {}
+
+
+# --- готовка по ингредиентам (10.3) ---
+
+L3 = SEED_CATALOG.recipes["l3"]  # не в партии Сб 07.11 — вне очереди, сегодня
+PASTA = SEED_CATALOG.ingredients["паста цельнозерновая"].id  # 90 г в l3
+
+
+def stock_of(name, qty, entity="input_number.x"):
+    i = SEED_CATALOG.ingredients[name]
+    return {"ingredient_id": i.id, "qty": qty, "unit": i.unit, "entity_id": entity}
+
+
+def first_dish(client):
+    dish = client.get("/api/summary").json()["cooking"]["dishes"][0]
+    return SEED_CATALOG.recipes[dish["recipe_id"]]
+
+
+def test_use_and_unuse_ingredient(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    body = {
+        "recipe_id": "l3",
+        "ingredient_id": PASTA,
+        "stock": [stock_of("паста цельнозерновая", 50)],
+    }
+    r = client.post("/api/actions/use-ingredient", json=body)
+    assert r.status_code == 200
+    out = r.json()
+    assert (out["day"], out["recipe_id"], out["version"]) == ("2026-11-09", "l3", 2)
+    # Нужно 90 г, есть 50 — без подтверждения, до 0.
+    assert out["counters"] == [{"entity_id": "input_number.x", "value": 0.0}]
+    assert repo.get_cook_state().usage == {(TODAY, "l3"): {PASTA: Decimal(50)}}
+
+    r = client.post("/api/actions/use-ingredient", json=body)
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "Ингредиент уже использован"
+    assert repo.get_settings().version == 2  # отказ ничего не пишет
+
+    body["stock"] = [stock_of("паста цельнозерновая", 0)]
+    out = client.post("/api/actions/unuse-ingredient", json=body).json()
+    # Возвращается списанное — 50 г, а не 90 по рецепту.
+    assert out["counters"] == [{"entity_id": "input_number.x", "value": 50.0}]
+    assert repo.get_cook_state().usage == {}
+
+
+def test_cook_recipe_shortage_matches_the_cookbook(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    stock = [
+        stock_of("паста цельнозерновая", 50, "input_number.pasta"),
+        stock_of("авокадо", 1000, "input_number.avocado"),
+    ]
+    preview = client.post("/api/cookbook", json={"stock": stock}).json()
+    missing = preview["cooking"]["l3"]["missing"]
+    assert missing == ["паста цельнозерновая — нужно 90 г, есть 50 г"]
+
+    body = {"recipe_id": "l3", "stock": stock}
+    r = client.post("/api/actions/cook-recipe", json=body)
+    assert r.status_code == 422
+    assert r.json()["detail"] == [
+        {
+            "type": "value_error",
+            "loc": ["body", "stock"],
+            "msg": "Не хватает продуктов: " + "; ".join(missing),
+        }
+    ]
+    assert repo.get_cook_state().cooked == {}
+
+    out = client.post(
+        "/api/actions/cook-recipe", json={**body, "allow_missing": True}
+    ).json()
+    assert out["day"] == "2026-11-09"
+    assert out["counters"] == [
+        {"entity_id": "input_number.pasta", "value": 0.0},
+        {"entity_id": "input_number.avocado", "value": 965.0},
+    ]
+    assert repo.get_cook_state().cooked == {(TODAY, "l3"): TODAY}
+    cooked = client.post("/api/cookbook", json={"stock": stock}).json()["cooking"]["l3"]
+    assert (cooked["cooked"], cooked["cooked_today"], cooked["locked"]) == (
+        True,
+        True,
+        True,
+    )
+    assert cooked["missing"] == []
+
+
+def test_uncook_returns_used_and_cooked(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    use = {
+        "recipe_id": "l3",
+        "ingredient_id": PASTA,
+        "stock": [stock_of("паста цельнозерновая", 500, "input_number.pasta")],
+    }
+    client.post("/api/actions/use-ingredient", json=use)
+    stock = [
+        stock_of("паста цельнозерновая", 410, "input_number.pasta"),
+        stock_of("авокадо", 100, "input_number.avocado"),
+    ]
+    out = client.post(
+        "/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": stock}
+    ).json()
+    # Пасту списали касанием — второй раз не списывается.
+    assert out["counters"] == [{"entity_id": "input_number.avocado", "value": 65.0}]
+
+    stock[1]["qty"] = 65
+    out = client.post(
+        "/api/actions/uncook-recipe", json={"recipe_id": "l3", "stock": stock}
+    ).json()
+    assert {c["entity_id"]: c["value"] for c in out["counters"]} == {
+        "input_number.pasta": 500.0,
+        "input_number.avocado": 100.0,
+    }
+    assert repo.get_cook_state() == CookState({}, {}, {})
+
+
+def test_portions_until_the_first_write_off(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    r = client.post(
+        "/api/actions/set-recipe-portions", json={"recipe_id": "l3", "portions": 2}
+    )
+    assert r.json() == {
+        "version": 2,
+        "day": "2026-11-09",
+        "recipe_id": "l3",
+        "portions": 2,
+    }
+    use = {
+        "recipe_id": "l3",
+        "ingredient_id": PASTA,
+        "stock": [stock_of("паста цельнозерновая", 500)],
+    }
+    out = client.post("/api/actions/use-ingredient", json=use).json()
+    assert out["counters"] == [{"entity_id": "input_number.x", "value": 320.0}]
+    locked = "Продукты уже списаны — порции меняются до первого списания"
+    r = client.post(
+        "/api/actions/set-recipe-portions", json={"recipe_id": "l3", "portions": 1}
+    )
+    assert (r.status_code, r.json()["detail"][0]["msg"]) == (422, locked)
+
+    # «Готовка» (8.3b): теперь блокирует и первое списание, а не только отметка.
+    dish = first_dish(client)
+    first = dish.ingredients[0]
+    client.post(
+        "/api/actions/use-ingredient",
+        json={
+            "recipe_id": dish.id,
+            "ingredient_id": SEED_CATALOG.ingredients[first.name].id,
+            "stock": [],
+        },
+    )
+    r = client.post(
+        "/api/actions/set-dish-portions", json={"recipe_id": dish.id, "portions": 3}
+    )
+    assert (r.status_code, r.json()["detail"][0]["msg"]) == (422, locked)
+
+
+def test_marks_are_shared_with_the_cooking_tab(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    dish = first_dish(client)
+    out = client.post(
+        "/api/actions/cook-recipe", json={"recipe_id": dish.id, "stock": []}
+    ).json()
+    assert out["day"] == "2026-11-07"  # ключ партии
+    assert client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
+    # Ключ — Сб, приготовили сегодня: на «Рецептах» серый.
+    assert client.get("/api/cookbook").json()["cooking"][dish.id]["cooked_today"]
+    r = client.post(
+        "/api/actions/unmark-cooked", json={"recipe_id": dish.id, "stock": []}
+    )
+    assert r.status_code == 200
+    assert not client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
+
+    breakfast = client.get("/api/summary").json()["cooking"]["breakfast"]["recipe_id"]
+    client.post("/api/actions/mark-cooked", json={"recipe_id": breakfast, "stock": []})
+    assert client.get("/api/cookbook").json()["cooking"][breakfast]["cooked_today"]
+
+
+def test_unmark_returns_what_was_written_off(client, repo):
+    # Изменение 8.3b (10.3): снятие отметки возвращает списанное по журналу.
+    repo.save_settings(DEFAULT_2X)
+    dish = first_dish(client)
+    first = dish.ingredients[0]
+    half = first.qty / 2
+    # Половина остатка — в счётчике без сущности: проверка нехватки её
+    # учитывает, но списать из него нельзя.
+    stock = [
+        stock_of(first.name, half),
+        {**stock_of(first.name, half), "entity_id": None},
+    ]
+    body = {"recipe_id": dish.id, "stock": stock}
+    out = client.post("/api/actions/mark-cooked", json=body).json()
+    assert out["counters"] == [{"entity_id": "input_number.x", "value": 0.0}]
+    stock[0]["qty"] = 0
+    out = client.post("/api/actions/unmark-cooked", json=body).json()
+    assert out["counters"] == [{"entity_id": "input_number.x", "value": half}]
+
+
+def test_cookbook_has_cooking_for_every_recipe(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    book = client.get("/api/cookbook").json()
+    ids = {r["id"] for kind in ("lunch", "dinner", "breakfast") for r in book[kind]}
+    ids |= {d["recipe_id"] for d in book["cook"]["dishes"]}
+    assert ids <= set(book["cooking"])
+    # Без остатков нехватка не известна.
+    assert not any(
+        i["short"] or i["have"] is not None
+        for c in book["cooking"].values()
+        for i in c["ingredients"]
+    )
+    assert client.post("/api/cookbook", json={"stock": []}).json() == book
+    l3 = book["cooking"]["l3"]
+    assert (l3["day"], l3["portions"], l3["planned_portions"], l3["locked"]) == (
+        "2026-11-09",
+        1,
+        1,
+        False,
+    )
+    assert [i["need"] for i in l3["ingredients"]] == [
+        format_qty(i.qty) for i in L3.ingredients
+    ]
+
+    stock = [stock_of("паста цельнозерновая", 50)]
+    l3 = client.post("/api/cookbook", json={"stock": stock}).json()["cooking"]["l3"]
+    pasta = next(i for i in l3["ingredients"] if i["ingredient_id"] == PASTA)
+    assert (pasta["need"], pasta["have"], pasta["short"]) == ("90", "50", True)
+    assert sum(i["short"] for i in l3["ingredients"]) == 1
 
 
 def test_reshuffle_cycle_saves_seed_from_first_free_cycle(client, repo, monkeypatch):

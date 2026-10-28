@@ -403,31 +403,6 @@ class Repository:
                 conn.execute(f"DELETE FROM {table} WHERE {column} = ?", (recipe_id,))
             return _bump_version(conn)
 
-    def get_cooked(self) -> frozenset[tuple[date, str]]:
-        """Отметки «приготовлено» (8.3b): (день, recipe_id)."""
-        with self._connect() as conn:
-            return frozenset(
-                (date.fromisoformat(day), recipe_id)
-                for day, recipe_id in conn.execute("SELECT day, recipe_id FROM cooked")
-            )
-
-    def mark_cooked(self, day: date, recipe_id: str) -> int:
-        """Повтор проверяет core/API заранее; здесь он — IntegrityError."""
-        with self._connect() as conn:
-            conn.execute(
-                "INSERT INTO cooked (day, recipe_id, cooked_on) VALUES (?, ?, ?)",
-                (day.isoformat(), recipe_id, day.isoformat()),
-            )
-            return _bump_version(conn)
-
-    def unmark_cooked(self, day: date, recipe_id: str) -> int:
-        with self._connect() as conn:
-            conn.execute(
-                "DELETE FROM cooked WHERE day = ? AND recipe_id = ?",
-                (day.isoformat(), recipe_id),
-            )
-            return _bump_version(conn)
-
     def get_cook_state(self) -> CookState:
         """Отметки с днём готовки, журнал списаний и порции (10.2) — разом."""
         with self._connect() as conn:

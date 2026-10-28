@@ -1,4 +1,7 @@
-"""8.3b: партия готовки, отметки «приготовлено» и списание из счётчиков."""
+"""8.3b: партия готовки, отметки «приготовлено» и списание из счётчиков.
+
+Отметки «Готовки» — cook_recipe/uncook_recipe с batch_only (10.3).
+"""
 
 from dataclasses import replace
 from datetime import date
@@ -10,13 +13,13 @@ from meal_planner.core.cooking import (
     BreakfastToday,
     Cooking,
     CookingBatch,
+    CookState,
     CounterUpdate,
-    check_enough,
-    cooked_change,
+    cook_recipe,
     cooking,
-    counter_update,
     current_cook_date,
-    set_portions,
+    set_recipe_portions,
+    uncook_recipe,
 )
 from meal_planner.core.models import (
     Ingredient,
@@ -124,35 +127,33 @@ def test_breakfast_today_and_cooked_flags():
     assert cooking(SEED_CATALOG, SETTINGS, date(2026, 11, 4), set()).breakfast is None
 
 
-def test_cooked_change_rules():
+def test_cooking_tab_marks_rules():
     today = date(2026, 11, 9)
     state = cooking(SEED_CATALOG, SETTINGS, today, set())
     breakfast = breakfast_of(state).recipe.id
     dish = batch_of(state).dishes[0]
 
-    change = cooked_change(SEED_CATALOG, SETTINGS, today, set(), breakfast, True)
-    assert (change.day, change.portions) == (today, 1)
-    change = cooked_change(SEED_CATALOG, SETTINGS, today, set(), dish.recipe.id, True)
-    assert (change.day, change.recipe, change.portions) == (
-        date(2026, 11, 7),
-        dish.recipe,
-        dish.portions,
-    )
+    def mark(st, recipe_id, cook=True):
+        fn = cook_recipe if cook else uncook_recipe
+        return fn(SEED_CATALOG, SETTINGS, today, st, recipe_id, [], batch_only=True)
 
-    cooked = {(date(2026, 11, 7), dish.recipe.id)}
+    empty = CookState({}, {}, {})
+    assert mark(empty, breakfast).day == today
+    assert mark(empty, dish.recipe.id).day == date(2026, 11, 7)
+
+    cooked = CookState({(date(2026, 11, 7), dish.recipe.id): today}, {}, {})
     cases = [
-        (set(), "l3", True, "Это блюдо сейчас не готовится"),  # не в партии
-        (set(), "нет", True, "Это блюдо сейчас не готовится"),
+        (empty, "l3", True, "Это блюдо сейчас не готовится"),  # не в партии
+        (empty, "нет", True, "Это блюдо сейчас не готовится"),
         (cooked, dish.recipe.id, True, "Блюдо уже отмечено как приготовленное"),
-        (set(), dish.recipe.id, False, "Блюдо не отмечено как приготовленное"),
+        (empty, dish.recipe.id, False, "Блюдо не отмечено как приготовленное"),
     ]
     assert "l3" not in {d.recipe.id for d in batch_of(state).dishes}
-    for marks, recipe_id, mark, message in cases:
+    for marks, recipe_id, cook, message in cases:
         with pytest.raises(ActionError) as e:
-            cooked_change(SEED_CATALOG, SETTINGS, today, marks, recipe_id, mark)
+            mark(marks, recipe_id, cook)
         assert (e.value.field, e.value.message) == ("recipe_id", message)
-    unmark = cooked_change(SEED_CATALOG, SETTINGS, today, cooked, dish.recipe.id, False)
-    assert unmark.day == date(2026, 11, 7)
+    assert mark(cooked, dish.recipe.id, cook=False).day == date(2026, 11, 7)
 
 
 RECIPE = Recipe(
@@ -177,9 +178,28 @@ def line(name, qty, unit, entity):
     return StockLine(ID[name], qty, unit, entity)
 
 
+DAY = date(2026, 11, 9)  # тестовый рецепт — вне очереди, ключ «сегодня»
+
+
+def counter_update(recipe, portions, lines, sign, allow_missing=True):
+    """Списать рецепт (−1) или снять отметку 8.3b без журнала (+1)."""
+    catalog = replace(SEED_CATALOG, recipes={**SEED_CATALOG.recipes, recipe.id: recipe})
+    key = (DAY, recipe.id)
+    if sign < 0:
+        state = CookState({}, {}, {key: portions})
+        return cook_recipe(
+            catalog, SETTINGS, DAY, state, recipe.id, lines, allow_missing
+        ).update
+    state = CookState({key: DAY}, {}, {key: portions})
+    return uncook_recipe(catalog, SETTINGS, DAY, state, recipe.id, lines).update
+
+
+def check_enough(recipe, portions, lines):
+    counter_update(recipe, portions, lines, -1, allow_missing=False)
+
+
 def test_write_off_in_counter_units_not_below_zero():
     update = counter_update(
-        SEED_CATALOG,
         RECIPE,
         2,
         [
@@ -214,7 +234,6 @@ def test_write_off_in_counter_units_not_below_zero():
 
 def test_unmark_puts_the_dish_back():
     update = counter_update(
-        SEED_CATALOG,
         RECIPE,
         1,
         [
@@ -234,13 +253,13 @@ def test_several_counters_of_one_ingredient_in_order():
         line("куриное филе", 0.2, "кг", "input_number.chicken_a"),
         line("куриное филе", 1000, "г", "input_number.chicken_b"),
     ]
-    off = counter_update(SEED_CATALOG, RECIPE, 2, lines, -1)  # нужно 600 г
+    off = counter_update(RECIPE, 2, lines, -1)  # нужно 600 г
     chicken = [v for v in off.values if v[0].startswith("input_number.chicken")]
     assert chicken == [
         ("input_number.chicken_a", 0.0),
         ("input_number.chicken_b", 600.0),
     ]
-    back = counter_update(SEED_CATALOG, RECIPE, 2, lines, 1)  # всё — в первый
+    back = counter_update(RECIPE, 2, lines, 1)  # всё — в первый
     assert [v for v in back.values if v[0].startswith("input_number.chicken")] == [
         ("input_number.chicken_a", 0.8),
     ]
@@ -250,7 +269,7 @@ def test_counter_values_are_rounded():
     # Цукини — 280 г штука: 100 г — 0.357… шт, до сотых.
     recipe = replace(RECIPE, ingredients=(Ingredient("цукини", 100, "г", "Овощи"),))
     update = counter_update(
-        SEED_CATALOG, recipe, 1, [line("цукини", 1, "шт", "input_number.zucchini")], -1
+        recipe, 1, [line("цукини", 1, "шт", "input_number.zucchini")], -1
     )
     assert update.values == (("input_number.zucchini", 0.64),)  # 1 − 100/280
 
@@ -264,7 +283,7 @@ def test_enough_stock_lets_the_dish_be_marked():
         line("брокколи", 0, "шт", "input_number.broccoli"),  # шт не перевести
     ]
     # Масло сливочное и киноа без счётчика — не проверяются.
-    check_enough(SEED_CATALOG, RECIPE, 2, lines)
+    check_enough(RECIPE, 2, lines)
 
 
 def test_not_enough_stock_refuses_the_mark():
@@ -274,7 +293,7 @@ def test_not_enough_stock_refuses_the_mark():
         line("куриное филе", 1, "кг", "input_number.chicken"),
     ]
     with pytest.raises(ActionError) as e:
-        check_enough(SEED_CATALOG, RECIPE, 2, lines)
+        check_enough(RECIPE, 2, lines)
     assert e.value.field == "stock"
     assert e.value.message == (
         "Не хватает продуктов: авокадо — нужно 260 г, есть 195 г;"
@@ -300,32 +319,53 @@ def test_chosen_portions_replace_planned_only_for_write_off():
     # Остальные блюда — по плану.
     assert all(d.portions == d.planned_portions for d in batch_of(state).dishes[1:])
 
-    change = cooked_change(
-        SEED_CATALOG, SETTINGS, today, set(), dish.recipe.id, True, portions
+    # Списание — на выбранные 3 порции; план не меняется — см. test_api.
+    first_ing = dish.recipe.ingredients[0]
+    eid = SEED_CATALOG.ingredients[first_ing.name].id
+    change = cook_recipe(
+        SEED_CATALOG,
+        SETTINGS,
+        today,
+        CookState({}, {}, portions),
+        dish.recipe.id,
+        [StockLine(eid, 10000, first_ing.unit, "input_number.x")],
+        batch_only=True,
     )
-    assert change.portions == 3  # план не меняется — см. test_api
+    assert change.update.values == (("input_number.x", 10000 - first_ing.qty * 3),)
 
 
 def test_set_portions_rules():
     today = date(2026, 11, 9)
     dish = batch_of(cooking(SEED_CATALOG, SETTINGS, today, set())).dishes[0]
     rid = dish.recipe.id
-    assert set_portions(SEED_CATALOG, SETTINGS, today, set(), rid, 2) == date(
-        2026, 11, 7
-    )
+    empty = CookState({}, {}, {})
+
+    def set_portions(st, recipe_id, n):
+        return set_recipe_portions(
+            SEED_CATALOG, SETTINGS, today, st, recipe_id, n, batch_only=True
+        )
+
+    assert set_portions(empty, rid, 2) == date(2026, 11, 7)
     cases = [
-        (set(), "l3", 2, "recipe_id", "Это блюдо сейчас не готовится"),
+        (empty, "l3", 2, "recipe_id", "Это блюдо сейчас не готовится"),
         (
-            {(date(2026, 11, 7), rid)},
+            CookState({(date(2026, 11, 7), rid): today}, {}, {}),
             rid,
             2,
             "recipe_id",
             "Блюдо уже отмечено — порции меняются до отметки",
         ),
-        (set(), rid, 0, "portions", "Порций — от 1 до 20"),
-        (set(), rid, 21, "portions", "Порций — от 1 до 20"),
+        (
+            CookState({}, {(date(2026, 11, 7), rid): {1: None}}, {}),
+            rid,
+            2,
+            "recipe_id",
+            "Продукты уже списаны — порции меняются до первого списания",
+        ),
+        (empty, rid, 0, "portions", "Порций — от 1 до 20"),
+        (empty, rid, 21, "portions", "Порций — от 1 до 20"),
     ]
-    for cooked, recipe_id, n, field, message in cases:
+    for st, recipe_id, n, field, message in cases:
         with pytest.raises(ActionError) as e:
-            set_portions(SEED_CATALOG, SETTINGS, today, cooked, recipe_id, n)
+            set_portions(st, recipe_id, n)
         assert (e.value.field, e.value.message) == (field, message)

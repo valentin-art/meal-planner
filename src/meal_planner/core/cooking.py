@@ -1,21 +1,19 @@
-"""Списание приготовленного (8.3b): партия готовки, отметки, новые остатки.
+"""Готовка и списание (8.3b, 10.1): партия, отметки, журнал, новые остатки.
 
-Готовка отмечается по каждому блюду: блюда текущей партии (обеды и ужины,
-с порциями) и сегодняшний завтрак (1 порция). Порции неотмеченного блюда
-можно поменять — это меняет только списание, не план. Отметки хранит приложение —
-повторная отклоняется, поэтому дважды не списать. Остатки — счётчики HA
+«Готовка» отмечает блюда текущей партии (обеды и ужины, с порциями) и
+сегодняшний завтрак (1 порция). «Рецепты» готовят любой активный рецепт
+целиком или по ингредиентам: блюдо текущей партии — по ключу партии,
+остальное — вне очереди, по ключу «сегодня». Отметки общие.
+
+Порции меняются до первого списания — это меняет только списание, не план.
+Журнал хранит фактически списанное по ингредиентам: отмена возвращает
+ровно его, даже если при нехватке списали меньше рецепта. Повторная
+готовка отклоняется, поэтому дважды не списать. Остатки — счётчики HA
 (8.2): core отдаёт их новые значения в единицах счётчиков, HA только
 выставляет.
-
-Готовка по ингредиентам (10.1): любой активный рецепт готовят целиком или
-по ингредиентам, на выбранные порции. Блюдо текущей партии — по ключу
-партии, сегодняшний завтрак и прочее — вне очереди, по ключу «сегодня».
-Журнал хранит фактически списанное по ингредиентам — отмена возвращает
-ровно его, даже если при нехватке списали меньше рецепта.
 """
 
-from collections.abc import Iterable, Mapping, Sequence
-from collections.abc import Set as AbstractSet
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
 from decimal import ROUND_HALF_UP, Decimal
@@ -45,15 +43,14 @@ from meal_planner.core.stock import (
     unconvertible_reason,
 )
 
-Cooked = AbstractSet[tuple[date, str]]  # (день, recipe_id): день готовки или завтрака
-# Порции, выбранные вместо плановых, — по тому же ключу (день, recipe_id).
-Portions = Mapping[tuple[date, str], int]
+Key = tuple[date, str]  # (день, recipe_id) — ключ отметки, порций и журнала
+Cooked = Collection[Key]  # отметки: день готовки партии или сегодня
+CookedOn = Mapping[Key, date]  # отметка → день, когда приготовили (10.1)
+# Порции, выбранные вместо плановых, — по тому же ключу.
+Portions = Mapping[Key, int]
 NO_PORTIONS: Portions = {}
 MIN_PORTIONS, MAX_PORTIONS = 1, 20
 COUNTER_STEP = Decimal("0.01")
-
-Key = tuple[date, str]  # (день, recipe_id) — ключ отметки, порций и журнала
-CookedOn = Mapping[Key, date]  # отметка → день, когда приготовили (10.1)
 # Журнал списаний (10.1): ingredient_id → списанное в единице ингредиента;
 # None — ингредиент отмечен, списывать было не из чего.
 Usage = Mapping[Key, Mapping[int, Decimal | None]]
@@ -194,76 +191,6 @@ def locate_dish(
     raise ActionError("recipe_id", "Это блюдо сейчас не готовится")
 
 
-def set_portions(
-    catalog: Catalog,
-    settings: Settings,
-    today: date,
-    cooked: Cooked,
-    recipe_id: str,
-    portions: int,
-) -> date:
-    """Порции неотмеченного блюда — сколько списать при отметке; день ключа.
-
-    План (расписание, закупка) не меняется. У отмеченного — нельзя: снятие
-    отметки вернуло бы не то, что списано.
-    """
-    settings = settle_skip(settings, today)
-    day, _, _ = locate_dish(catalog, settings, today, recipe_id)
-    if (day, recipe_id) in cooked:
-        raise ActionError(
-            "recipe_id", "Блюдо уже отмечено — порции меняются до отметки"
-        )
-    if not MIN_PORTIONS <= portions <= MAX_PORTIONS:
-        raise ActionError("portions", f"Порций — от {MIN_PORTIONS} до {MAX_PORTIONS}")
-    return day
-
-
-@dataclass(frozen=True, slots=True)
-class CookedChange:
-    """Что отметить или снять: ключ отметки и сколько списать."""
-
-    day: date
-    recipe: Recipe
-    portions: int
-
-
-def cooked_change(
-    catalog: Catalog,
-    settings: Settings,
-    today: date,
-    cooked: Cooked,
-    recipe_id: str,
-    mark: bool,
-    portions: Portions = NO_PORTIONS,
-) -> CookedChange:
-    """mark — отметить, иначе снять. Невозможно — ActionError (API: 422).
-
-    Повторная отметка отклоняется: иначе блюдо списалось бы дважды.
-    Порции — выбранные (set_portions), иначе плановые.
-    """
-    settings = settle_skip(settings, today)
-    day, recipe, planned = locate_dish(catalog, settings, today, recipe_id)
-    is_cooked = (day, recipe_id) in cooked
-    if mark and is_cooked:
-        raise ActionError("recipe_id", "Блюдо уже отмечено как приготовленное")
-    if not mark and not is_cooked:
-        raise ActionError("recipe_id", "Блюдо не отмечено как приготовленное")
-    return CookedChange(day, recipe, portions.get((day, recipe_id), planned))
-
-
-def check_enough(
-    catalog: Catalog, recipe: Recipe, portions: int, lines: Iterable[StockLine]
-) -> None:
-    """Хватает ли продуктов на блюдо; нет — ActionError, блюдо не отмечается.
-
-    Проверяются ингредиенты со счётчиком, единицу которого можно перевести:
-    без счётчика остаток неизвестен, и блюдо с ним иначе не отметить никогда.
-    """
-    missing = shortages(needs(catalog, recipe.ingredients, portions), list(lines))
-    if missing:
-        raise ActionError("stock", "Не хватает продуктов: " + "; ".join(missing))
-
-
 def needs(
     catalog: Catalog, ingredients: Iterable[Ingredient], portions: int
 ) -> list[tuple[CatalogIngredient, Decimal]]:
@@ -306,24 +233,6 @@ def shortages(
         if have is not None and have < need:
             missing.append(shortage_line(ingredient, need, have))
     return missing
-
-
-def counter_update(
-    catalog: Catalog,
-    recipe: Recipe,
-    portions: int,
-    lines: Iterable[StockLine],
-    sign: int,
-) -> CounterUpdate:
-    """Новые значения счётчиков: −1 — списать блюдо, +1 — вернуть.
-
-    Списание не уводит счётчик ниже 0; на несколько счётчиков одного
-    ингредиента — по порядку. Возврат — всё количество в первый счётчик:
-    блюдо не готовили, продукты на месте.
-    """
-    items = needs(catalog, recipe.ingredients, portions)
-    update, _ = move_stock(items, list(lines), sign)
-    return update
 
 
 @dataclass(frozen=True, slots=True)
@@ -512,12 +421,13 @@ def use_ingredient(
     recipe_id: str,
     ingredient_id: int,
     lines: Iterable[StockLine],
+    batch_only: bool = False,
 ) -> UsageChange:
     """Списать один ингредиент на порции рецепта — сколько есть, до 0.
 
     Без подтверждения: нехватку видно на плитке заранее.
     """
-    target = _target(catalog, settings, today, recipe_id, batch_only=False)
+    target = _target(catalog, settings, today, recipe_id, batch_only)
     _not_cooked(state, target)
     if ingredient_id in state.usage.get(target.key(), {}):
         raise ActionError("ingredient_id", "Ингредиент уже использован")
@@ -536,9 +446,10 @@ def unuse_ingredient(
     recipe_id: str,
     ingredient_id: int,
     lines: Iterable[StockLine],
+    batch_only: bool = False,
 ) -> UsageChange:
     """Вернуть ровно списанное по ингредиенту."""
-    target = _target(catalog, settings, today, recipe_id, batch_only=False)
+    target = _target(catalog, settings, today, recipe_id, batch_only)
     if target.key() in state.cooked:
         raise ActionError("recipe_id", "Блюдо приготовлено — сначала снимите отметку")
     used = state.usage.get(target.key(), {})
@@ -624,9 +535,11 @@ def set_recipe_portions(
     state: CookState,
     recipe_id: str,
     portions: int,
+    batch_only: bool = False,
 ) -> date:
-    """Порции любого рецепта — сколько списывать; день ключа."""
-    target = _target(catalog, settings, today, recipe_id, batch_only=False)
+    """Порции рецепта — сколько списывать; день ключа. План (расписание,
+    закупка) не меняется."""
+    target = _target(catalog, settings, today, recipe_id, batch_only)
     check_portions(state, target.key(), portions)
     return target.day
 

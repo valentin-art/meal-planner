@@ -121,6 +121,42 @@
             }
           }
         }
+      },
+      "post": {
+        "summary": "Post Cookbook",
+        "operationId": "post_cookbook_api_cookbook_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingRemainingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookbookOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/api/shopping/remaining": {
@@ -1053,6 +1089,196 @@
         }
       }
     },
+    "/api/actions/use-ingredient": {
+      "post": {
+        "summary": "Use Ingredient",
+        "operationId": "use_ingredient_api_actions_use_ingredient_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UseIngredientIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookedActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/unuse-ingredient": {
+      "post": {
+        "summary": "Unuse Ingredient",
+        "operationId": "unuse_ingredient_api_actions_unuse_ingredient_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UseIngredientIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookedActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/cook-recipe": {
+      "post": {
+        "summary": "Cook Recipe",
+        "operationId": "cook_recipe_api_actions_cook_recipe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookRecipeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookedActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/uncook-recipe": {
+      "post": {
+        "summary": "Uncook Recipe",
+        "operationId": "uncook_recipe_api_actions_uncook_recipe_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CookedIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CookedActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/set-recipe-portions": {
+      "post": {
+        "summary": "Set Recipe Portions",
+        "operationId": "set_recipe_portions_api_actions_set_recipe_portions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetDishPortionsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DishPortionsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/save-recipe": {
       "post": {
         "summary": "Save Recipe",
@@ -1934,6 +2160,33 @@
         ],
         "title": "CookItemOut"
       },
+      "CookRecipeIn": {
+        "properties": {
+          "stock": {
+            "items": {
+              "$ref": "#/components/schemas/StockLineIn"
+            },
+            "type": "array",
+            "title": "Stock"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "allow_missing": {
+            "type": "boolean",
+            "title": "Allow Missing",
+            "default": false
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock",
+          "recipe_id"
+        ],
+        "title": "CookRecipeIn",
+        "description": "Приготовить рецепт: списать неиспользованные ингредиенты (10.3)."
+      },
       "CookbookCookOut": {
         "properties": {
           "date": {
@@ -2064,6 +2317,13 @@
             },
             "type": "array",
             "title": "Breakfast"
+          },
+          "cooking": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RecipeCookingOut"
+            },
+            "type": "object",
+            "title": "Cooking"
           }
         },
         "type": "object",
@@ -2072,7 +2332,8 @@
           "cook",
           "lunch",
           "dinner",
-          "breakfast"
+          "breakfast",
+          "cooking"
         ],
         "title": "CookbookOut",
         "description": "Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.\n\nШаги и хранение — только в группах: плитка ближайшей готовки берёт их\nпо recipe_id. Ингредиенты — без id и категории, сенсор и так большой."
@@ -2210,6 +2471,46 @@
         ],
         "title": "CookedIn",
         "description": "Отметить или снять «приготовлено» (8.3b) — с остатками из счётчиков HA.\n\nДень отметки (день готовки партии или сегодняшний завтрак) решает core."
+      },
+      "CookingIngredientOut": {
+        "properties": {
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          },
+          "need": {
+            "type": "string",
+            "title": "Need"
+          },
+          "have": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Have"
+          },
+          "used": {
+            "type": "boolean",
+            "title": "Used"
+          },
+          "short": {
+            "type": "boolean",
+            "title": "Short"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredient_id",
+          "need",
+          "have",
+          "used",
+          "short"
+        ],
+        "title": "CookingIngredientOut"
       },
       "CounterValueOut": {
         "properties": {
@@ -2859,6 +3160,62 @@
         ],
         "title": "RecipeActionOut"
       },
+      "RecipeCookingOut": {
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date",
+            "title": "Day"
+          },
+          "portions": {
+            "type": "integer",
+            "title": "Portions"
+          },
+          "planned_portions": {
+            "type": "integer",
+            "title": "Planned Portions"
+          },
+          "locked": {
+            "type": "boolean",
+            "title": "Locked"
+          },
+          "cooked": {
+            "type": "boolean",
+            "title": "Cooked"
+          },
+          "cooked_today": {
+            "type": "boolean",
+            "title": "Cooked Today"
+          },
+          "missing": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Missing"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/CookingIngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "day",
+          "portions",
+          "planned_portions",
+          "locked",
+          "cooked",
+          "cooked_today",
+          "missing",
+          "ingredients"
+        ],
+        "title": "RecipeCookingOut",
+        "description": "Готовка рецепта на «Рецептах» (10.3); ингредиенты — в порядке рецепта."
+      },
       "RecipeIdIn": {
         "properties": {
           "id": {
@@ -3370,7 +3727,7 @@
           "portions"
         ],
         "title": "SetDishPortionsIn",
-        "description": "Порции неотмеченного блюда (8.3b) — меняют только списание, не план."
+        "description": "Порции рецепта до первого списания (8.3b, 10.3) — меняют только\nсписание, не план."
       },
       "SetNutritionTargetIn": {
         "properties": {
@@ -4275,6 +4632,33 @@
         ],
         "title": "UpdateDraftIn",
         "description": "Правка своего черновика (8.6c): тело то же, плюс id черновика."
+      },
+      "UseIngredientIn": {
+        "properties": {
+          "stock": {
+            "items": {
+              "$ref": "#/components/schemas/StockLineIn"
+            },
+            "type": "array",
+            "title": "Stock"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "ingredient_id": {
+            "type": "integer",
+            "title": "Ingredient Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock",
+          "recipe_id",
+          "ingredient_id"
+        ],
+        "title": "UseIngredientIn",
+        "description": "Списать один ингредиент рецепта или вернуть его (10.3)."
       },
       "ValidationError": {
         "properties": {

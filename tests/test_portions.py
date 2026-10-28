@@ -18,10 +18,10 @@ from meal_planner.core.actions import (
     skip_next_cook,
 )
 from meal_planner.core.cooking import (
+    CookState,
     batch_dishes,
-    check_enough,
-    cooked_change,
-    counter_update,
+    cook_key,
+    cook_recipe,
 )
 from meal_planner.core.models import (
     CycleShuffle,
@@ -261,19 +261,24 @@ def test_write_off_uses_scaled_portion():
     cook_date = date(2026, 11, 14)
     dishes = {r.id: r for r, _ in batch_dishes(SEED_CATALOG, SCALED, cook_date)}
     assert all(r.scale != 1 for r in dishes.values())
-    change = cooked_change(SEED_CATALOG, SCALED, cook_date, set(), "l1", True)
-    assert change.recipe == dishes["l1"]
-    chicken = next(i for i in change.recipe.ingredients if i.name == "куриное филе")
+    target = cook_key(SEED_CATALOG, SCALED, cook_date, "l1")
+    assert target.recipe == dishes["l1"]
+    chicken = next(i for i in target.recipe.ingredients if i.name == "куриное филе")
     plain = next(
         i for i in SEED_CATALOG.recipes["l1"].ingredients if i.name == "куриное филе"
     )
     assert chicken.qty == plain.qty * 1.45
     eid = SEED_CATALOG.ingredients["куриное филе"].id
-    line = StockLine(eid, 5000, "г", "input_number.chicken")
-    update = counter_update(SEED_CATALOG, change.recipe, 2, [line], -1)
+    state = CookState({}, {}, {(cook_date, "l1"): 2})
+
+    def cook(line):
+        return cook_recipe(
+            SEED_CATALOG, SCALED, cook_date, state, "l1", [line], batch_only=True
+        )
+
+    update = cook(StockLine(eid, 5000, "г", "input_number.chicken")).update
     assert dict(update.values)["input_number.chicken"] == pytest.approx(
         5000 - chicken.qty * 2
     )
-    short = StockLine(eid, plain.qty * 2, "г", "input_number.chicken")
     with pytest.raises(ActionError, match="куриное филе"):
-        check_enough(SEED_CATALOG, change.recipe, 2, [short])
+        cook(StockLine(eid, plain.qty * 2, "г", "input_number.chicken"))

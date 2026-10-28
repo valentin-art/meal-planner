@@ -242,20 +242,17 @@ def test_catalog_write_without_settings_writes_nothing(tmp_path):
 def test_cooked_marks(tmp_path):
     repo = Repository(tmp_path / "db.sqlite")
     repo.save_settings(SETTINGS)
-    assert repo.get_cooked() == frozenset()
-    assert repo.mark_cooked(date(2026, 11, 11), "l3") == 2
-    assert repo.mark_cooked(date(2026, 11, 12), "b1") == 3
-    assert repo.get_cooked() == {(date(2026, 11, 11), "l3"), (date(2026, 11, 12), "b1")}
+    day, other = date(2026, 11, 11), date(2026, 11, 12)
+    assert repo.get_cook_state().cooked == {}
+    assert repo.record_cook(day, "l3", day, {}) == 2
+    assert repo.record_cook(other, "b1", other, {}) == 3
+    assert repo.get_cook_state().cooked == {(day, "l3"): day, (other, "b1"): other}
     with pytest.raises(sqlite3.IntegrityError):
-        repo.mark_cooked(date(2026, 11, 11), "l3")
+        repo.record_cook(day, "l3", day, {})
     stored = repo.get_settings()
     assert stored is not None and stored.version == 3  # повтор не записан
-    assert repo.unmark_cooked(date(2026, 11, 11), "l3") == 4
-    assert repo.get_cooked() == {(date(2026, 11, 12), "b1")}
-    # До 10.3 отметка 8.3b — в день ключа.
-    assert repo.get_cook_state().cooked == {
-        (date(2026, 11, 12), "b1"): date(2026, 11, 12)
-    }
+    assert repo.clear_cook(day, "l3") == 4
+    assert repo.get_cook_state().cooked == {(other, "b1"): other}
 
 
 def test_dish_portions(tmp_path):

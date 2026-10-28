@@ -24,7 +24,7 @@ from meal_planner.core.catalog_actions import (
     from_assist,
     used_in,
 )
-from meal_planner.core.cookbook import UpcomingCook
+from meal_planner.core.cookbook import RecipeCooking, UpcomingCook
 from meal_planner.core.cooking import (
     MAX_PORTIONS,
     MIN_PORTIONS,
@@ -454,8 +454,22 @@ class CookedIn(ShoppingRemainingIn):
     recipe_id: str
 
 
+class UseIngredientIn(CookedIn):
+    """Списать один ингредиент рецепта или вернуть его (10.3)."""
+
+    ingredient_id: int
+
+
+class CookRecipeIn(CookedIn):
+    """Приготовить рецепт: списать неиспользованные ингредиенты (10.3)."""
+
+    # Нехватку подтвердили — списать сколько есть, до 0; иначе 422.
+    allow_missing: bool = False
+
+
 class SetDishPortionsIn(BaseModel):
-    """Порции неотмеченного блюда (8.3b) — меняют только списание, не план."""
+    """Порции рецепта до первого списания (8.3b, 10.3) — меняют только
+    списание, не план."""
 
     recipe_id: str
     # ge/le дублируют core намеренно: так пределы видны в OpenAPI.
@@ -546,6 +560,27 @@ class CookbookRecipeOut(BaseModel):
     storage: RecipeStorageOut | None
 
 
+class CookingIngredientOut(BaseModel):
+    ingredient_id: int
+    need: str  # format_qty на порции рецепта, в единице справочника
+    have: str | None  # остаток по счётчикам; null — не известен
+    used: bool  # уже списан по журналу
+    short: bool  # не хватает: только у неиспользованных и до готовки
+
+
+class RecipeCookingOut(BaseModel):
+    """Готовка рецепта на «Рецептах» (10.3); ингредиенты — в порядке рецепта."""
+
+    day: date  # ключ: день готовки партии или сегодня (вне очереди)
+    portions: int
+    planned_portions: int
+    locked: bool  # порции не поменять: уже списано или приготовлено
+    cooked: bool
+    cooked_today: bool  # приготовлено сегодня — серый до конца дня
+    missing: list[str]  # строки нехватки для подтверждения
+    ingredients: list[CookingIngredientOut]
+
+
 class CookbookOut(BaseModel):
     """Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.
 
@@ -558,6 +593,8 @@ class CookbookOut(BaseModel):
     lunch: list[CookbookRecipeOut]
     dinner: list[CookbookRecipeOut]
     breakfast: list[CookbookRecipeOut]
+    # Готовка по recipe_id (10.3) — одна на рецепт, общая у ряда и группы.
+    cooking: dict[str, RecipeCookingOut]
 
 
 class SkippedCookOut(BaseModel):
@@ -940,7 +977,10 @@ def to_cookbook_recipe_out(r: Recipe) -> CookbookRecipeOut:
 
 
 def to_cookbook_out(
-    today: date, cook: UpcomingCook, book: Mapping[MealKind, tuple[Recipe, ...]]
+    today: date,
+    cook: UpcomingCook,
+    book: Mapping[MealKind, tuple[Recipe, ...]],
+    cooking: Mapping[str, RecipeCooking],
 ) -> CookbookOut:
     def group(kind: MealKind) -> list[CookbookRecipeOut]:
         return [to_cookbook_recipe_out(r) for r in book[kind]]
@@ -969,6 +1009,29 @@ def to_cookbook_out(
         lunch=group(MealKind.LUNCH),
         dinner=group(MealKind.DINNER),
         breakfast=group(MealKind.BREAKFAST),
+        cooking={rid: to_recipe_cooking_out(c) for rid, c in cooking.items()},
+    )
+
+
+def to_recipe_cooking_out(c: RecipeCooking) -> RecipeCookingOut:
+    return RecipeCookingOut(
+        day=c.day,
+        portions=c.portions,
+        planned_portions=c.planned_portions,
+        locked=c.locked,
+        cooked=c.cooked,
+        cooked_today=c.cooked_today,
+        missing=list(c.missing),
+        ingredients=[
+            CookingIngredientOut(
+                ingredient_id=i.ingredient_id,
+                need=format_qty(float(i.need)),
+                have=None if i.have is None else format_qty(float(round(i.have, 1))),
+                used=i.used,
+                short=i.short,
+            )
+            for i in c.ingredients
+        ],
     )
 
 

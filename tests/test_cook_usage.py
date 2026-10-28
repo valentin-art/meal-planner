@@ -10,7 +10,6 @@ from meal_planner.core.actions import ActionError
 from meal_planner.core.cookbook import cook_preview
 from meal_planner.core.cooking import (
     CookState,
-    check_enough,
     cook_key,
     cook_recipe,
     set_recipe_portions,
@@ -243,11 +242,12 @@ SHORT = [
 
 
 def test_cook_with_shortage_needs_confirmation():
-    expected = error(check_enough, SEED_CATALOG, SEED_CATALOG.recipes["l3"], 1, SHORT)
-    assert error(cook, state(), "l3", SHORT) == expected
-    assert expected[1] == (
-        "Не хватает продуктов: паста цельнозерновая — нужно 90 г, есть 50 г;"
-        " авокадо — нужно 35 г, есть 26 г"
+    assert error(cook, state(), "l3", SHORT) == (
+        "stock",
+        (
+            "Не хватает продуктов: паста цельнозерновая — нужно 90 г, есть 50 г;"
+            " авокадо — нужно 35 г, есть 26 г"
+        ),
     )
     change = cook(state(), "l3", SHORT, allow_missing=True)
     assert change.update.values == (

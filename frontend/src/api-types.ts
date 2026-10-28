@@ -65,7 +65,8 @@ export interface paths {
         /** Get Cookbook */
         get: operations["get_cookbook_api_cookbook_get"];
         put?: never;
-        post?: never;
+        /** Post Cookbook */
+        post: operations["post_cookbook_api_cookbook_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -361,6 +362,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/use-ingredient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Use Ingredient */
+        post: operations["use_ingredient_api_actions_use_ingredient_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/unuse-ingredient": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unuse Ingredient */
+        post: operations["unuse_ingredient_api_actions_unuse_ingredient_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/cook-recipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cook Recipe */
+        post: operations["cook_recipe_api_actions_cook_recipe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/uncook-recipe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Uncook Recipe */
+        post: operations["uncook_recipe_api_actions_uncook_recipe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/set-recipe-portions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Recipe Portions */
+        post: operations["set_recipe_portions_api_actions_set_recipe_portions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/save-recipe": {
         parameters: {
             query?: never;
@@ -587,6 +673,21 @@ export interface components {
             /** Dinner Scale */
             dinner_scale: number;
         };
+        /**
+         * CookRecipeIn
+         * @description Приготовить рецепт: списать неиспользованные ингредиенты (10.3).
+         */
+        CookRecipeIn: {
+            /** Stock */
+            stock: components["schemas"]["StockLineIn"][];
+            /** Recipe Id */
+            recipe_id: string;
+            /**
+             * Allow Missing
+             * @default false
+             */
+            allow_missing: boolean;
+        };
         /** CookbookCookOut */
         CookbookCookOut: {
             /**
@@ -646,6 +747,10 @@ export interface components {
             dinner: components["schemas"]["CookbookRecipeOut"][];
             /** Breakfast */
             breakfast: components["schemas"]["CookbookRecipeOut"][];
+            /** Cooking */
+            cooking: {
+                [key: string]: components["schemas"]["RecipeCookingOut"];
+            };
         };
         /** CookbookRecipeOut */
         CookbookRecipeOut: {
@@ -695,6 +800,19 @@ export interface components {
             stock: components["schemas"]["StockLineIn"][];
             /** Recipe Id */
             recipe_id: string;
+        };
+        /** CookingIngredientOut */
+        CookingIngredientOut: {
+            /** Ingredient Id */
+            ingredient_id: number;
+            /** Need */
+            need: string;
+            /** Have */
+            have: string | null;
+            /** Used */
+            used: boolean;
+            /** Short */
+            short: boolean;
         };
         /** CounterValueOut */
         CounterValueOut: {
@@ -921,6 +1039,31 @@ export interface components {
             state: components["schemas"]["AppStateOut"];
             recipe: components["schemas"]["RecipeOut"];
         };
+        /**
+         * RecipeCookingOut
+         * @description Готовка рецепта на «Рецептах» (10.3); ингредиенты — в порядке рецепта.
+         */
+        RecipeCookingOut: {
+            /**
+             * Day
+             * Format: date
+             */
+            day: string;
+            /** Portions */
+            portions: number;
+            /** Planned Portions */
+            planned_portions: number;
+            /** Locked */
+            locked: boolean;
+            /** Cooked */
+            cooked: boolean;
+            /** Cooked Today */
+            cooked_today: boolean;
+            /** Missing */
+            missing: string[];
+            /** Ingredients */
+            ingredients: components["schemas"]["CookingIngredientOut"][];
+        };
         /** RecipeIdIn */
         RecipeIdIn: {
             /** Id */
@@ -1082,7 +1225,8 @@ export interface components {
         };
         /**
          * SetDishPortionsIn
-         * @description Порции неотмеченного блюда (8.3b) — меняют только списание, не план.
+         * @description Порции рецепта до первого списания (8.3b, 10.3) — меняют только
+         *     списание, не план.
          */
         SetDishPortionsIn: {
             /** Recipe Id */
@@ -1432,6 +1576,18 @@ export interface components {
             /** Id */
             id: string;
         };
+        /**
+         * UseIngredientIn
+         * @description Списать один ингредиент рецепта или вернуть его (10.3).
+         */
+        UseIngredientIn: {
+            /** Stock */
+            stock: components["schemas"]["StockLineIn"][];
+            /** Recipe Id */
+            recipe_id: string;
+            /** Ingredient Id */
+            ingredient_id: number;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1542,6 +1698,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CookbookOut"];
+                };
+            };
+        };
+    };
+    post_cookbook_api_cookbook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingRemainingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookbookOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
@@ -2065,6 +2254,171 @@ export interface operations {
         };
     };
     set_dish_portions_api_actions_set_dish_portions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetDishPortionsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DishPortionsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    use_ingredient_api_actions_use_ingredient_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UseIngredientIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookedActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unuse_ingredient_api_actions_unuse_ingredient_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UseIngredientIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookedActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cook_recipe_api_actions_cook_recipe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookRecipeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookedActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    uncook_recipe_api_actions_uncook_recipe_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CookedIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CookedActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_recipe_portions_api_actions_set_recipe_portions_post: {
         parameters: {
             query?: never;
             header?: never;

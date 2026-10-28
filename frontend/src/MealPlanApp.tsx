@@ -249,6 +249,7 @@ export default function MealPlanApp() {
             onEdit={setEditing}
             recipeAction={recipeAction}
             slots={state.cycle_slots}
+            cycleOrder={state.cycle_order}
             planUse={state.recipe_plan_use}
             catalog={catalog}
             loadIngredients={loadIngredients}
@@ -748,6 +749,7 @@ type SettingsTabProps = {
   onEdit: (editing: Editing) => void;
   recipeAction: RecipeAction;
   slots: AppState['cycle_slots'];
+  cycleOrder: AppState['cycle_order'];
   planUse: AppState['recipe_plan_use'];
   catalog: IngredientsCatalog | null;
   loadIngredients: () => Promise<void>;
@@ -764,6 +766,7 @@ function SettingsTab({
   onEdit,
   recipeAction,
   slots,
+  cycleOrder,
   planUse,
   catalog,
   loadIngredients,
@@ -904,7 +907,14 @@ function SettingsTab({
 
       <NutritionTargetSection settings={settings} saveError={saveError} runAction={runAction} />
 
-      <CycleSection slots={slots} recipes={recipes} planUse={planUse} saveError={saveError} runAction={runAction} />
+      <CycleSection
+        slots={slots}
+        order={cycleOrder}
+        recipes={recipes}
+        planUse={planUse}
+        saveError={saveError}
+        runAction={runAction}
+      />
       <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
       <IngredientsSection catalog={catalog} loadIngredients={loadIngredients} onEdit={onEditIngredient} />
     </div>
@@ -1382,13 +1392,14 @@ const SLOT_WARNING: Record<PlanUse, string> = {
 
 type CycleSectionProps = {
   slots: AppState['cycle_slots'];
+  order: AppState['cycle_order'];
   recipes: Recipes;
   planUse: AppState['recipe_plan_use'];
   saveError: SaveError | null;
   runAction: RunAction;
 };
 
-function CycleSection({ slots, recipes, planUse, saveError, runAction }: CycleSectionProps) {
+function CycleSection({ slots, order, recipes, planUse, saveError, runAction }: CycleSectionProps) {
   const lunches = recipesOfKind(recipes, 'lunch');
   const dinners = recipesOfKind(recipes, 'dinner');
   return (
@@ -1430,7 +1441,41 @@ function CycleSection({ slots, recipes, planUse, saveError, runAction }: CycleSe
         );
       })}
       <FieldError error={saveError} action="set-cycle-slot" />
+      <CycleOrderControls order={order} saveError={saveError} runAction={runAction} />
     </section>
+  );
+}
+
+// ---------- Перемешивание цикла (8.4a) ----------
+type CycleOrderControlsProps = {
+  order: AppState['cycle_order'];
+  saveError: SaveError | null;
+  runAction: RunAction;
+};
+
+function CycleOrderControls({ order, saveError, runAction }: CycleOrderControlsProps) {
+  const smallBtn = { ...ghostBtnStyle, padding: '4px 10px', fontSize: 12 };
+  return (
+    <div style={{ borderTop: `1px solid ${COLORS.line}`, paddingTop: 10, marginTop: 4 }}>
+      <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: 0 }}>
+        {order.shuffled ? 'Порядок перемешан: каждые 5 дней — свой.' : 'Блюда идут по кругу 1→5.'}
+        {order.changes_from && (
+          <> Изменение — с {weekdayShort(order.changes_from)} {fmtDate(order.changes_from)}, купленное не меняется.</>
+        )}
+      </p>
+      <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+        <button onClick={() => runAction('reshuffle-cycle', {})} style={smallBtn}>
+          {order.shuffled ? 'Перемешать ещё раз' : 'Перемешать порядок'}
+        </button>
+        {order.shuffled && (
+          <button onClick={() => runAction('reset-cycle-order', {})} style={smallBtn}>
+            Вернуть порядок 1→5
+          </button>
+        )}
+      </div>
+      <FieldError error={saveError} action="reshuffle-cycle" />
+      <FieldError error={saveError} action="reset-cycle-order" />
+    </div>
   );
 }
 

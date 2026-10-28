@@ -26,7 +26,12 @@ CATALOG_TABLES = {
     "recipe_steps",
     "cycle_slots",
 }
-ALL_TABLES = {"settings", "cooked", "dish_portions"} | CATALOG_TABLES  # 8.3b
+ALL_TABLES = {
+    "settings",
+    "cooked",  # 8.3b
+    "dish_portions",  # 8.3b
+    "cycle_shuffles",  # 8.4a
+} | CATALOG_TABLES
 
 
 def connect(path: Path) -> closing[sqlite3.Connection]:
@@ -88,7 +93,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 5
+        assert user_version(conn) == len(MIGRATIONS) == 6
     assert tables(db) == ALL_TABLES
 
 
@@ -167,6 +172,23 @@ def test_nutrition_target_migration_keeps_settings(tmp_path, monkeypatch):
     repo = Repository(path)
     with connect(path) as conn:
         assert user_version(conn) == len(MIGRATIONS)
+    assert repo.get_settings() == StoredSettings(SETTINGS, 7)
+
+
+def test_cycle_shuffles_migration_keeps_settings(tmp_path, monkeypatch):
+    # БД на v5 (до 8.4a): перемешивания нет — порядок 1→5, как раньше.
+    path = tmp_path / "v5.db"
+    monkeypatch.setattr(schema, "MIGRATIONS", MIGRATIONS[:5])
+    Repository(path)
+    monkeypatch.undo()
+    with connect(path) as conn, conn:
+        conn.execute(
+            "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 7, NULL,"
+            " NULL, NULL)"
+        )
+    repo = Repository(path)
+    with connect(path) as conn:
+        assert user_version(conn) == 6
     assert repo.get_settings() == StoredSettings(SETTINGS, 7)
 
 

@@ -719,6 +719,134 @@
         }
       }
     },
+    "/api/actions/reshuffle-cycle": {
+      "post": {
+        "summary": "Reshuffle Cycle",
+        "operationId": "reshuffle_cycle_api_actions_reshuffle_cycle_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/actions/reset-cycle-order": {
+      "post": {
+        "summary": "Reset Cycle Order",
+        "operationId": "reset_cycle_order_api_actions_reset_cycle_order_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/mark-cooked": {
       "post": {
         "summary": "Mark Cooked",
@@ -1264,6 +1392,9 @@
             },
             "type": "array",
             "title": "Cycle Slots"
+          },
+          "cycle_order": {
+            "$ref": "#/components/schemas/CycleOrderOut"
           }
         },
         "type": "object",
@@ -1277,7 +1408,8 @@
           "skipped_cook",
           "can_skip_next_cook",
           "recipe_plan_use",
-          "cycle_slots"
+          "cycle_slots",
+          "cycle_order"
         ],
         "title": "AppStateOut"
       },
@@ -1474,6 +1606,32 @@
           "value"
         ],
         "title": "CounterValueOut"
+      },
+      "CycleOrderOut": {
+        "properties": {
+          "shuffled": {
+            "type": "boolean",
+            "title": "Shuffled"
+          },
+          "changes_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes From"
+          }
+        },
+        "type": "object",
+        "required": [
+          "shuffled",
+          "changes_from"
+        ],
+        "title": "CycleOrderOut"
       },
       "CyclePositionOut": {
         "properties": {

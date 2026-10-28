@@ -242,6 +242,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/reshuffle-cycle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reshuffle Cycle */
+        post: operations["reshuffle_cycle_api_actions_reshuffle_cycle_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/actions/reset-cycle-order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reset Cycle Order */
+        post: operations["reset_cycle_order_api_actions_reset_cycle_order_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/mark-cooked": {
         parameters: {
             query?: never;
@@ -405,6 +439,7 @@ export interface components {
             };
             /** Cycle Slots */
             cycle_slots: components["schemas"]["CycleSlotOut"][];
+            cycle_order: components["schemas"]["CycleOrderOut"];
         };
         /**
          * CatalogIngredientOut
@@ -477,6 +512,13 @@ export interface components {
             entity_id: string;
             /** Value */
             value: number;
+        };
+        /** CycleOrderOut */
+        CycleOrderOut: {
+            /** Shuffled */
+            shuffled: boolean;
+            /** Changes From */
+            changes_from: string | null;
         };
         /** CyclePositionOut */
         CyclePositionOut: {
@@ -1490,6 +1532,70 @@ export interface operations {
         };
     };
     unskip_cook_api_actions_unskip_cook_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reshuffle_cycle_api_actions_reshuffle_cycle_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reset_cycle_order_api_actions_reset_cycle_order_post: {
         parameters: {
             query?: {
                 from?: string | null;

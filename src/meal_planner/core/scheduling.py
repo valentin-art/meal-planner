@@ -3,6 +3,7 @@
 Отличие с 6.5: до якоря блюд нет, первая готовка — день 0 (якорь − 1).
 С 7.7: пропущенная готовка ставит цикл на паузу (skipped).
 С 8.1: у дня с блюдами — отклонение от суточной цели.
+С 8.4a: порядок слотов в цикле может быть перемешан (core/shuffle.py).
 """
 
 from collections.abc import Iterable
@@ -12,11 +13,13 @@ from datetime import date, timedelta
 from meal_planner.core.models import (
     Catalog,
     CyclePosition,
+    CycleShuffle,
     DayMeals,
     Recipe,
     Settings,
     TodayPosition,
 )
+from meal_planner.core.shuffle import CYCLE_LEN, cycle_order
 
 # Позиция ротации k (1..5) → обед и ужин слота k каталога (5.3); завтраки
 # чередуются b1/b2 и в слоты не входят (5.1).
@@ -37,6 +40,12 @@ def dish_index_for_date(d: date, anchor: date) -> int:
     # JS: (((diff % 5) + 5) % 5) + 1. В Python % с положительным делителем
     # не бывает отрицательным, поэтому diff % 5 + 1 — то же самое.
     return (d - anchor).days % 5 + 1
+
+
+def slot_for_index(shuffles: tuple[CycleShuffle, ...], i: int) -> int:
+    """Слот дня ленты i (дней от якоря): без перемешивания — i % 5 + 1, как
+    dish_index_for_date."""
+    return cycle_order(shuffles, i // CYCLE_LEN)[i % CYCLE_LEN]
 
 
 def breakfast_for_date(d: date, anchor: date) -> str:
@@ -121,6 +130,7 @@ def meals_for_date(
     anchor: date,
     cook_weekdays: tuple[int, ...],
     skipped: date | None = None,
+    shuffles: tuple[CycleShuffle, ...] = (),
 ) -> DayMeals:
     if d < anchor:
         # Цикл ещё не начался (6.5): до дня 0 ничего не готовим и не едим,
@@ -166,10 +176,8 @@ def meals_for_date(
         previous_cook_date(cook_weekdays, window_end) + timedelta(days=1), anchor
     )
     win_len = (window_end - window_start).days + 1
-    natural_ks = [
-        dish_index_for_date(window_start + timedelta(days=i), anchor)
-        for i in range(win_len)
-    ]
+    start_index = (window_start - anchor).days
+    natural_ks = [slot_for_index(shuffles, start_index + i) for i in range(win_len)]
     # JS: sort((a, b) => fishPriority(b) - fishPriority(a) || a - b)
     order = sorted(
         range(len(natural_ks)),
@@ -205,11 +213,17 @@ def build_schedule(
     anchor = settings.meal_anchor_date
     weekdays = cook_weekdays(settings)
     skipped = settings.skipped_cook_date
+    shuffles = settings.cycle_shuffles
     days = (date_to - date_from).days + 1
     return tuple(
         with_target_deltas(
             meals_for_date(
-                catalog, date_from + timedelta(days=i), anchor, weekdays, skipped
+                catalog,
+                date_from + timedelta(days=i),
+                anchor,
+                weekdays,
+                skipped,
+                shuffles,
             ),
             settings,
         )
@@ -246,6 +260,12 @@ def trip_cook_date(settings: Settings, today: date) -> date:
     return cook_date
 
 
+def shopping_date_for(settings: Settings, cook_date: date) -> date:
+    if settings.shopping_timing == "before":
+        return cook_date - timedelta(days=1)
+    return cook_date
+
+
 def settle_skip(settings: Settings, today: date) -> Settings:
     """Прошедшая пауза уходит в якорь: блюда после неё те же, пропуск свободен.
 
@@ -279,6 +299,7 @@ def today_position(
     anchor: date,
     cook_weekdays: tuple[int, ...],
     skipped: date | None = None,
+    shuffles: tuple[CycleShuffle, ...] = (),
 ) -> TodayPosition:
     """Позиция «сегодня — блюдо N» (6.6): текущая и все достижимые.
 
@@ -297,11 +318,13 @@ def today_position(
     ]
     anchors = {0: today + timedelta(days=1)}  # сегодня день 0: готовка, цикл с завтра
     for candidate in candidates:
-        dish = meals_for_date(catalog, today, candidate, cook_weekdays).cycle_index
+        dish = meals_for_date(
+            catalog, today, candidate, cook_weekdays, shuffles=shuffles
+        ).cycle_index
         if dish is not None:  # всегда: кандидаты не позже сегодня
             anchors.setdefault(dish, candidate)
 
-    current = meals_for_date(catalog, today, anchor, cook_weekdays, skipped)
+    current = meals_for_date(catalog, today, anchor, cook_weekdays, skipped, shuffles)
     return TodayPosition(
         current=0 if current.is_day_zero else current.cycle_index,
         options=tuple(
@@ -314,3 +337,58 @@ def today_position(
             for dish in sorted(anchors)
         ),
     )
+
+
+def tape_index(settings: Settings, d: date) -> int:
+    """День ленты: сколько дней от якоря, без паузы пропущенной готовки (7.7).
+
+    Для дня в паузе — как у первого дня после неё.
+    """
+    skipped = settings.skipped_cook_date
+    anchor = settings.meal_anchor_date
+    if skipped is not None and d > skipped:
+        end = pause_end(skipped, cook_weekdays(settings))
+        d = max(d, end + timedelta(days=1))
+        anchor += end - skipped
+    return (d - anchor).days
+
+
+def tape_date(settings: Settings, i: int) -> date:
+    """Обратное к tape_index: дата дня ленты i."""
+    d = settings.meal_anchor_date + timedelta(days=i)
+    skipped = settings.skipped_cook_date
+    if skipped is not None and d > skipped:
+        d += pause_end(skipped, cook_weekdays(settings)) - skipped
+    return d
+
+
+def first_free_day(settings: Settings, today: date) -> date:
+    """Первый день, под который ещё не было закупки (8.4a); settings — после
+    settle_skip.
+
+    Ближайшая закупка не куплена, пока не настал её день; в день закупки она
+    считается сделанной.
+    """
+    cook_date = trip_cook_date(settings, today)
+    window_start, window_end = cook_window(settings, cook_date)
+    if today >= shopping_date_for(settings, cook_date):
+        return window_end + timedelta(days=1)
+    return window_start
+
+
+def first_free_cycle(settings: Settings, today: date) -> int:
+    """Первый цикл, начинающийся не раньше first_free_day.
+
+    Его партия может начаться раньше цикла (рыба переставляет дни внутри
+    партии), но не раньше first_free_day: тот — начало партии.
+    """
+    i = tape_index(settings, first_free_day(settings, today))
+    return max(0, -(-i // CYCLE_LEN))
+
+
+def batch_start(settings: Settings, d: date) -> date:
+    """Первый день партии, которая ест d (d — день с блюдами)."""
+    weekdays = cook_weekdays(settings)
+    window_end = nearest_cook_date(weekdays, d)
+    start = previous_cook_date(weekdays, window_end) + timedelta(days=1)
+    return max(start, settings.meal_anchor_date)

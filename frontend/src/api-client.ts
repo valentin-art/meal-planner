@@ -33,6 +33,9 @@ export type ActionPayloads = {
   // без тела: что пропускать, решает сервер (ближайшая готовка)
   'skip-next-cook': Record<string, never>;
   'unskip-cook': Record<string, never>;
+  // без тела: зерно выбирает сервер, с какого цикла — тоже (8.4a)
+  'reshuffle-cycle': Record<string, never>;
+  'reset-cycle-order': Record<string, never>;
 };
 export type ActionName = keyof ActionPayloads;
 

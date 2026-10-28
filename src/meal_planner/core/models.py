@@ -104,6 +104,17 @@ class Catalog:
 
 
 @dataclass(frozen=True, slots=True)
+class CycleShuffle:
+    """С цикла from_cycle — порядок слотов из зерна seed (8.4a).
+
+    Цикл n — дни ленты 5n..5n+4 от якоря. seed None — обратно к кругу 1→5.
+    """
+
+    from_cycle: int
+    seed: int | None
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     meal_anchor_date: date
     cook_count: int
@@ -118,6 +129,8 @@ class Settings:
     # None — цели нет.
     daily_kcal_target: int | None = None
     daily_protein_target: int | None = None
+    # Перемешивание цикла (8.4a), по from_cycle. Пусто — всегда 1→5.
+    cycle_shuffles: tuple[CycleShuffle, ...] = ()
 
 
 def default_settings(today: date) -> Settings:
@@ -212,6 +225,15 @@ class SkippedCook:
 
 
 @dataclass(frozen=True, slots=True)
+class CycleOrder:
+    """Перемешан ли порядок цикла (8.4a) и с какого дня действует последнее
+    изменение — None, если уже действует."""
+
+    shuffled: bool
+    changes_from: date | None
+
+
+@dataclass(frozen=True, slots=True)
 class AppState:
     today: date  # от него считается поездка в магазин; UI берёт «сегодня» отсюда
     settings: Settings
@@ -223,3 +245,4 @@ class AppState:
     can_skip_next_cook: bool
     plan_use: Mapping[str, PlanUse]  # только рецепты с признаком (5.4)
     slots: tuple[CycleSlot, ...]  # состав цикла — для UI (5.6)
+    cycle_order: CycleOrder

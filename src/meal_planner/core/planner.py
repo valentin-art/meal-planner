@@ -10,22 +10,27 @@ from meal_planner.core.models import (
     AppState,
     Catalog,
     CookItem,
+    CycleOrder,
     PlanUse,
     Settings,
     ShoppingTrip,
     SkippedCook,
 )
 from meal_planner.core.scheduling import (
+    batch_start,
     build_schedule,
     cook_weekdays,
     cook_window,
     pause_end,
     settle_skip,
+    shopping_date_for,
     slot_portions,
+    tape_date,
     today_position,
     trip_cook_date,
 )
 from meal_planner.core.shopping import extract_shopping_list
+from meal_planner.core.shuffle import CYCLE_LEN
 from meal_planner.core.stock import StockedTrip, StockLine, stock_in_catalog_units
 
 SCHEDULE_DAYS = 14  # JS PAGE_SIZE
@@ -54,12 +59,8 @@ def next_shopping_trip(
         )
         for k, n in slot_portions(days).items()
     )
-    if settings.shopping_timing == "before":
-        shopping_date = cook_date - timedelta(days=1)
-    else:
-        shopping_date = cook_date
     return ShoppingTrip(
-        shopping_date=shopping_date,
+        shopping_date=shopping_date_for(settings, cook_date),
         cook_date=cook_date,
         window_start=window_start,
         window_end=window_end,
@@ -113,6 +114,20 @@ def skipped_cook(settings: Settings, today: date) -> SkippedCook | None:
     )
 
 
+def cycle_order_state(settings: Settings, today: date) -> CycleOrder:
+    shuffles = settings.cycle_shuffles
+    if not shuffles:
+        return CycleOrder(shuffled=False, changes_from=None)
+    last = shuffles[-1]
+    # Порядок меняется с начала партии, в которую попал первый день цикла:
+    # рыба переставляет дни внутри партии.
+    start = batch_start(settings, tape_date(settings, last.from_cycle * CYCLE_LEN))
+    return CycleOrder(
+        shuffled=last.seed is not None,
+        changes_from=start if start > today else None,
+    )
+
+
 def recompute(
     catalog: Catalog,
     settings: Settings,
@@ -140,9 +155,11 @@ def recompute(
             settings.meal_anchor_date,
             cook_weekdays(settings),
             settings.skipped_cook_date,
+            settings.cycle_shuffles,
         ),
         skipped_cook=skipped_cook(settings, today),
         can_skip_next_cook=skip_next_cook_error(settings, today) is None,
         plan_use=MappingProxyType(plan_use(catalog, settings, today, trip)),
         slots=catalog.slots,
+        cycle_order=cycle_order_state(settings, today),
     )

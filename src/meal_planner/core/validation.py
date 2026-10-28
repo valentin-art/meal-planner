@@ -13,12 +13,25 @@ from meal_planner.core.scheduling import cook_weekdays
 WEEKDAY_MESSAGE = "День готовки — число от 1 (пн) до 7 (вс)"
 KCAL_TARGET_MIN, KCAL_TARGET_MAX = 500, 6000
 PROTEIN_TARGET_MIN, PROTEIN_TARGET_MAX = 10, 400
+SEED_LIMIT = 2**31  # зерно перемешивания — 0..2³¹−1, влезает в INTEGER SQLite
 
 
 @dataclass(frozen=True, slots=True)
 class SettingsError:
     field: str
     message: str
+
+
+def shuffles_valid(settings: Settings) -> bool:
+    # Строки пишет только сервер (8.4a) — проверка ловит правку БД руками.
+    cycles = [s.from_cycle for s in settings.cycle_shuffles]
+    return (
+        all(c >= 0 for c in cycles)
+        and cycles == sorted(set(cycles))
+        and all(
+            s.seed is None or 0 <= s.seed < SEED_LIMIT for s in settings.cycle_shuffles
+        )
+    )
 
 
 def settings_errors(settings: Settings) -> list[SettingsError]:
@@ -64,6 +77,10 @@ def settings_errors(settings: Settings) -> list[SettingsError]:
                 "daily_protein_target",
                 f"Цель по белку — от {PROTEIN_TARGET_MIN} до {PROTEIN_TARGET_MAX} г",
             )
+        )
+    if not shuffles_valid(settings):
+        errors.append(
+            SettingsError("cycle_shuffles", "Повреждена история перемешивания цикла")
         )
     skipped = settings.skipped_cook_date
     # Дни готовки проверяются только у валидного расписания (not errors).

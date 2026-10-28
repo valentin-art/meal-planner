@@ -188,12 +188,26 @@ def _dish_portions(conn: sqlite3.Connection) -> None:
     )
 
 
+def _cycle_shuffles(conn: sqlite3.Connection) -> None:
+    # Перемешивание цикла (8.4a): с цикла from_cycle — зерно seed (NULL —
+    # обратно к 1→5). Вход для recompute, не кэш расписания.
+    conn.execute(
+        """
+        CREATE TABLE cycle_shuffles (
+            from_cycle INTEGER PRIMARY KEY,
+            seed INTEGER
+        )
+        """
+    )
+
+
 MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _settings,  # 1: settings — схема до фазы 5
     _catalog,  # 2: каталог рецептов и сид (5.2)
     _nutrition_target,  # 3: цель по ккал и белку (8.1)
     _cooked,  # 4: отметки «приготовлено» (8.3b)
     _dish_portions,  # 5: порции блюда для списания (8.3b)
+    _cycle_shuffles,  # 6: перемешивание цикла (8.4a)
 )
 
 

@@ -15,7 +15,7 @@ from meal_planner.api.schemas import (
     to_ingredients_out,
     to_recipes_out,
 )
-from meal_planner.core.models import Settings, default_settings
+from meal_planner.core.models import CycleShuffle, Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
 
@@ -58,6 +58,20 @@ SCENARIOS = [
         "nutrition_target",
         date(2026, 11, 11),
         Settings(date(2026, 11, 5), 2, 3, 6, "same", None, 2000, 100),
+    ),
+    # порядок перемешан с цикла 1 (8.4a), новое зерно — с цикла 3: его
+    # партия начинается чт 19.11
+    (
+        "cycle_shuffled",
+        date(2026, 11, 9),
+        Settings(
+            date(2026, 11, 5),
+            2,
+            3,
+            6,
+            "same",
+            cycle_shuffles=(CycleShuffle(1, 42), CycleShuffle(3, 7)),
+        ),
     ),
 ]
 

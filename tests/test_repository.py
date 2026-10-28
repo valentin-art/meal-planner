@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from meal_planner.core.catalog import spec_of
-from meal_planner.core.models import CycleSlot, Settings
+from meal_planner.core.models import CycleShuffle, CycleSlot, Settings
 from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.db.repository import (
     DEFAULT_DB_PATH,
@@ -92,6 +92,17 @@ def test_nutrition_target_roundtrip(tmp_path):
     repo.save_settings(target)
     assert repo.get_settings() == StoredSettings(target, 1)
     repo.save_settings(SETTINGS)  # цели сняты — NULL в БД
+    assert repo.get_settings() == StoredSettings(SETTINGS, 2)
+
+
+def test_cycle_shuffles_roundtrip(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    shuffled = replace(
+        SETTINGS, cycle_shuffles=(CycleShuffle(2, 42), CycleShuffle(5, None))
+    )
+    repo.save_settings(shuffled)
+    assert repo.get_settings() == StoredSettings(shuffled, 1)
+    repo.save_settings(SETTINGS)  # строки заменяются целиком
     assert repo.get_settings() == StoredSettings(SETTINGS, 2)
 
 

@@ -17,6 +17,7 @@ from meal_planner.core.catalog import build_catalog
 from meal_planner.core.models import (
     Catalog,
     CatalogIngredient,
+    CycleShuffle,
     CycleSlot,
     Ingredient,
     MealKind,
@@ -96,8 +97,22 @@ def _read(conn: sqlite3.Connection) -> StoredSettings | None:
         skipped and date.fromisoformat(skipped),
         kcal,
         protein,
+        tuple(
+            CycleShuffle(*r)
+            for r in conn.execute(
+                "SELECT from_cycle, seed FROM cycle_shuffles ORDER BY from_cycle"
+            )
+        ),
     )
     return StoredSettings(settings=settings, version=version)
+
+
+def _write_shuffles(conn: sqlite3.Connection, settings: Settings) -> None:
+    conn.execute("DELETE FROM cycle_shuffles")
+    conn.executemany(
+        "INSERT INTO cycle_shuffles (from_cycle, seed) VALUES (?, ?)",
+        [(s.from_cycle, s.seed) for s in settings.cycle_shuffles],
+    )
 
 
 def _read_catalog(conn: sqlite3.Connection) -> Catalog:
@@ -232,6 +247,7 @@ class Repository:
         """Сохраняет настройки целиком и возвращает новую версию (1, 2, ...)."""
         with self._connect() as conn:
             (version,) = conn.execute(_UPSERT, _row(settings)).fetchone()
+            _write_shuffles(conn, settings)
         return version
 
     # Запись каталога (5.4): проверено в core/catalog_actions; каждая — одна

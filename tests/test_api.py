@@ -8,7 +8,7 @@ from scenario_settings import settings_of
 
 from meal_planner.api.main import create_app, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
-from meal_planner.core.models import Settings, default_settings
+from meal_planner.core.models import CycleShuffle, Settings, default_settings
 from meal_planner.core.planner import recompute
 from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.core.shopping import format_qty
@@ -976,3 +976,34 @@ def test_dish_portions_out_of_range_is_422(client, repo, portions):
     )
     assert r.status_code == 422
     assert repo.get_dish_portions() == {}
+
+
+def test_reshuffle_cycle_saves_seed_from_first_free_cycle(client, repo, monkeypatch):
+    # 8.4a: пн 09.11, закупка ср 11.11 не куплена — новый порядок с цикла 2,
+    # его партия начинается вс 15.11. Зерно — от сервера.
+    monkeypatch.setattr("meal_planner.api.main.secrets.randbelow", lambda _: 42)
+    repo.save_settings(DEFAULT_2X)
+    before = client.get("/api/state").json()
+    assert before["cycle_order"] == {"shuffled": False, "changes_from": None}
+    body = post(client, "reshuffle-cycle", None).json()
+    assert body["version"] == 2
+    assert body["cycle_order"] == {"shuffled": True, "changes_from": "2026-11-15"}
+    assert "cycle_shuffles" not in body["settings"]  # строки наружу не отдаются
+    saved = repo.get_settings().settings
+    assert saved.cycle_shuffles == (CycleShuffle(2, 42),)
+    # До 15.11 и ближайшая закупка — как были.
+    assert body["schedule"][:6] == before["schedule"][:6]
+    assert body["next_shopping_trip"] == before["next_shopping_trip"]
+    assert body == client.get("/api/state").json()
+
+
+def test_reset_cycle_order(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    r = post(client, "reset-cycle-order", None)
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "Порядок и так по слотам 1→5"
+    assert repo.get_settings().version == 1  # ничего не записано
+    post(client, "reshuffle-cycle", None)
+    body = post(client, "reset-cycle-order", None).json()
+    assert body["cycle_order"] == {"shuffled": False, "changes_from": "2026-11-15"}
+    assert repo.get_settings().settings.cycle_shuffles[-1] == CycleShuffle(2, None)

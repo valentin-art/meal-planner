@@ -226,6 +226,24 @@ it('пропуск готовки: кнопка в «Закупках», отм�
   ui.unmount();
 });
 
+it('перемешивание цикла: кнопки в «Цикле из 5 блюд», подпись — с сервера', async () => {
+  const shuffled = fullState(SCENARIOS.find((s) => s.name === 'cycle_shuffled')!);
+  handler = (url) => (url === 'api/actions/reshuffle-cycle' ? jsonResponse(shuffled) : jsonResponse(BASE));
+  const ui = await render(<MealPlanApp />);
+  await click(buttons(ui.container, 'Настройки')[0]);
+  expect(ui.text()).toContain('Блюда идут по кругу 1→5.');
+  expect(buttons(ui.container, 'Вернуть порядок 1→5')).toHaveLength(0);
+
+  await click(buttons(ui.container, 'Перемешать порядок')[0]);
+  expect(calls.at(-1)).toEqual({ url: 'api/actions/reshuffle-cycle', method: 'POST', body: {} });
+  expect(ui.text()).toContain('Порядок перемешан');
+  expect(ui.text()).toContain('Изменение — с Чт 19 нояб.');
+
+  await click(buttons(ui.container, 'Вернуть порядок 1→5')[0]);
+  expect(calls.at(-1)).toEqual({ url: 'api/actions/reset-cycle-order', method: 'POST', body: {} });
+  ui.unmount();
+});
+
 describe('ошибки', () => {
   it('422 — сообщение сервера на экране, state прежний', async () => {
     const detail = [{ type: 'value_error', loc: ['body', 'cook_weekday2'], msg: 'При двух готовках в неделю нужен второй день готовки' }];

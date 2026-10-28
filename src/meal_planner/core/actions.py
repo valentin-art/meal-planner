@@ -8,9 +8,10 @@
 from dataclasses import replace
 from datetime import date
 
-from meal_planner.core.models import Catalog, Settings, ShoppingTiming
+from meal_planner.core.models import Catalog, CycleShuffle, Settings, ShoppingTiming
 from meal_planner.core.scheduling import (
     cook_weekdays,
+    first_free_cycle,
     settle_skip,
     today_position,
     trip_cook_date,
@@ -92,7 +93,11 @@ def set_cycle_position(
     """«Сегодня — блюдо №dish» (0 — сегодня день 0): сервер сам выбирает якорь."""
     # Каталог нужен: какие блюда достижимы, зависит от рыбы в слотах (6.6).
     options = today_position(
-        catalog, today, settings.meal_anchor_date, cook_weekdays(settings)
+        catalog,
+        today,
+        settings.meal_anchor_date,
+        cook_weekdays(settings),
+        shuffles=settings.cycle_shuffles,
     ).options
     anchor = next((o.anchor for o in options if o.dish == dish), None)
     if anchor is None:
@@ -138,3 +143,26 @@ def unskip_cook(settings: Settings, today: date) -> Settings:
             " настройках, какое блюдо сегодня",
         )
     return replace(settings, skipped_cook_date=None)
+
+
+def with_cycle_shuffle(settings: Settings, today: date, seed: int | None) -> Settings:
+    """С первого некупленного цикла — новый порядок (8.4a); до него прежний.
+
+    Строки с того же цикла и позже заменяются; ранние нужны цепочке.
+    """
+    settings = settle_skip(settings, today)
+    first = first_free_cycle(settings, today)
+    kept = tuple(s for s in settings.cycle_shuffles if s.from_cycle < first)
+    return replace(settings, cycle_shuffles=(*kept, CycleShuffle(first, seed)))
+
+
+def reshuffle_cycle(settings: Settings, today: date, seed: int) -> Settings:
+    # Зерно приходит снаружи (API): core остаётся детерминированным.
+    return with_cycle_shuffle(settings, today, seed)
+
+
+def reset_cycle_order(settings: Settings, today: date) -> Settings:
+    shuffles = settings.cycle_shuffles
+    if not shuffles or shuffles[-1].seed is None:
+        raise ActionError("cycle_shuffles", "Порядок и так по слотам 1→5")
+    return with_cycle_shuffle(settings, today, None)

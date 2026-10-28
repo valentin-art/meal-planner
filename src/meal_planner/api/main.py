@@ -5,6 +5,7 @@
 
 import logging
 import os
+import secrets
 from collections.abc import Callable
 from datetime import date, timedelta
 from functools import lru_cache
@@ -57,7 +58,11 @@ from meal_planner.core.models import (
     default_settings,
 )
 from meal_planner.core.planner import recompute, shopping_with_stock
-from meal_planner.core.validation import settings_errors, usable_settings
+from meal_planner.core.validation import (
+    SEED_LIMIT,
+    settings_errors,
+    usable_settings,
+)
 from meal_planner.db.repository import (
     Repository,
     StoredSettings,
@@ -468,6 +473,41 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.unskip_cook(s, today),
+        )
+
+    @app.post("/api/actions/reshuffle-cycle", response_model=AppStateOut)
+    def reshuffle_cycle(
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        seed = secrets.randbelow(SEED_LIMIT)
+        return apply_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.reshuffle_cycle(s, today, seed),
+        )
+
+    @app.post("/api/actions/reset-cycle-order", response_model=AppStateOut)
+    def reset_cycle_order(
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.reset_cycle_order(s, today),
         )
 
     @app.post("/api/actions/mark-cooked", response_model=CookedActionOut)

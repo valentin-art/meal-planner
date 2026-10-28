@@ -436,6 +436,12 @@ class SkippedCookOut(BaseModel):
     can_undo: bool
 
 
+class CycleOrderOut(BaseModel):
+    shuffled: bool  # порядок слотов перемешан (8.4a)
+    # С какого дня действует последнее изменение порядка; null — уже действует.
+    changes_from: date | None
+
+
 class SummaryOut(BaseModel):
     """Компактный ответ для REST-сенсоров и Assist в HA (7.5)."""
 
@@ -466,6 +472,7 @@ class AppStateOut(BaseModel):
     # ближайшей закупке; остальных нет. Правка такого рецепта меняет план.
     recipe_plan_use: dict[str, PlanUse]
     cycle_slots: list[CycleSlotOut]  # какой обед и ужин в каждой позиции (5.6)
+    cycle_order: CycleOrderOut
 
 
 class RecipeActionOut(BaseModel):
@@ -645,6 +652,9 @@ def to_app_state_out(s: AppState) -> AppStateOut:
             CycleSlotOut(slot=c.slot, lunch_id=c.lunch_id, dinner_id=c.dinner_id)
             for c in s.slots
         ],
+        cycle_order=CycleOrderOut(
+            shuffled=s.cycle_order.shuffled, changes_from=s.cycle_order.changes_from
+        ),
     )
 
 

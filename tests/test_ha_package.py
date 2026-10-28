@@ -234,6 +234,13 @@ def test_propose_recipe_rules_match_core():
     assert options(new["category"]) == list(CATEGORY_ORDER)
     text = json.dumps(script, ensure_ascii=False)
     assert "meal_planner_ingredients" in text and "«В план»" in text
+    # Остатки и справочник — не повод для выбора блюда (поправка к 8.6c).
+    assert "на выбор блюда не влияют" in text
+    ingredients = json.dumps(
+        PACKAGE["script"]["meal_planner_ingredients"]["description"],
+        ensure_ascii=False,
+    )
+    assert "а не запасы дома" in ingredients
 
 
 def test_ingredients_script_uses_catalog_fields():

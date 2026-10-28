@@ -41,7 +41,7 @@ def test_save_and_get_roundtrip(tmp_path):
 def test_version_increments_on_every_save(tmp_path):
     repo = Repository(tmp_path / "db.sqlite")
     assert [repo.save_settings(SETTINGS) for _ in range(3)] == [1, 2, 3]
-    assert repo.get_settings().version == 3
+    assert repo.get_settings() == StoredSettings(SETTINGS, 3)
 
 
 def test_survives_restart(tmp_path):
@@ -204,7 +204,8 @@ def test_cooked_marks(tmp_path):
     assert repo.get_cooked() == {(date(2026, 11, 11), "l3"), (date(2026, 11, 12), "b1")}
     with pytest.raises(sqlite3.IntegrityError):
         repo.mark_cooked(date(2026, 11, 11), "l3")
-    assert repo.get_settings().version == 3  # повтор не записан
+    stored = repo.get_settings()
+    assert stored is not None and stored.version == 3  # повтор не записан
     assert repo.unmark_cooked(date(2026, 11, 11), "l3") == 4
     assert repo.get_cooked() == {(date(2026, 11, 12), "b1")}
 

@@ -132,7 +132,10 @@ def test_batches_have_no_repeats_and_fish_first(weekdays, seed):
         ks = [d.cycle_index for d in days]
         if len(ks) <= 4:
             assert len(set(ks)) == len(ks), (weekdays, days[0].date)
-        fish = [d.lunch.is_fish + d.dinner.is_fish for d in days]
+        fish = [
+            d.lunch.is_fish + d.dinner.is_fish for d in days if d.lunch and d.dinner
+        ]
+        assert len(fish) == len(days)
         assert fish == sorted(fish, reverse=True)
 
 
@@ -172,6 +175,7 @@ def test_reshuffle_keeps_bought_days_and_trip(timing, today_offset):
         changes_from = recompute(SEED_CATALOG, after, today).cycle_order.changes_from
         # Меняется с начала партии нового цикла — не раньше первого
         # некупленного дня, а он не раньше окна ближайшей закупки.
+        assert changes_from is not None
         assert changes_from >= first_free_day(current, today) > today
         assert build_schedule(SEED_CATALOG, after, today, changes_from - DAY) == (
             build_schedule(SEED_CATALOG, current, today, changes_from - DAY)
@@ -262,7 +266,7 @@ def test_cook_days_change_keeps_tape():
             slot_for_index(moved.cycle_shuffles, tape_index(moved, d.date))
             for d in days
         ]
-        assert sorted(d.cycle_index for d in days) == sorted(slots)
+        assert sorted(d.cycle_index or 0 for d in days) == sorted(slots)
 
 
 def test_today_position_options_hold_under_shuffle():

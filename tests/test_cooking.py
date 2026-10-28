@@ -293,7 +293,10 @@ def test_chosen_portions_replace_planned_only_for_write_off():
     state = cooking(SEED_CATALOG, SETTINGS, today, set(), portions)
     first = batch_of(state).dishes[0]
     assert (first.portions, first.planned_portions) == (3, dish.portions)
-    assert (breakfast_of(state).portions, breakfast_of(state).planned_portions) == (2, 1)
+    assert (breakfast_of(state).portions, breakfast_of(state).planned_portions) == (
+        2,
+        1,
+    )
     # Остальные блюда — по плану.
     assert all(d.portions == d.planned_portions for d in batch_of(state).dishes[1:])
 

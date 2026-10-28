@@ -84,7 +84,7 @@ def test_schedule_takes_variant_of_the_days_cycle():
     # чередуются, начиная с цикла 0.
     catalog = catalog_with(SlotVersion(1, 0, ("l1", "l6"), ("d1",)))
     days = build_schedule(catalog, BASE, date(2026, 11, 5), date(2026, 12, 31))
-    seen = [d.lunch.id for d in days if d.cycle_index == 1]
+    seen = [d.lunch.id for d in days if d.cycle_index == 1 and d.lunch]
     assert len(seen) == 12
     assert seen == ["l1", "l6"] * 6
 
@@ -240,7 +240,12 @@ def test_fish_days_stay_in_first_three_of_a_batch(weekdays):
     while d < date(2027, 2, 1):
         if d.isoweekday() in cook_weekdays(settings):
             days = build_schedule(catalog, settings, *cook_window(settings, d))
-            fish = [day.lunch.is_fish or day.dinner.is_fish for day in days]
+            fish = [
+                day.lunch.is_fish or day.dinner.is_fish
+                for day in days
+                if day.lunch and day.dinner
+            ]
+            assert len(fish) == len(days)
             if len(days) <= 4:
                 assert sum(fish) <= 3
             assert fish == sorted(fish, reverse=True)

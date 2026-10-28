@@ -168,7 +168,7 @@ def test_recipes_endpoint(client):
 
 
 class ExplodingRepository:
-    def get_settings(self):
+    def get_settings(self) -> StoredSettings | None:
         raise AssertionError("/api/recipes не должен читать настройки")
 
     def init_settings(self, defaults):
@@ -209,6 +209,7 @@ def test_summary_reshapes_state_for_today_and_tomorrow(client, repo):
     assert body["today"] == TODAY.isoformat()
     assert body["version"] == 1
     for key, day in zip(("today", "tomorrow"), state.schedule, strict=True):
+        assert day.breakfast and day.lunch and day.dinner
         assert body["days"][key] == {
             "date": day.date.isoformat(),
             "breakfast": day.breakfast.name,

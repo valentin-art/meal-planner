@@ -225,9 +225,10 @@ def test_portion_scales_migration_keeps_settings(tmp_path, monkeypatch):
             "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 7, NULL,"
             " 2700, NULL)"
         )
-    stored = Repository(path).get_settings()
-    assert stored == StoredSettings(replace(SETTINGS, daily_kcal_target=2700), 7)
-    assert stored.settings.portion_scales == ()
+    # portion_scales — дефолт (): порции как в рецептах.
+    assert Repository(path).get_settings() == StoredSettings(
+        replace(SETTINGS, daily_kcal_target=2700), 7
+    )
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):

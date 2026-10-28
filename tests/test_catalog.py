@@ -42,7 +42,7 @@ def test_order_is_kind_then_number():
         *(f"d{i}" for i in range(1, 6)),
     ]
     l10 = replace(RECIPE_SPECS["l1"], id="l10")
-    specs = [l10, *reversed(RECIPE_SPECS.values())]
+    specs = [l10, *reversed(list(RECIPE_SPECS.values()))]
     catalog = build_catalog(seed_ingredients(), specs, seed_slot_versions())
     assert list(catalog.recipes)[-6:] == ["l10", "d1", "d2", "d3", "d4", "d5"]
 
@@ -69,6 +69,7 @@ def test_schedule_follows_slots():
     other = {1: 4, 4: 1}
     for a, b in zip(seed, moved, strict=True):
         assert a.cycle_index == b.cycle_index
+        assert a.cycle_index is not None and b.lunch and b.dinner
         k = other.get(a.cycle_index, a.cycle_index)
         assert (b.lunch.id, b.dinner.id) == (f"l{k}", f"d{k}")
 

@@ -115,13 +115,14 @@ def test_no_rows_keeps_recipes():
         SEED_CATALOG, BASE, *window
     )
     for d in build_schedule(SEED_CATALOG, BASE, *window):
-        if d.lunch:
+        if d.breakfast and d.lunch and d.dinner:
             assert (d.lunch.scale, d.dinner.scale, d.breakfast.scale) == (1, 1, 1)
 
 
 def test_days_land_near_target():
     days = build_schedule(SEED_CATALOG, SCALED, date(2026, 11, 5), date(2026, 12, 31))
     for d in days:
+        assert d.breakfast is not None
         assert d.breakfast.scale == 1  # завтраки не масштабируются
         # Разброс — завтраки b1/b2 (±97.5) и округление множителя (±0.025 × ккал).
         assert abs(d.kcal_total - 2700) <= 160, d.date
@@ -177,24 +178,24 @@ def test_batch_never_mixes_two_scales(weekdays):
         if d.isoweekday() in cook_weekdays(settings):
             days = build_schedule(SEED_CATALOG, settings, *cook_window(settings, d))
             scales: dict[str, set[float]] = {}
-            for day in days:
-                for r in (day.lunch, day.dinner):
-                    scales.setdefault(r.id, set()).add(r.scale)
+            recipes = [r for day in days for r in (day.lunch, day.dinner) if r]
+            assert len(recipes) == 2 * len(days)
+            for r in recipes:
+                scales.setdefault(r.id, set()).add(r.scale)
             assert all(len(s) == 1 for s in scales.values()), (weekdays, d)
             target = target_for(
                 settings.portion_scales, batch_start(settings, days[0].date)
             )
-            for day in days:
-                for r in (day.lunch, day.dinner):
-                    plain = SEED_CATALOG.recipes[r.id]
-                    expected = (
-                        Decimal(1)
-                        if target is None
-                        else scale_for(
-                            plain, meal_share(SEED_CATALOG, target, ("b1", "b2"))
-                        )
+            for r in recipes:
+                plain = SEED_CATALOG.recipes[r.id]
+                expected = (
+                    Decimal(1)
+                    if target is None
+                    else scale_for(
+                        plain, meal_share(SEED_CATALOG, target, ("b1", "b2"))
                     )
-                    assert Decimal(str(r.scale)) == expected
+                )
+                assert Decimal(str(r.scale)) == expected
         d += DAY
 
 

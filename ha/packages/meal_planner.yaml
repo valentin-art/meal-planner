@@ -970,11 +970,12 @@ script:
         required: false
         selector:
           entity:
-            # Свои пункты помечаются описанием — списки без него не годятся.
+            # Без supported_features: HA 2026.10 при сборке tools для LLM
+            # перепроверяет уже переведённый в число флаг и падает — Assist
+            # теряет все скрипты. Списки без описания пункта отсекает
+            # проверка bitwise_and(64) ниже.
             filter:
               - domain: todo
-                supported_features:
-                  - todo.TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM
     sequence:
       - variables:
           todo_entity: "{{ todo_list | default('todo.pokupki', true) }}"

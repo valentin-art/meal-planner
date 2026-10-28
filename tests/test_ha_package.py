@@ -173,13 +173,20 @@ def test_items_key_is_not_an_attribute():
 def test_sync_targets_only_lists_with_item_description():
     # Свои пункты to-do помечаются описанием «meal-planner <дата>»: список
     # без описания (Shopping List) ломал todo.add_item (8.2).
+    # Отсекает их проверка в скрипте, а не фильтр селектора — см. ниже.
     script = PACKAGE["script"]["meal_planner_sync_shopping_list"]
     (entity_filter,) = script["fields"]["todo_list"]["selector"]["entity"]["filter"]
-    assert entity_filter == {
-        "domain": "todo",
-        "supported_features": ["todo.TodoListEntityFeature.SET_DESCRIPTION_ON_ITEM"],
-    }
+    assert entity_filter == {"domain": "todo"}
     assert "bitwise_and(64)" in json.dumps(script["sequence"], ensure_ascii=False)
+
+
+def test_selectors_have_no_supported_features():
+    # HA 2026.10: supported_features в фильтре селектора валит сборку tools
+    # для LLM («expected str at filter[0].supported_features[0][0]») — и
+    # Assist не получает ни одного скрипта.
+    assert "supported_features" not in json.dumps(
+        {name: s.get("fields", {}) for name, s in PACKAGE["script"].items()}
+    )
 
 
 def test_stock_template_passes_entity_id():

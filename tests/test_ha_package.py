@@ -45,9 +45,9 @@ def resolve(schema: dict) -> dict:
     return schema
 
 
-def schema_at(path: list[str]) -> dict:
-    """Схема поля SummaryOut по пути ["days", "today", …]."""
-    schema = resolve(SCHEMAS["SummaryOut"])
+def schema_at(path: list[str], root: str = "SummaryOut") -> dict:
+    """Схема поля root по пути ["days", "today", …]."""
+    schema = resolve(SCHEMAS[root])
     for key in path:
         assert key in schema.get("properties", {}), f"нет поля {key} в {path}"
         schema = resolve(schema["properties"][key])
@@ -86,6 +86,16 @@ def template_sensors():
     return [s for block in PACKAGE["template"] for s in block["sensor"]]
 
 
+def template_block(unique_id: str) -> dict:
+    """Блок template с сенсором unique_id: у партии и книги рецептов — свои."""
+    (block,) = [
+        b
+        for b in PACKAGE["template"]
+        if any(s["unique_id"] == unique_id for s in b["sensor"])
+    ]
+    return block
+
+
 def entity_id(sensor: dict) -> str:
     return "sensor." + sensor["name"].lower().replace(" ", "_")
 
@@ -110,7 +120,7 @@ def test_references_resolve():
 
 def test_cook_batch_sensor_uses_summary_fields():
     # Сенсор-шаблон (8.3b) сам запрашивает summary и берёт из него cooking.
-    (block,) = PACKAGE["template"]
+    block = template_block("meal_planner_cook_batch")
     (call, variables) = block["actions"]
     assert call["action"] == "rest_command.meal_planner_summary"
     assert call["response_variable"] == "resp"
@@ -130,7 +140,7 @@ def test_cook_batch_sensor_uses_summary_fields():
 
 def test_actions_refresh_the_cook_batch():
     # Сенсор партии обновляется по событию: его шлют скрипты действий.
-    (block,) = PACKAGE["template"]
+    block = template_block("meal_planner_cook_batch")
     events = {t.get("event_type") for t in block["triggers"]}
     assert "meal_planner_changed" in events
     for name in (
@@ -147,6 +157,33 @@ def test_actions_refresh_the_cook_batch():
     clear = PACKAGE["script"]["meal_planner_clear_dish_error"]
     assert clear["mode"] == "restart"
     assert clear["sequence"] == [{"delay": 3}, {"event": "meal_planner_changed"}]
+
+
+def test_cookbook_sensor_uses_cookbook_fields():
+    # Книга рецептов (9.1) — свой запрос, ответ целиком в атрибутах.
+    block = template_block("meal_planner_cookbook")
+    (call, variables) = block["actions"]
+    assert call["action"] == "rest_command.meal_planner_cookbook"
+    assert call["response_variable"] == "resp"
+    assert "resp.content" in variables["variables"]["book"]
+    (sensor,) = block["sensor"]
+    templates = json.dumps(sensor, ensure_ascii=False)
+    for path in re.findall(r"book((?:\.\w+)+)", templates):
+        schema_at(path.split(".")[1:], root="CookbookOut")
+    assert set(sensor["attributes"]) == {"cook", "lunch", "dinner", "breakfast"}
+    # Обновляется тогда же, что партия, — в том числе по meal_planner_changed.
+    assert block["triggers"] == template_block("meal_planner_cook_batch")["triggers"]
+
+
+def test_cookbook_sensor_is_not_recorded():
+    # ~50 КБ атрибутов: recorder их не пишет и предупреждает в логе.
+    assert "sensor.meal_planner_cookbook" in PACKAGE["recorder"]["exclude"]["entities"]
+
+
+def test_refresh_script_only_fires_the_event():
+    # Касание заголовка «рецепты» на дашборде: перечитать книгу сразу.
+    script = PACKAGE["script"]["meal_planner_refresh"]
+    assert script["sequence"] == [{"event": "meal_planner_changed"}]
 
 
 def test_scripts_describe_their_fields_for_the_llm():

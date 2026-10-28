@@ -33,6 +33,11 @@
 # согласия пользователя сохраняет рецепт черновиком
 # (meal_planner_propose_recipe). Ккал, перевод единиц и новые ингредиенты —
 # в приложении; в план и покупки черновик попадает только после «В план» в UI.
+#
+# Книга рецептов (9.1): sensor.meal_planner_cookbook для вкладки «Рецепты»
+# дашборда «Кухня» — ближайшая готовка и активные рецепты с шагами. Атрибуты
+# ~50 КБ, поэтому сенсор вне recorder. Обновляется по тем же событиям, что
+# партия, и скриптом meal_planner_refresh (после правки рецептов в приложении).
 
 homeassistant:
   customize:
@@ -46,6 +51,8 @@ homeassistant:
       friendly_name: Ккал сегодня
     sensor.meal_planner_cook_batch:
       friendly_name: Готовка
+    sensor.meal_planner_cookbook:
+      friendly_name: Рецепты
 
 rest:
   - resource: http://127.0.0.1:8001/api/summary
@@ -108,7 +115,7 @@ rest:
 # breakfast — то же для сегодняшнего завтрака. Плитки вкладки «Готовка»
 # дашборда «Кухня».
 template:
-  - triggers:
+  - triggers: &refresh_triggers
       - trigger: homeassistant
         event: start
       - trigger: event
@@ -145,9 +152,45 @@ template:
                   and trigger.event.data.error is defined
                else none }}
 
+  # Книга рецептов (9.1) — вкладка «Рецепты» дашборда «Кухня». Те же
+  # триггеры, что у партии. Состояние — дата ближайшей готовки; атрибуты —
+  # cook (блюда с порцией под цель) и активные рецепты по видам. ~50 КБ —
+  # вне recorder (см. recorder ниже).
+  - triggers: *refresh_triggers
+    actions:
+      - action: rest_command.meal_planner_cookbook
+        response_variable: resp
+        continue_on_error: true
+      - variables:
+          book: >-
+            {{ resp.content if resp is defined and resp.status == 200 else none }}
+    sensor:
+      - name: Meal planner cookbook
+        unique_id: meal_planner_cookbook
+        icon: mdi:book-open-variant
+        device_class: date
+        availability: "{{ book is not none }}"
+        state: "{{ book.cook.date if book else none }}"
+        attributes:
+          cook: "{{ book.cook if book else none }}"
+          lunch: "{{ book.lunch if book else [] }}"
+          dinner: "{{ book.dinner if book else [] }}"
+          breakfast: "{{ book.breakfast if book else [] }}"
+
+# Атрибуты книги рецептов ~50 КБ: recorder не пишет атрибуты больше 16 КБ и
+# предупреждает при каждом изменении. История этому сенсору не нужна.
+recorder:
+  exclude:
+    entities:
+      - sensor.meal_planner_cookbook
+
 rest_command:
   meal_planner_summary:
     url: http://127.0.0.1:8001/api/summary
+    method: get
+    timeout: 10
+  meal_planner_cookbook:
+    url: http://127.0.0.1:8001/api/cookbook
     method: get
     timeout: 10
   meal_planner_shopping_remaining:
@@ -689,6 +732,16 @@ script:
     mode: restart
     sequence:
       - delay: 3
+      - event: meal_planner_changed
+
+  meal_planner_refresh:
+    alias: Питание — обновить рецепты
+    description: >-
+      Служебный скрипт дашборда: сразу перечитывает книгу рецептов и партию
+      готовки из приложения (после правки рецептов в приложении). Вызывать не
+      нужно.
+    mode: single
+    sequence:
       - event: meal_planner_changed
 
   # Рецепт от Assist (8.6): справочник — чтобы модель не плодила дубли

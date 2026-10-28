@@ -34,6 +34,11 @@
 # (meal_planner_propose_recipe). Ккал, перевод единиц и новые ингредиенты —
 # в приложении; в план и покупки черновик попадает только после «В план» в UI.
 #
+# Готовка по ингредиентам (10.4): любой активный рецепт готовят целиком
+# или по продуктам (meal_planner_use_ingredient / _unuse_, _cook_recipe /
+# _uncook_recipe, _set_recipe_portions). Отметки общие с партией; отмена
+# возвращает ровно списанное (журнал в приложении).
+#
 # Книга рецептов (9.1): sensor.meal_planner_cookbook для вкладки «Рецепты»
 # дашборда «Кухня» — ближайшая готовка и активные рецепты с шагами. Атрибуты
 # ~50 КБ, поэтому сенсор вне recorder. Обновляется по тем же событиям, что
@@ -154,11 +159,32 @@ template:
 
   # Книга рецептов (9.1) — вкладка «Рецепты» дашборда «Кухня». Те же
   # триггеры, что у партии. Состояние — дата ближайшей готовки; атрибуты —
-  # cook (блюда с порцией под цель) и активные рецепты по видам. ~50 КБ —
-  # вне recorder (см. recorder ниже).
+  # cook (блюда с порцией под цель), активные рецепты по видам и cooking —
+  # готовка каждого рецепта (10.4). ~60 КБ — вне recorder (см. recorder ниже).
+  # Запрос — с остатками из счётчиков: нехватку и текст подтверждения видно
+  # заранее. Скрипты готовки выставляют счётчики до события, поэтому после
+  # действия книга уже с новыми остатками. Ручная правка «Запасов» сенсор не
+  # обновляет — до 15 минут остатки в книге могут устареть; действие
+  # проверяет заново, отказ показывает плитка (last_error).
   - triggers: *refresh_triggers
     actions:
+      # Шаблон остатков (8.2) — здесь его первое место в пакете, дальше *stock.
+      - variables:
+          stock: &stock >-
+            {%- set ns = namespace(lines=[]) %}
+            {%- for s in states.input_number
+                  if s.attributes.meal_planner_ingredient is defined
+                  and s.state not in ['unknown', 'unavailable'] %}
+              {%- set ns.lines = ns.lines + [{
+                    "ingredient_id": s.attributes.meal_planner_ingredient | int,
+                    "qty": s.state | float,
+                    "unit": s.attributes.unit_of_measurement | default(''),
+                    "entity_id": s.entity_id}] %}
+            {%- endfor %}
+            {{ ns.lines }}
       - action: rest_command.meal_planner_cookbook
+        data:
+          stock: "{{ stock }}"
         response_variable: resp
         continue_on_error: true
       - variables:
@@ -176,6 +202,14 @@ template:
           lunch: "{{ book.lunch if book else [] }}"
           dinner: "{{ book.dinner if book else [] }}"
           breakfast: "{{ book.breakfast if book else [] }}"
+          cooking: "{{ book.cooking if book else {} }}"
+          # Отказ действия готовки ({recipe_id, error}) — как у партии.
+          last_error: >-
+            {{ trigger.event.data
+               if trigger.platform == 'event'
+                  and trigger.event.event_type == 'meal_planner_changed'
+                  and trigger.event.data.error is defined
+               else none }}
 
 # Атрибуты книги рецептов ~50 КБ: recorder не пишет атрибуты больше 16 КБ и
 # предупреждает при каждом изменении. История этому сенсору не нужна.
@@ -191,8 +225,10 @@ rest_command:
     timeout: 10
   meal_planner_cookbook:
     url: http://127.0.0.1:8001/api/cookbook
-    method: get
+    method: post
+    content_type: application/json
     timeout: 10
+    payload: '{{ {"stock": stock} | to_json }}'
   meal_planner_shopping_remaining:
     url: http://127.0.0.1:8001/api/shopping/remaining
     method: post
@@ -217,6 +253,42 @@ rest_command:
     content_type: application/json
     timeout: 10
     payload: '{{ {"recipe_id": recipe_id, "stock": stock} | to_json }}'
+  meal_planner_use_ingredient:
+    url: http://127.0.0.1:8001/api/actions/use-ingredient
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {{ {"recipe_id": recipe_id, "ingredient_id": ingredient_id | int,
+          "stock": stock} | to_json }}
+  meal_planner_unuse_ingredient:
+    url: http://127.0.0.1:8001/api/actions/unuse-ingredient
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {{ {"recipe_id": recipe_id, "ingredient_id": ingredient_id | int,
+          "stock": stock} | to_json }}
+  meal_planner_cook_recipe:
+    url: http://127.0.0.1:8001/api/actions/cook-recipe
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {{ {"recipe_id": recipe_id, "stock": stock,
+          "allow_missing": allow_missing | default(false) | bool} | to_json }}
+  meal_planner_uncook_recipe:
+    url: http://127.0.0.1:8001/api/actions/uncook-recipe
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"recipe_id": recipe_id, "stock": stock} | to_json }}'
+  meal_planner_set_recipe_portions:
+    url: http://127.0.0.1:8001/api/actions/set-recipe-portions
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"recipe_id": recipe_id, "portions": portions | int} | to_json }}'
   meal_planner_set_cycle_position:
     url: http://127.0.0.1:8001/api/actions/set-cycle-position
     method: post
@@ -296,18 +368,7 @@ script:
         response_variable: resp
         continue_on_error: true
       - variables:
-          stock: &stock >-
-            {%- set ns = namespace(lines=[]) %}
-            {%- for s in states.input_number
-                  if s.attributes.meal_planner_ingredient is defined
-                  and s.state not in ['unknown', 'unavailable'] %}
-              {%- set ns.lines = ns.lines + [{
-                    "ingredient_id": s.attributes.meal_planner_ingredient | int,
-                    "qty": s.state | float,
-                    "unit": s.attributes.unit_of_measurement | default(''),
-                    "entity_id": s.entity_id}] %}
-            {%- endfor %}
-            {{ ns.lines }}
+          stock: *stock
       - action: rest_command.meal_planner_shopping_remaining
         data:
           stock: "{{ stock }}"
@@ -567,7 +628,8 @@ script:
       - if: "{{ resp is defined and resp.status == 200 }}"
         then:
           # Значения посчитало приложение; max — только защита set_value.
-          - repeat:
+          - &set_counters
+            repeat:
               for_each: "{{ resp.content.counters }}"
               sequence:
                 - action: input_number.set_value
@@ -686,17 +748,7 @@ script:
       - if: "{{ resp is defined and resp.status == 200 }}"
         then:
           # Значения посчитало приложение; max — только защита set_value.
-          - repeat:
-              for_each: "{{ resp.content.counters }}"
-              sequence:
-                - action: input_number.set_value
-                  target:
-                    entity_id: "{{ repeat.item.entity_id }}"
-                  data:
-                    value: >-
-                      {{ [repeat.item.value,
-                          state_attr(repeat.item.entity_id, 'max') | float(repeat.item.value)]
-                         | min }}
+          - *set_counters
           - event: meal_planner_changed
           - variables:
               result:
@@ -712,6 +764,292 @@ script:
       # На дашборде ответа скрипта не видно: причину показывает плитка блюда
       # (атрибут last_error сенсора партии) — 3 секунды, снимает
       # meal_planner_clear_dish_error, не задерживая ответ.
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
+      - stop: Ошибка
+        response_variable: result
+
+  # Готовка по ингредиентам (10.4) — вкладка «Рецепты». Как у блюд
+  # партии: счётчики из ответа, событие, отказ — событием с ошибкой.
+  meal_planner_use_ingredient:
+    alias: Питание — продукт рецепта использован
+    description: >-
+      Списывает один продукт рецепта из счётчиков запасов — на выбранные
+      порции рецепта, сколько есть (до 0, без проверки нехватки). Повторно
+      не списывается. Если рецепт уже приготовлен — ошибка.
+    mode: queued
+    fields:
+      recipe_id:
+        name: Рецепт
+        description: recipe_id рецепта (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+      ingredient_id:
+        name: Ингредиент
+        description: id ингредиента справочника (ingredient_id в cooking книги рецептов)
+        required: true
+        selector:
+          number:
+            mode: box
+    sequence:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_use_ingredient
+        data:
+          recipe_id: "{{ recipe_id }}"
+          ingredient_id: "{{ ingredient_id }}"
+          stock: "{{ stock }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          # Значения посчитало приложение; max — только защита set_value.
+          - *set_counters
+          - event: meal_planner_changed
+          - variables:
+              result:
+                ok: true
+                ignored: "{{ resp.content.ignored }}"
+                untracked: "{{ resp.content.untracked }}"
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка
+      # (last_error сенсоров партии и книги) — 3 секунды.
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_unuse_ingredient:
+    alias: Питание — вернуть продукт рецепта
+    description: >-
+      Возвращает в счётчики ровно то, что списал meal_planner_use_ingredient
+      по этому продукту, — если отметили по ошибке.
+    mode: queued
+    fields:
+      recipe_id:
+        name: Рецепт
+        description: recipe_id рецепта (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+      ingredient_id:
+        name: Ингредиент
+        description: id ингредиента справочника (ingredient_id в cooking книги рецептов)
+        required: true
+        selector:
+          number:
+            mode: box
+    sequence:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_unuse_ingredient
+        data:
+          recipe_id: "{{ recipe_id }}"
+          ingredient_id: "{{ ingredient_id }}"
+          stock: "{{ stock }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          # Значения посчитало приложение; max — только защита set_value.
+          - *set_counters
+          - event: meal_planner_changed
+          - variables:
+              result:
+                ok: true
+                ignored: "{{ resp.content.ignored }}"
+                untracked: "{{ resp.content.untracked }}"
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка
+      # (last_error сенсоров партии и книги) — 3 секунды.
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_cook_recipe:
+    alias: Питание — приготовить рецепт
+    description: >-
+      Готовит любой активный рецепт: списывает из счётчиков ещё не
+      использованные продукты на выбранные порции и отмечает рецепт
+      приготовленным. Блюдо текущей партии отмечается и на «Готовке»,
+      остальное — вне очереди, сегодня. Если продуктов не хватает — ошибка со
+      списком, ничего не списано; перескажи её и спроси, готовить ли без
+      них — только после согласия вызови снова с allow_missing: true
+      (спишется сколько есть, до 0).
+    mode: queued
+    fields:
+      recipe_id:
+        name: Рецепт
+        description: recipe_id рецепта (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+      allow_missing:
+        name: Без недостающих
+        description: true — готовить без недостающих продуктов (только после согласия)
+        required: false
+        default: false
+        selector:
+          boolean:
+    sequence:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_cook_recipe
+        data:
+          recipe_id: "{{ recipe_id }}"
+          allow_missing: "{{ allow_missing | default(false) }}"
+          stock: "{{ stock }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          # Значения посчитало приложение; max — только защита set_value.
+          - *set_counters
+          - event: meal_planner_changed
+          - variables:
+              result:
+                ok: true
+                ignored: "{{ resp.content.ignored }}"
+                untracked: "{{ resp.content.untracked }}"
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка
+      # (last_error сенсоров партии и книги) — 3 секунды.
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_uncook_recipe:
+    alias: Питание — отменить готовку рецепта
+    description: >-
+      Снимает отметку «приготовлено» с рецепта и возвращает в счётчики ровно
+      то, что было списано (и по отдельным продуктам, и при готовке).
+    mode: queued
+    fields:
+      recipe_id:
+        name: Рецепт
+        description: recipe_id рецепта (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+    sequence:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_uncook_recipe
+        data:
+          recipe_id: "{{ recipe_id }}"
+          stock: "{{ stock }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          # Значения посчитало приложение; max — только защита set_value.
+          - *set_counters
+          - event: meal_planner_changed
+          - variables:
+              result:
+                ok: true
+                ignored: "{{ resp.content.ignored }}"
+                untracked: "{{ resp.content.untracked }}"
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка
+      # (last_error сенсоров партии и книги) — 3 секунды.
+      - event: meal_planner_changed
+        event_data:
+          recipe_id: "{{ recipe_id }}"
+          error: "{{ result.error }}"
+      - action: script.turn_on
+        target:
+          entity_id: script.meal_planner_clear_dish_error
+      - stop: Ошибка
+        response_variable: result
+
+  meal_planner_set_recipe_portions:
+    alias: Питание — порции рецепта
+    description: >-
+      Сколько порций рецепта готовят (1–20): на столько считаются продукты и
+      списание. План и список покупок не меняются. Только пока по рецепту
+      ничего не списано.
+    mode: queued
+    fields:
+      recipe_id:
+        name: Рецепт
+        description: recipe_id рецепта (например, l3, d2, b1)
+        required: true
+        selector:
+          text:
+      portions:
+        name: Порции
+        description: Сколько порций готовят, от 1 до 20
+        required: true
+        selector:
+          number:
+            min: 1
+            max: 20
+            mode: box
+    sequence:
+      - action: rest_command.meal_planner_set_recipe_portions
+        data:
+          recipe_id: "{{ recipe_id }}"
+          portions: "{{ portions }}"
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - event: meal_planner_changed
+          - variables:
+              result:
+                ok: true
+          - stop: Готово
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+            error: *error
+      # На дашборде ответа скрипта не видно: причину показывает плитка
+      # (last_error сенсоров партии и книги) — 3 секунды.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"

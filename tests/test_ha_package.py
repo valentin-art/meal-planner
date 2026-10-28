@@ -143,11 +143,7 @@ def test_actions_refresh_the_cook_batch():
     block = template_block("meal_planner_cook_batch")
     events = {t.get("event_type") for t in block["triggers"]}
     assert "meal_planner_changed" in events
-    for name in (
-        "meal_planner_mark_cooked",
-        "meal_planner_unmark_cooked",
-        "meal_planner_set_dish_portions",
-    ):
+    for name in (*COOKING_SCRIPTS, *PORTION_SCRIPTS):
         script = json.dumps(PACKAGE["script"][name], ensure_ascii=False)
         assert '"event": "meal_planner_changed"' in script, name
         # Отказ — тоже событие: причину показывает плитка (last_error).
@@ -159,18 +155,64 @@ def test_actions_refresh_the_cook_batch():
     assert clear["sequence"] == [{"delay": 3}, {"event": "meal_planner_changed"}]
 
 
+# Скрипты, что списывают или возвращают продукты: 8.3b и 10.4.
+COOKING_SCRIPTS = (
+    "meal_planner_mark_cooked",
+    "meal_planner_unmark_cooked",
+    "meal_planner_use_ingredient",
+    "meal_planner_unuse_ingredient",
+    "meal_planner_cook_recipe",
+    "meal_planner_uncook_recipe",
+)
+PORTION_SCRIPTS = ("meal_planner_set_dish_portions", "meal_planner_set_recipe_portions")
+
+
+def stock_template() -> str:
+    plan = PACKAGE["script"]["meal_planner_plan"]["sequence"]
+    return next(
+        s["variables"]["stock"] for s in plan if "stock" in s.get("variables", {})
+    )
+
+
+def test_cooking_scripts_send_stock_and_set_counters():
+    # Все счётчики — в запрос: возврат идёт только в переданные (10.3).
+    for name in COOKING_SCRIPTS:
+        sequence = PACKAGE["script"][name]["sequence"]
+        assert sequence[0] == {"variables": {"stock": stock_template()}}, name
+        call = sequence[1]
+        assert call["data"]["stock"] == "{{ stock }}", name
+        counters = json.dumps(sequence[2]["then"][0], ensure_ascii=False)
+        assert "resp.content.counters" in counters, name
+        assert "input_number.set_value" in counters, name
+
+
 def test_cookbook_sensor_uses_cookbook_fields():
     # Книга рецептов (9.1) — свой запрос, ответ целиком в атрибутах.
     block = template_block("meal_planner_cookbook")
-    (call, variables) = block["actions"]
+    (stock, call, variables) = block["actions"]
+    # С остатками из счётчиков (10.4): нехватка видна заранее.
+    assert stock["variables"]["stock"] == stock_template()
     assert call["action"] == "rest_command.meal_planner_cookbook"
+    assert call["data"] == {"stock": "{{ stock }}"}
     assert call["response_variable"] == "resp"
     assert "resp.content" in variables["variables"]["book"]
     (sensor,) = block["sensor"]
     templates = json.dumps(sensor, ensure_ascii=False)
-    for path in re.findall(r"book((?:\.\w+)+)", templates):
+    paths = re.findall(r"book((?:\.\w+)+)", templates)
+    assert "book.cooking" in [f"book{p}" for p in paths]
+    for path in paths:
         schema_at(path.split(".")[1:], root="CookbookOut")
-    assert set(sensor["attributes"]) == {"cook", "lunch", "dinner", "breakfast"}
+    assert set(sensor["attributes"]) == {
+        "cook",
+        "lunch",
+        "dinner",
+        "breakfast",
+        "cooking",
+        "last_error",
+    }
+    # Отказ действия готовки — как у партии.
+    (batch,) = template_block("meal_planner_cook_batch")["sensor"]
+    assert sensor["attributes"]["last_error"] == batch["attributes"]["last_error"]
     # Обновляется тогда же, что партия, — в том числе по meal_planner_changed.
     assert block["triggers"] == template_block("meal_planner_cook_batch")["triggers"]
 

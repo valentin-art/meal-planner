@@ -173,6 +173,26 @@ describe('настройки уходят в action-эндпоинты, отве
     ui.unmount();
   });
 
+  it('порции под цель (8.5): флажок шлёт действие, множитель и граммы — с сервера', async () => {
+    const scaled = fullState(SCENARIOS.find((s) => s.name === 'portion_scaling')!);
+    handler = (url) => (url === 'api/actions/set-portion-scaling' ? jsonResponse(scaled) : jsonResponse(BASE));
+    const ui = await render(<MealPlanApp />);
+    await click(buttons(ui.container, 'Настройки')[0]);
+    const box = ui.container.querySelector<HTMLInputElement>('input[type="checkbox"]')!;
+    expect(box.checked).toBe(false);
+    expect(ui.text()).toContain('Порции — как в рецептах.');
+
+    await click(box);
+    expect(calls.at(-1)).toEqual({ url: 'api/actions/set-portion-scaling', method: 'POST', body: { enabled: true } });
+    expect(ui.text()).toContain('Порции — под 2400 ккал. Изменение — с Вс 15 нояб., купленное не меняется.');
+
+    await click(buttons(ui.container, 'Меню')[0]);
+    const lunch = scaled.schedule[0];
+    const portion = scaled.scaled_recipes.find((r) => r.recipe_id === lunch.lunch_id && r.scale === lunch.lunch_scale)!;
+    expect(ui.text()).toContain(`≈${portion.kcal} ккал · ${portion.protein}г белка · порция ×${lunch.lunch_scale}`);
+    ui.unmount();
+  });
+
   it('«Сегодня» — варианты с сервера, выбор уходит в set-cycle-position', async () => {
     const { options, current } = BASE.today_position;
     const moved = { ...withSettings({ meal_anchor_date: options[1].anchor }), today_position: { options, current: options[1].dish } };

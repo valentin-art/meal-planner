@@ -8,10 +8,17 @@
 from dataclasses import replace
 from datetime import date
 
-from meal_planner.core.models import Catalog, CycleShuffle, Settings, ShoppingTiming
+from meal_planner.core.models import (
+    Catalog,
+    CycleShuffle,
+    PortionScale,
+    Settings,
+    ShoppingTiming,
+)
 from meal_planner.core.scheduling import (
     cook_weekdays,
     first_free_cycle,
+    first_free_day,
     settle_skip,
     today_position,
     trip_cook_date,
@@ -76,14 +83,49 @@ def set_shopping_timing(
 
 def set_nutrition_target(
     settings: Settings,
+    today: date,
     daily_kcal_target: int | None,
     daily_protein_target: int | None,
 ) -> Settings:
     # Обе цели целиком: форма шлёт оба поля, None — цели нет (8.1).
+    # Масштаб порций (8.5) следует за целью — с первой некупленной партии.
+    if portions_target(settings) is not None:
+        settings = with_portion_scale(settings, today, daily_kcal_target)
     return replace(
         settings,
         daily_kcal_target=daily_kcal_target,
         daily_protein_target=daily_protein_target,
+    )
+
+
+def portions_target(settings: Settings) -> int | None:
+    """Под какую цель масштабируются порции сейчас; None — масштаба нет."""
+    rows = settings.portion_scales
+    return rows[-1].kcal_target if rows else None
+
+
+def with_portion_scale(settings: Settings, today: date, target: int | None) -> Settings:
+    """С первой некупленной партии — порции под target (8.5); None — без масштаба.
+
+    Строки с той же даты и позже заменяются; то же состояние — без новой строки.
+    """
+    settings = settle_skip(settings, today)
+    if portions_target(settings) == target:
+        return settings
+    first = first_free_day(settings, today)
+    kept = tuple(r for r in settings.portion_scales if r.from_date < first)
+    if (kept[-1].kcal_target if kept else None) == target:
+        # Отмена ещё не наступившей правки — возврат к тому, что действует.
+        return replace(settings, portion_scales=kept)
+    return replace(settings, portion_scales=(*kept, PortionScale(first, target)))
+
+
+def set_portion_scaling(settings: Settings, today: date, enabled: bool) -> Settings:
+    """Подгонять порции обедов и ужинов под цель по ккал (8.5) или перестать."""
+    if enabled and settings.daily_kcal_target is None:
+        raise ActionError("enabled", "Сначала задайте цель по ккал")
+    return with_portion_scale(
+        settings, today, settings.daily_kcal_target if enabled else None
     )
 
 

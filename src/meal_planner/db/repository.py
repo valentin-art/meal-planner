@@ -20,6 +20,7 @@ from meal_planner.core.models import (
     CycleShuffle,
     Ingredient,
     MealKind,
+    PortionScale,
     RecipeSpec,
     RecipeStorage,
     Settings,
@@ -103,6 +104,12 @@ def _read(conn: sqlite3.Connection) -> StoredSettings | None:
                 "SELECT from_cycle, seed FROM cycle_shuffles ORDER BY from_cycle"
             )
         ),
+        tuple(
+            PortionScale(date.fromisoformat(from_date), target)
+            for from_date, target in conn.execute(
+                "SELECT from_date, kcal_target FROM portion_scales ORDER BY from_date"
+            )
+        ),
     )
     return StoredSettings(settings=settings, version=version)
 
@@ -112,6 +119,11 @@ def _write_shuffles(conn: sqlite3.Connection, settings: Settings) -> None:
     conn.executemany(
         "INSERT INTO cycle_shuffles (from_cycle, seed) VALUES (?, ?)",
         [(s.from_cycle, s.seed) for s in settings.cycle_shuffles],
+    )
+    conn.execute("DELETE FROM portion_scales")
+    conn.executemany(
+        "INSERT INTO portion_scales (from_date, kcal_target) VALUES (?, ?)",
+        [(r.from_date.isoformat(), r.kcal_target) for r in settings.portion_scales],
     )
 
 

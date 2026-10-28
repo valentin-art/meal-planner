@@ -7,7 +7,12 @@ from pathlib import Path
 import pytest
 
 from meal_planner.core.catalog import spec_of
-from meal_planner.core.models import CycleShuffle, Settings, SlotVersion
+from meal_planner.core.models import (
+    CycleShuffle,
+    PortionScale,
+    Settings,
+    SlotVersion,
+)
 from meal_planner.core.seed import SEED_CATALOG
 from meal_planner.db.repository import (
     DEFAULT_DB_PATH,
@@ -102,6 +107,22 @@ def test_cycle_shuffles_roundtrip(tmp_path):
     )
     repo.save_settings(shuffled)
     assert repo.get_settings() == StoredSettings(shuffled, 1)
+    repo.save_settings(SETTINGS)  # строки заменяются целиком
+    assert repo.get_settings() == StoredSettings(SETTINGS, 2)
+
+
+def test_portion_scales_roundtrip(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    scaled = replace(
+        SETTINGS,
+        daily_kcal_target=2700,
+        portion_scales=(
+            PortionScale(date(2026, 11, 12), 2700),
+            PortionScale(date(2026, 11, 19), None),
+        ),
+    )
+    repo.save_settings(scaled)
+    assert repo.get_settings() == StoredSettings(scaled, 1)
     repo.save_settings(SETTINGS)  # строки заменяются целиком
     assert repo.get_settings() == StoredSettings(SETTINGS, 2)
 

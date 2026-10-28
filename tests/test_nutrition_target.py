@@ -58,9 +58,10 @@ def test_recompute_schedule_carries_deviation():
 
 
 def test_set_nutrition_target_changes_only_targets():
-    assert set_nutrition_target(BASE, 2000, 100) == TARGET
-    assert set_nutrition_target(TARGET, None, None) == BASE
-    assert set_nutrition_target(TARGET, 1800, None) == replace(
+    today = date(2026, 11, 9)
+    assert set_nutrition_target(BASE, today, 2000, 100) == TARGET
+    assert set_nutrition_target(TARGET, today, None, None) == BASE
+    assert set_nutrition_target(TARGET, today, 1800, None) == replace(
         BASE, daily_kcal_target=1800
     )
 

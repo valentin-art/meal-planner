@@ -225,6 +225,19 @@ def _slot_versions(conn: sqlite3.Connection) -> None:
     conn.execute("DROP TABLE cycle_slots")
 
 
+def _portion_scales(conn: sqlite3.Connection) -> None:
+    # Порции под цель по ккал (8.5): с партии, начинающейся не раньше
+    # from_date, — масштаб под kcal_target (NULL — без масштаба).
+    conn.execute(
+        """
+        CREATE TABLE portion_scales (
+            from_date TEXT PRIMARY KEY,
+            kcal_target INTEGER
+        )
+        """
+    )
+
+
 MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _settings,  # 1: settings — схема до фазы 5
     _catalog,  # 2: каталог рецептов и сид (5.2)
@@ -233,6 +246,7 @@ MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _dish_portions,  # 5: порции блюда для списания (8.3b)
     _cycle_shuffles,  # 6: перемешивание цикла (8.4a)
     _slot_versions,  # 7: варианты у позиций цикла (8.4b)
+    _portion_scales,  # 8: порции под цель по ккал (8.5)
 )
 
 

@@ -174,6 +174,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/set-portion-scaling": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set Portion Scaling */
+        post: operations["set_portion_scaling_api_actions_set_portion_scaling_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/set-anchor-date": {
         parameters: {
             query?: never;
@@ -440,6 +457,9 @@ export interface components {
             /** Cycle Slots */
             cycle_slots: components["schemas"]["CycleSlotOut"][];
             cycle_order: components["schemas"]["CycleOrderOut"];
+            portion_scaling: components["schemas"]["PortionScalingOut"];
+            /** Scaled Recipes */
+            scaled_recipes: components["schemas"]["ScaledRecipeOut"][];
         };
         /**
          * CatalogIngredientOut
@@ -475,6 +495,10 @@ export interface components {
             dinner_id: string;
             /** Portions */
             portions: number;
+            /** Lunch Scale */
+            lunch_scale: number;
+            /** Dinner Scale */
+            dinner_scale: number;
         };
         /** CookedActionOut */
         CookedActionOut: {
@@ -576,6 +600,10 @@ export interface components {
             kcal_delta: number | null;
             /** Protein Delta */
             protein_delta: number | null;
+            /** Lunch Scale */
+            lunch_scale: number;
+            /** Dinner Scale */
+            dinner_scale: number;
         };
         /** DishPortionsOut */
         DishPortionsOut: {
@@ -649,6 +677,15 @@ export interface components {
             kcal: number;
             /** Protein */
             protein: number;
+        };
+        /** PortionScalingOut */
+        PortionScalingOut: {
+            /** Enabled */
+            enabled: boolean;
+            /** Kcal Target */
+            kcal_target: number | null;
+            /** Changes From */
+            changes_from: string | null;
         };
         /** RecipeActionOut */
         RecipeActionOut: {
@@ -764,6 +801,22 @@ export interface components {
             steps: string[];
             storage?: components["schemas"]["RecipeStorageIn"] | null;
         };
+        /**
+         * ScaledRecipeOut
+         * @description Обед или ужин в порции под цель (8.5): ключ — recipe_id и scale.
+         */
+        ScaledRecipeOut: {
+            /** Recipe Id */
+            recipe_id: string;
+            /** Scale */
+            scale: number;
+            /** Kcal */
+            kcal: number;
+            /** Protein */
+            protein: number;
+            /** Ingredients */
+            ingredients: components["schemas"]["IngredientOut"][];
+        };
         /** SetAnchorDateIn */
         SetAnchorDateIn: {
             /**
@@ -814,6 +867,11 @@ export interface components {
             daily_kcal_target: number | null;
             /** Daily Protein Target */
             daily_protein_target: number | null;
+        };
+        /** SetPortionScalingIn */
+        SetPortionScalingIn: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** SetShoppingTimingIn */
         SetShoppingTimingIn: {
@@ -1406,6 +1464,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["SetNutritionTargetIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AppStateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_portion_scaling_api_actions_set_portion_scaling_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetPortionScalingIn"];
             };
         };
         responses: {

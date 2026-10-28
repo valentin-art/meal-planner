@@ -3,7 +3,7 @@
 import json
 import sqlite3
 from contextlib import closing
-from dataclasses import astuple
+from dataclasses import astuple, replace
 from datetime import date
 from pathlib import Path
 
@@ -36,6 +36,7 @@ ALL_TABLES = {
     "cooked",  # 8.3b
     "dish_portions",  # 8.3b
     "cycle_shuffles",  # 8.4a
+    "portion_scales",  # 8.5
 } | CATALOG_TABLES
 
 
@@ -98,7 +99,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 7
+        assert user_version(conn) == len(MIGRATIONS) == 8
     assert tables(db) == ALL_TABLES
 
 
@@ -211,6 +212,22 @@ def test_slot_versions_migration_keeps_slots(tmp_path, monkeypatch):
     assert "cycle_slots" not in tables(path)
     assert catalog.slot_versions[0] == SlotVersion(1, 0, ("l4",), ("d1",))
     assert catalog.slot_versions[1:] == SEED_CATALOG.slot_versions[1:]
+
+
+def test_portion_scales_migration_keeps_settings(tmp_path, monkeypatch):
+    # БД на v7 (до 8.5): масштаба нет — порции как в рецептах.
+    path = tmp_path / "v7.db"
+    monkeypatch.setattr(schema, "MIGRATIONS", MIGRATIONS[:7])
+    Repository(path)
+    monkeypatch.undo()
+    with connect(path) as conn, conn:
+        conn.execute(
+            "INSERT INTO settings VALUES (1, '2026-11-05', 2, 3, 6, 'same', 7, NULL,"
+            " 2700, NULL)"
+        )
+    stored = Repository(path).get_settings()
+    assert stored == StoredSettings(replace(SETTINGS, daily_kcal_target=2700), 7)
+    assert stored.settings.portion_scales == ()
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):

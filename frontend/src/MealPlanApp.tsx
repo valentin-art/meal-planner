@@ -250,6 +250,7 @@ export default function MealPlanApp() {
             recipeAction={recipeAction}
             slots={state.cycle_slots}
             cycleOrder={state.cycle_order}
+            portionScaling={state.portion_scaling}
             catalog={catalog}
             loadIngredients={loadIngredients}
             onEditIngredient={setEditingIngredient}
@@ -398,8 +399,8 @@ function ScheduleTab({ state, recipes, selectedDateStr, goToDate, goToToday, loa
               ) : (
                 <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.7 }}>
                   <div><b>Завтрак:</b> {recipes[day.breakfast_id].name}</div>
-                  <div><b>Обед:</b> {recipes[day.lunch_id].name}{recipes[day.lunch_id].is_fish && <span style={{ color: COLORS.flame }}> · рыба/морепродукты</span>}</div>
-                  <div><b>Ужин:</b> {recipes[day.dinner_id].name}{recipes[day.dinner_id].is_fish && <span style={{ color: COLORS.flame }}> · рыба/морепродукты</span>}</div>
+                  <div><b>Обед:</b> {recipes[day.lunch_id].name}{scaleNote(day.lunch_scale)}{recipes[day.lunch_id].is_fish && <span style={{ color: COLORS.flame }}> · рыба/морепродукты</span>}</div>
+                  <div><b>Ужин:</b> {recipes[day.dinner_id].name}{scaleNote(day.dinner_scale)}{recipes[day.dinner_id].is_fish && <span style={{ color: COLORS.flame }}> · рыба/морепродукты</span>}</div>
                   <div style={{ fontSize: 12, color: COLORS.inkSoft, marginTop: 4 }}>
                     Итого: ≈{day.kcal_total} ккал{fmtDelta(day.kcal_delta)} · {day.protein_total}г белка{fmtDelta(day.protein_delta)}
                   </div>
@@ -554,9 +555,9 @@ function MenuTab({ state, recipes, selectedDateStr, goToDate, openRecipe, setOpe
               {recipes[day.breakfast_id].name}{' '}
               <span style={{ fontSize: 12, color: COLORS.inkSoft }}>(≈{recipes[day.breakfast_id].kcal} ккал · {recipes[day.breakfast_id].protein}г)</span>
             </p>
-            <RecipeBlock recipe={recipes[day.lunch_id]} slot="Обед" openRecipe={openRecipe} setOpenRecipe={setOpenRecipe} />
+            <RecipeBlock recipe={portionOf(state, recipes, day.lunch_id, day.lunch_scale)} slot="Обед" openRecipe={openRecipe} setOpenRecipe={setOpenRecipe} />
             <div style={{ height: 10 }} />
-            <RecipeBlock recipe={recipes[day.dinner_id]} slot="Ужин" openRecipe={openRecipe} setOpenRecipe={setOpenRecipe} />
+            <RecipeBlock recipe={portionOf(state, recipes, day.dinner_id, day.dinner_scale)} slot="Ужин" openRecipe={openRecipe} setOpenRecipe={setOpenRecipe} />
             <p style={{ fontSize: 13, fontWeight: 600, color: COLORS.primarySoft, marginTop: 12, marginBottom: 0, borderTop: `1px solid ${COLORS.line}`, paddingTop: 8 }}>
               Итого за день: ≈{day.kcal_total} ккал{fmtDelta(day.kcal_delta)} · {day.protein_total}г белка{fmtDelta(day.protein_delta)}
             </p>
@@ -594,7 +595,22 @@ type RecipeToggleProps = {
   setOpenRecipe: (id: string | null) => void;
 };
 
-function RecipeBlock({ recipe: r, slot, openRecipe, setOpenRecipe }: RecipeToggleProps & { slot: string }) {
+/** Рецепт в порции под цель (8.5): множитель, ккал и граммы — с сервера. */
+type Portion = Recipe & { scale: number };
+
+function portionOf(state: AppState, recipes: Recipes, id: string, scale: number): Portion {
+  const scaled = scale === 1 ? undefined : state.scaled_recipes.find((r) => r.recipe_id === id && r.scale === scale);
+  return scaled
+    ? { ...recipes[id], kcal: scaled.kcal, protein: scaled.protein, ingredients: scaled.ingredients, scale }
+    : { ...recipes[id], scale: 1 };
+}
+
+/** « · порция ×1.45» у масштабированного обеда или ужина; иначе пусто. */
+function scaleNote(scale: number): string {
+  return scale === 1 ? '' : ` · порция ×${scale}`;
+}
+
+function RecipeBlock({ recipe: r, slot, openRecipe, setOpenRecipe }: Omit<RecipeToggleProps, 'recipe'> & { recipe: Portion; slot: string }) {
   const isOpen = openRecipe === r.id + '-inline';
   return (
     <div>
@@ -607,11 +623,11 @@ function RecipeBlock({ recipe: r, slot, openRecipe, setOpenRecipe }: RecipeToggl
           <br />
           <span style={{ fontFamily: 'ui-serif, Georgia, serif', fontWeight: 700, fontSize: 15 }}>{r.name}</span>
           <br />
-          <span style={{ fontSize: 12, color: COLORS.inkSoft }}>≈{r.kcal} ккал · {r.protein}г белка</span>
+          <span style={{ fontSize: 12, color: COLORS.inkSoft }}>≈{r.kcal} ккал · {r.protein}г белка{scaleNote(r.scale)}</span>
         </span>
         {isOpen ? <ChevronDown size={18} color={COLORS.inkSoft} /> : <ChevronRight size={18} color={COLORS.inkSoft} />}
       </button>
-      {isOpen && <RecipeDetails recipe={r} />}
+      {isOpen && <RecipeDetails recipe={r} scale={r.scale} />}
     </div>
   );
 }
@@ -636,10 +652,10 @@ function RecipeCard({ recipe: r, openRecipe, setOpenRecipe }: RecipeToggleProps)
   );
 }
 
-function RecipeDetails({ recipe }: { recipe: Recipe }) {
+function RecipeDetails({ recipe, scale = 1 }: { recipe: Recipe; scale?: number }) {
   return (
     <div style={{ marginTop: 10, fontSize: 13 }}>
-      <b>Ингредиенты (1 порция):</b>
+      <b>Ингредиенты ({scale === 1 ? '1 порция' : `порция ×${scale}`}):</b>
       <ul style={{ margin: '4px 0 8px', paddingLeft: 18 }}>
         {recipe.ingredients.map((ing) => (
           <li key={`${ing.name}|${ing.unit}`}>
@@ -706,7 +722,7 @@ function ShoppingTab({ state, recipes, saveError, runAction }: ShoppingTabProps)
         <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13 }}>
           {trip.cook_items.map((it, i) => (
             <li key={i} style={{ marginBottom: 2 }}>
-              {`${recipes[it.lunch_id].name} + ${recipes[it.dinner_id].name}`} <span style={{ color: COLORS.inkSoft }}>— x{it.portions}</span>
+              {`${recipes[it.lunch_id].name}${scaleNote(it.lunch_scale)} + ${recipes[it.dinner_id].name}${scaleNote(it.dinner_scale)}`} <span style={{ color: COLORS.inkSoft }}>— x{it.portions}</span>
             </li>
           ))}
         </ul>
@@ -749,6 +765,7 @@ type SettingsTabProps = {
   recipeAction: RecipeAction;
   slots: AppState['cycle_slots'];
   cycleOrder: AppState['cycle_order'];
+  portionScaling: AppState['portion_scaling'];
   catalog: IngredientsCatalog | null;
   loadIngredients: () => Promise<void>;
   onEditIngredient: (id: number | 'new') => void;
@@ -765,6 +782,7 @@ function SettingsTab({
   recipeAction,
   slots,
   cycleOrder,
+  portionScaling,
   catalog,
   loadIngredients,
   onEditIngredient,
@@ -902,7 +920,7 @@ function SettingsTab({
         <FieldError error={saveError} action="set-shopping-timing" />
       </section>
 
-      <NutritionTargetSection settings={settings} saveError={saveError} runAction={runAction} />
+      <NutritionTargetSection settings={settings} scaling={portionScaling} saveError={saveError} runAction={runAction} />
 
       <CycleSection slots={slots} order={cycleOrder} recipes={recipes} saveError={saveError} runAction={runAction} />
       <DishesSection recipes={recipes} onEdit={onEdit} recipeAction={recipeAction} />
@@ -921,11 +939,12 @@ function TargetNote({ settings }: { settings: Settings }) {
 
 type NutritionTargetSectionProps = {
   settings: Settings;
+  scaling: AppState['portion_scaling'];
   saveError: SaveError | null;
   runAction: RunAction;
 };
 
-function NutritionTargetSection({ settings, saveError, runAction }: NutritionTargetSectionProps) {
+function NutritionTargetSection({ settings, scaling, saveError, runAction }: NutritionTargetSectionProps) {
   // Черновик полей; после ответа сервера — снова то, что сохранено.
   const [kcal, setKcal] = useState(text(settings.daily_kcal_target));
   const [protein, setProtein] = useState(text(settings.daily_protein_target));
@@ -969,9 +988,22 @@ function NutritionTargetSection({ settings, saveError, runAction }: NutritionTar
         Применить
       </button>
       <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '8px 0 0' }}>
-        Итог дня покажет отклонение от цели. Блюда и порции не меняются. Пустое поле — без цели.
+        Итог дня покажет отклонение от цели. Пустое поле — без цели.
       </p>
       <FieldError error={saveError} action="set-nutrition-target" />
+      <label style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 13, marginTop: 10 }}>
+        <input
+          type="checkbox"
+          checked={scaling.enabled}
+          onChange={(e) => runAction('set-portion-scaling', { enabled: e.target.checked })}
+        />
+        Подгонять порции обедов и ужинов под цель
+      </label>
+      <p style={{ fontSize: 12, color: COLORS.inkSoft, margin: '4px 0 0' }}>
+        {scaling.enabled ? `Порции — под ${scaling.kcal_target} ккал.` : 'Порции — как в рецептах.'}
+        {scaling.changes_from && <> Изменение — с {weekdayShort(scaling.changes_from)} {fmtDate(scaling.changes_from)}, купленное не меняется.</>}
+      </p>
+      <FieldError error={saveError} action="set-portion-scaling" />
     </section>
   );
 }

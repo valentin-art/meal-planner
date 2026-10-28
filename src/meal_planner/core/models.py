@@ -64,6 +64,8 @@ class Recipe:
     storage: RecipeStorage | None = None  # у завтраков нет
     is_fish: bool = False  # заменяет FISH_LUNCH_IDS/FISH_DINNER_IDS
     status: RecipeStatus = "active"
+    # Множитель порции под цель (8.5): количества и ккал уже умножены.
+    scale: float = 1.0
 
 
 @dataclass(frozen=True, slots=True)
@@ -152,6 +154,15 @@ class CycleShuffle:
 
 
 @dataclass(frozen=True, slots=True)
+class PortionScale:
+    """С партии, начинающейся не раньше from_date, — порции обедов и ужинов
+    под цель kcal_target (8.5); None — без масштаба."""
+
+    from_date: date
+    kcal_target: int | None
+
+
+@dataclass(frozen=True, slots=True)
 class Settings:
     meal_anchor_date: date
     cook_count: int
@@ -168,6 +179,8 @@ class Settings:
     daily_protein_target: int | None = None
     # Перемешивание цикла (8.4a), по from_cycle. Пусто — всегда 1→5.
     cycle_shuffles: tuple[CycleShuffle, ...] = ()
+    # Масштаб порций (8.5), по from_date. Пусто — порции как в рецептах.
+    portion_scales: tuple[PortionScale, ...] = ()
 
 
 def default_settings(today: date) -> Settings:
@@ -271,6 +284,16 @@ class CycleOrder:
 
 
 @dataclass(frozen=True, slots=True)
+class PortionScaling:
+    """Масштаб порций для UI (8.5): включён ли, под какую цель и с какого
+    дня действует последнее изменение — None, если уже действует."""
+
+    enabled: bool
+    kcal_target: int | None
+    changes_from: date | None
+
+
+@dataclass(frozen=True, slots=True)
 class SlotState:
     """Позиция цикла для UI: последняя версия состава (8.4b) и с какого дня
     она действует — None, если уже действует или правок не было."""
@@ -294,3 +317,6 @@ class AppState:
     plan_use: Mapping[str, PlanUse]  # только рецепты с признаком (5.4)
     slots: tuple[SlotState, ...]  # состав цикла — для UI (5.6, 8.4b)
     cycle_order: CycleOrder
+    portion_scaling: PortionScaling
+    # Масштабированные обеды и ужины из расписания и поездки — для карточек UI.
+    scaled_recipes: tuple[Recipe, ...]

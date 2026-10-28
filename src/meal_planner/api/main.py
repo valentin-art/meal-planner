@@ -6,7 +6,7 @@
 import logging
 import os
 import secrets
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from datetime import date, timedelta
 from functools import lru_cache
 from pathlib import Path
@@ -36,6 +36,7 @@ from meal_planner.api.schemas import (
     SetCycleSlotIn,
     SetDishPortionsIn,
     SetNutritionTargetIn,
+    SetPortionScalingIn,
     SetShoppingTimingIn,
     ShoppingRemainingIn,
     ShoppingRemainingOut,
@@ -153,11 +154,11 @@ def state_response(
     date_to: date | None,
 ) -> AppStateOut:
     return to_app_state_out(
-        recompute(catalog, settings, today, date_from, date_to, version)
+        recompute(catalog, settings, today, date_from, date_to, version), catalog
     )
 
 
-def unprocessable(*errors: tuple[list[str | int], str]) -> HTTPException:
+def unprocessable(*errors: tuple[Sequence[str | int], str]) -> HTTPException:
     # Тот же формат detail, что у ошибок валидации Pydantic/FastAPI.
     return HTTPException(
         422,
@@ -412,8 +413,26 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda s: actions.set_nutrition_target(
-                s, body.daily_kcal_target, body.daily_protein_target
+                s, today, body.daily_kcal_target, body.daily_protein_target
             ),
+        )
+
+    @app.post("/api/actions/set-portion-scaling", response_model=AppStateOut)
+    def set_portion_scaling(
+        body: SetPortionScalingIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> AppStateOut:
+        return apply_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda s: actions.set_portion_scaling(s, today, body.enabled),
         )
 
     @app.post("/api/actions/set-anchor-date", response_model=AppStateOut)

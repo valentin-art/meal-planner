@@ -34,6 +34,16 @@ def shuffles_valid(settings: Settings) -> bool:
     )
 
 
+def portion_scales_valid(settings: Settings) -> bool:
+    # Строки пишет только сервер (8.5) — проверка ловит правку БД руками.
+    rows = settings.portion_scales
+    dates = [r.from_date for r in rows]
+    return dates == sorted(set(dates)) and all(
+        r.kcal_target is None or KCAL_TARGET_MIN <= r.kcal_target <= KCAL_TARGET_MAX
+        for r in rows
+    )
+
+
 def settings_errors(settings: Settings) -> list[SettingsError]:
     errors = []
     if settings.cook_count not in (1, 2):
@@ -81,6 +91,10 @@ def settings_errors(settings: Settings) -> list[SettingsError]:
     if not shuffles_valid(settings):
         errors.append(
             SettingsError("cycle_shuffles", "Повреждена история перемешивания цикла")
+        )
+    if not portion_scales_valid(settings):
+        errors.append(
+            SettingsError("portion_scales", "Повреждена история масштаба порций")
         )
     skipped = settings.skipped_cook_date
     # Дни готовки проверяются только у валидного расписания (not errors).

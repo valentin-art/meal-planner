@@ -19,6 +19,7 @@ from meal_planner.api.schemas import (
 from meal_planner.core.models import (
     Catalog,
     CycleShuffle,
+    PortionScale,
     Settings,
     SlotVersion,
     default_settings,
@@ -98,6 +99,23 @@ SCENARIOS: list[tuple] = [
         Settings(date(2026, 11, 5), 2, 3, 6, "same"),
         SLOT_POOL_CATALOG,
     ),
+    # порции под 2700 ккал (8.5), с партии вс 15.11 — под 2400
+    (
+        "portion_scaling",
+        date(2026, 11, 9),
+        Settings(
+            date(2026, 11, 5),
+            2,
+            3,
+            6,
+            "same",
+            daily_kcal_target=2400,
+            portion_scales=(
+                PortionScale(date(2026, 11, 5), 2700),
+                PortionScale(date(2026, 11, 15), 2400),
+            ),
+        ),
+    ),
 ]
 
 
@@ -110,7 +128,7 @@ def state_json(
     date_to=None,
 ) -> dict:
     out = to_app_state_out(
-        recompute(catalog, settings, today, date_from, date_to, version)
+        recompute(catalog, settings, today, date_from, date_to, version), catalog
     )
     return out.model_dump(mode="json")
 

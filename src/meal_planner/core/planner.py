@@ -11,7 +11,10 @@ from meal_planner.core.models import (
     Catalog,
     CookItem,
     CycleOrder,
+    DayMeals,
     PlanUse,
+    PortionScaling,
+    Recipe,
     Settings,
     ShoppingTrip,
     SkippedCook,
@@ -53,10 +56,12 @@ def next_shopping_trip(
     # Готовится по парам «обед + ужин» в порядке первого появления (JS брал
     # ужин по позиции обеда; с 5.3 рецепт может стоять в нескольких слотах,
     # с 8.4b у позиции бывает несколько вариантов).
+    # Рецепты — из дней: с порцией под цель (8.5), в партии она одна.
+    recipes = {r.id: r for d in days for r in (d.lunch, d.dinner) if r is not None}
     cook_items = tuple(
         CookItem(
-            lunch=catalog.recipes[lunch_id],
-            dinner=catalog.recipes[dinner_id],
+            lunch=recipes[lunch_id],
+            dinner=recipes[dinner_id],
             portions=n,
         )
         for (lunch_id, dinner_id), n in slot_portions(days).items()
@@ -96,7 +101,11 @@ def plan_use(
         catalog, settings, today, trip.window_start - timedelta(days=1)
     )
     window = build_schedule(catalog, settings, trip.window_start, trip.window_end)
-    for use, days in (("bought", eaten), ("next_trip", window)):
+    uses: tuple[tuple[PlanUse, tuple[DayMeals, ...]], ...] = (
+        ("bought", eaten),
+        ("next_trip", window),
+    )
+    for use, days in uses:
         for day in days:
             for recipe in (day.breakfast, day.lunch, day.dinner):
                 if recipe is not None:
@@ -157,6 +166,34 @@ def cycle_order_state(settings: Settings, today: date) -> CycleOrder:
     )
 
 
+def portion_scaling_state(settings: Settings, today: date) -> PortionScaling:
+    rows = settings.portion_scales
+    if not rows:
+        return PortionScaling(enabled=False, kcal_target=None, changes_from=None)
+    last = rows[-1]
+    return PortionScaling(
+        enabled=last.kcal_target is not None,
+        kcal_target=last.kcal_target,
+        changes_from=last.from_date if last.from_date > today else None,
+    )
+
+
+def scaled_recipes(
+    schedule: Iterable[DayMeals], trip: ShoppingTrip
+) -> tuple[Recipe, ...]:
+    """Масштабированные обеды и ужины, что видны в UI (8.5), — без повторов.
+
+    Карточке рецепта нужны граммы и ккал порции: их считает сервер.
+    """
+    found: dict[tuple[str, float], Recipe] = {}
+    recipes = [r for d in schedule for r in (d.lunch, d.dinner) if r is not None]
+    recipes += [r for c in trip.cook_items for r in (c.lunch, c.dinner)]
+    for r in recipes:
+        if r.scale != 1:
+            found.setdefault((r.id, r.scale), r)
+    return tuple(found.values())
+
+
 def recompute(
     catalog: Catalog,
     settings: Settings,
@@ -172,10 +209,11 @@ def recompute(
     date_to = date_to or date_from + timedelta(days=SCHEDULE_DAYS - 1)
     settings = settle_skip(settings, today)
     trip = next_shopping_trip(catalog, settings, today)
+    schedule = build_schedule(catalog, settings, date_from, date_to)
     return AppState(
         today=today,
         settings=settings,
-        schedule=build_schedule(catalog, settings, date_from, date_to),
+        schedule=schedule,
         next_shopping_trip=trip,
         version=version,
         today_position=today_position(
@@ -191,4 +229,6 @@ def recompute(
         plan_use=MappingProxyType(plan_use(catalog, settings, today, trip)),
         slots=slot_states(catalog, settings, today),
         cycle_order=cycle_order_state(settings, today),
+        portion_scaling=portion_scaling_state(settings, today),
+        scaled_recipes=scaled_recipes(schedule, trip),
     )

@@ -30,6 +30,7 @@ export type ActionPayloads = {
   'set-cycle-position': Schemas['SetCyclePositionIn'];
   'set-cycle-slot': Schemas['SetCycleSlotIn'];
   'set-nutrition-target': Schemas['SetNutritionTargetIn'];
+  'set-portion-scaling': Schemas['SetPortionScalingIn'];
   // без тела: что пропускать, решает сервер (ближайшая готовка)
   'skip-next-cook': Record<string, never>;
   'unskip-cook': Record<string, never>;

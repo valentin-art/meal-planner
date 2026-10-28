@@ -102,13 +102,15 @@ def batch_dishes(
     """Обеды и ужины партии с порциями, по рецепту в порядке появления.
 
     Позиции — как «Что готовить» поездки; рецепт из двух слотов — одно блюдо.
+    Рецепт — из расписания, с порцией под цель (8.5): в партии она одна.
     """
     days = build_schedule(catalog, settings, *cook_window(settings, cook_date))
+    recipes = {r.id: r for d in days for r in (d.lunch, d.dinner) if r is not None}
     portions: dict[str, int] = {}
     for pair, n in slot_portions(days).items():
         for recipe_id in pair:
             portions[recipe_id] = portions.get(recipe_id, 0) + n
-    return [(catalog.recipes[rid], n) for rid, n in portions.items()]
+    return [(recipes[rid], n) for rid, n in portions.items()]
 
 
 def breakfast_today(catalog: Catalog, settings: Settings, today: date) -> Recipe | None:
@@ -156,20 +158,21 @@ def cooking(
 
 def locate_dish(
     catalog: Catalog, settings: Settings, today: date, recipe_id: str
-) -> tuple[date, int]:
-    """День отметки и плановые порции блюда; settings — после settle_skip.
+) -> tuple[date, Recipe, int]:
+    """День отметки, рецепт (с порцией под цель, 8.5) и плановые порции
+    блюда; settings — после settle_skip.
 
     Сегодняшний завтрак — сегодня, 1 порция; блюдо партии — день готовки.
     Иначе ActionError: блюдо сейчас не готовится.
     """
     breakfast = breakfast_today(catalog, settings, today)
     if breakfast is not None and breakfast.id == recipe_id:
-        return today, 1
+        return today, breakfast, 1
     cook_date = current_cook_date(settings, today)
     if cook_date is not None:
         for recipe, n in batch_dishes(catalog, settings, cook_date):
             if recipe.id == recipe_id:
-                return cook_date, n
+                return cook_date, recipe, n
     raise ActionError("recipe_id", "Это блюдо сейчас не готовится")
 
 
@@ -187,7 +190,7 @@ def set_portions(
     отметки вернуло бы не то, что списано.
     """
     settings = settle_skip(settings, today)
-    day, _ = locate_dish(catalog, settings, today, recipe_id)
+    day, _, _ = locate_dish(catalog, settings, today, recipe_id)
     if (day, recipe_id) in cooked:
         raise ActionError(
             "recipe_id", "Блюдо уже отмечено — порции меняются до отметки"
@@ -221,15 +224,13 @@ def cooked_change(
     Порции — выбранные (set_portions), иначе плановые.
     """
     settings = settle_skip(settings, today)
-    day, planned = locate_dish(catalog, settings, today, recipe_id)
+    day, recipe, planned = locate_dish(catalog, settings, today, recipe_id)
     is_cooked = (day, recipe_id) in cooked
     if mark and is_cooked:
         raise ActionError("recipe_id", "Блюдо уже отмечено как приготовленное")
     if not mark and not is_cooked:
         raise ActionError("recipe_id", "Блюдо не отмечено как приготовленное")
-    return CookedChange(
-        day, catalog.recipes[recipe_id], portions.get((day, recipe_id), planned)
-    )
+    return CookedChange(day, recipe, portions.get((day, recipe_id), planned))
 
 
 def check_enough(
@@ -275,10 +276,11 @@ def counter_update(
     ингредиента — по порядку. Возврат — всё количество в первый счётчик:
     блюдо не готовили, продукты на месте.
     """
-    by_id: dict[int, list[StockLine]] = {}
+    # Только счётчики с сущностью HA: без неё новое значение некуда выставить.
+    by_id: dict[int, list[tuple[str, StockLine]]] = {}
     for line in lines:
         if line.entity_id is not None:
-            by_id.setdefault(line.ingredient_id, []).append(line)
+            by_id.setdefault(line.ingredient_id, []).append((line.entity_id, line))
     values: list[tuple[str, float]] = []
     ignored: list[StockIgnored] = []
     untracked: list[str] = []
@@ -289,7 +291,7 @@ def counter_update(
             untracked.append(ingredient.name)
             continue
         need = Decimal(str(ing.qty)) * portions  # в единице ингредиента
-        for line in counters:
+        for entity_id, line in counters:
             per_unit = convert(ingredient, Decimal(1), line.unit)
             if per_unit is None:
                 ignored.append(
@@ -309,7 +311,7 @@ def counter_update(
             else:
                 new = max(qty - amount, Decimal(0))
             new = new.quantize(COUNTER_STEP, ROUND_HALF_UP)
-            values.append((line.entity_id, float(new)))
+            values.append((entity_id, float(new)))
             need -= abs(new - qty) * per_unit
             if sign > 0 or need <= 0:
                 break

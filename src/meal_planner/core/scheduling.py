@@ -5,6 +5,7 @@
 С 8.1: у дня с блюдами — отклонение от суточной цели.
 С 8.4a: порядок слотов в цикле может быть перемешан (core/shuffle.py).
 С 8.4b: у позиции может быть несколько вариантов — Catalog.slot_at(k, n).
+С 8.5: порции обедов и ужинов — под цель по ккал (core/portions.py).
 """
 
 from collections.abc import Iterable
@@ -21,6 +22,7 @@ from meal_planner.core.models import (
     Settings,
     TodayPosition,
 )
+from meal_planner.core.portions import scaled_meal, target_for
 from meal_planner.core.shuffle import CYCLE_LEN, cycle_order
 
 # Позиция ротации k (1..5) → обед и ужин слота k каталога (5.3); завтраки
@@ -221,17 +223,37 @@ def build_schedule(
     days = (date_to - date_from).days + 1
     return tuple(
         with_target_deltas(
-            meals_for_date(
+            with_portions(
                 catalog,
-                date_from + timedelta(days=i),
-                anchor,
-                weekdays,
-                skipped,
-                shuffles,
+                settings,
+                meals_for_date(
+                    catalog,
+                    date_from + timedelta(days=i),
+                    anchor,
+                    weekdays,
+                    skipped,
+                    shuffles,
+                ),
             ),
             settings,
         )
         for i in range(max(days, 0))
+    )
+
+
+def with_portions(catalog: Catalog, settings: Settings, day: DayMeals) -> DayMeals:
+    """Обед и ужин в порциях под цель партии этого дня (8.5)."""
+    if day.lunch is None or day.dinner is None or not settings.portion_scales:
+        return day
+    target = target_for(settings.portion_scales, batch_start(settings, day.date))
+    if target is None:
+        return day
+    lunch = scaled_meal(catalog, day.lunch, target, ROTATION_BREAKFASTS)
+    dinner = scaled_meal(catalog, day.dinner, target, ROTATION_BREAKFASTS)
+    assert day.breakfast is not None  # у дня с обедом завтрак есть
+    kcal, protein = day_totals(day.breakfast, lunch, dinner)
+    return replace(
+        day, lunch=lunch, dinner=dinner, kcal_total=kcal, protein_total=protein
     )
 
 

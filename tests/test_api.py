@@ -77,7 +77,9 @@ def test_state_with_bad_range_saves_nothing(client, repo):
 def test_state_with_saved_settings_matches_recompute(client, repo):
     repo.save_settings(DEFAULT_2X)
     body = client.get("/api/state").json()
-    expected = to_app_state_out(recompute(SEED_CATALOG, DEFAULT_2X, TODAY, version=1))
+    expected = to_app_state_out(
+        recompute(SEED_CATALOG, DEFAULT_2X, TODAY, version=1), SEED_CATALOG
+    )
     assert body == expected.model_dump(mode="json")
     assert body["version"] == 1
 
@@ -382,7 +384,9 @@ def test_set_anchor_date_matches_recompute(client, repo):
     repo.save_settings(DEFAULT_2X)
     body = post(client, "set-anchor-date", {"meal_anchor_date": "2026-11-12"}).json()
     moved = dataclasses.replace(DEFAULT_2X, meal_anchor_date=date(2026, 11, 12))
-    expected = to_app_state_out(recompute(SEED_CATALOG, moved, TODAY, version=2))
+    expected = to_app_state_out(
+        recompute(SEED_CATALOG, moved, TODAY, version=2), SEED_CATALOG
+    )
     assert body == expected.model_dump(mode="json")
     # день 0 — накануне нового якоря, и он единственный в окне
     assert [d["date"] for d in body["schedule"] if d["is_day_zero"]] == ["2026-11-11"]
@@ -1040,3 +1044,40 @@ def test_reset_cycle_order(client, repo):
     body = post(client, "reset-cycle-order", None).json()
     assert body["cycle_order"] == {"shuffled": False, "changes_from": "2026-11-15"}
     assert repo.get_settings().settings.cycle_shuffles[-1] == CycleShuffle(2, None)
+
+
+def test_set_portion_scaling(client, repo):
+    # 8.5: без цели — 422; с целью порции подгоняются с первой некупленной
+    # партии (пн 09.11: с чт 12.11), до неё — как в рецептах.
+    repo.save_settings(DEFAULT_2X)
+    r = post(client, "set-portion-scaling", {"enabled": True})
+    assert r.status_code == 422
+    assert r.json()["detail"][0]["msg"] == "Сначала задайте цель по ккал"
+    assert repo.get_settings().version == 1
+    post(
+        client,
+        "set-nutrition-target",
+        {"daily_kcal_target": 2700, "daily_protein_target": None},
+    )
+    body = post(client, "set-portion-scaling", {"enabled": True}).json()
+    assert body["portion_scaling"] == {
+        "enabled": True,
+        "kcal_target": 2700,
+        "changes_from": "2026-11-12",
+    }
+    for day in body["schedule"]:
+        if day["lunch_id"] is None:
+            continue
+        scaled = day["date"] >= "2026-11-12"
+        assert (day["lunch_scale"] != 1) == scaled, day["date"]
+    keys = {(r["recipe_id"], r["scale"]) for r in body["scaled_recipes"]}
+    for day in body["schedule"]:
+        if day["lunch_id"] and day["lunch_scale"] != 1:
+            assert (day["lunch_id"], day["lunch_scale"]) in keys
+    l1 = next(r for r in body["scaled_recipes"] if r["recipe_id"] == "l1")
+    assert l1["scale"] == 1.45
+    chicken = next(i for i in l1["ingredients"] if i["name"] == "куриное филе")
+    assert chicken["qty_display"] == format_qty(chicken["qty"])
+    off = post(client, "set-portion-scaling", {"enabled": False}).json()
+    assert off["portion_scaling"]["enabled"] is False
+    assert off["scaled_recipes"] == []

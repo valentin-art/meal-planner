@@ -443,6 +443,80 @@
         }
       }
     },
+    "/api/actions/set-portion-scaling": {
+      "post": {
+        "summary": "Set Portion Scaling",
+        "operationId": "set_portion_scaling_api_actions_set_portion_scaling_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPortionScalingIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppStateOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/set-anchor-date": {
       "post": {
         "summary": "Set Anchor Date",
@@ -1395,6 +1469,16 @@
           },
           "cycle_order": {
             "$ref": "#/components/schemas/CycleOrderOut"
+          },
+          "portion_scaling": {
+            "$ref": "#/components/schemas/PortionScalingOut"
+          },
+          "scaled_recipes": {
+            "items": {
+              "$ref": "#/components/schemas/ScaledRecipeOut"
+            },
+            "type": "array",
+            "title": "Scaled Recipes"
           }
         },
         "type": "object",
@@ -1409,7 +1493,9 @@
           "can_skip_next_cook",
           "recipe_plan_use",
           "cycle_slots",
-          "cycle_order"
+          "cycle_order",
+          "portion_scaling",
+          "scaled_recipes"
         ],
         "title": "AppStateOut"
       },
@@ -1509,13 +1595,23 @@
           "portions": {
             "type": "integer",
             "title": "Portions"
+          },
+          "lunch_scale": {
+            "type": "number",
+            "title": "Lunch Scale"
+          },
+          "dinner_scale": {
+            "type": "number",
+            "title": "Dinner Scale"
           }
         },
         "type": "object",
         "required": [
           "lunch_id",
           "dinner_id",
-          "portions"
+          "portions",
+          "lunch_scale",
+          "dinner_scale"
         ],
         "title": "CookItemOut"
       },
@@ -1814,6 +1910,14 @@
               }
             ],
             "title": "Protein Delta"
+          },
+          "lunch_scale": {
+            "type": "number",
+            "title": "Lunch Scale"
+          },
+          "dinner_scale": {
+            "type": "number",
+            "title": "Dinner Scale"
           }
         },
         "type": "object",
@@ -1830,7 +1934,9 @@
           "is_before_start",
           "is_skipped",
           "kcal_delta",
-          "protein_delta"
+          "protein_delta",
+          "lunch_scale",
+          "dinner_scale"
         ],
         "title": "DayOut"
       },
@@ -2003,6 +2109,44 @@
           "protein"
         ],
         "title": "NutritionOut"
+      },
+      "PortionScalingOut": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          },
+          "kcal_target": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal Target"
+          },
+          "changes_from": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Changes From"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled",
+          "kcal_target",
+          "changes_from"
+        ],
+        "title": "PortionScalingOut"
       },
       "RecipeActionOut": {
         "properties": {
@@ -2377,6 +2521,43 @@
         ],
         "title": "SaveRecipeIn"
       },
+      "ScaledRecipeOut": {
+        "properties": {
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "scale": {
+            "type": "number",
+            "title": "Scale"
+          },
+          "kcal": {
+            "type": "integer",
+            "title": "Kcal"
+          },
+          "protein": {
+            "type": "integer",
+            "title": "Protein"
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/IngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "scale",
+          "kcal",
+          "protein",
+          "ingredients"
+        ],
+        "title": "ScaledRecipeOut",
+        "description": "Обед или ужин в порции под цель (8.5): ключ — recipe_id и scale."
+      },
       "SetAnchorDateIn": {
         "properties": {
           "meal_anchor_date": {
@@ -2530,6 +2711,19 @@
           "daily_protein_target"
         ],
         "title": "SetNutritionTargetIn"
+      },
+      "SetPortionScalingIn": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "title": "SetPortionScalingIn"
       },
       "SetShoppingTimingIn": {
         "properties": {

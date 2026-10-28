@@ -7,6 +7,9 @@ import pytest
 
 from meal_planner.core.actions import ActionError
 from meal_planner.core.cooking import (
+    BreakfastToday,
+    Cooking,
+    CookingBatch,
     CounterUpdate,
     check_enough,
     cooked_change,
@@ -30,6 +33,16 @@ from meal_planner.core.stock import StockIgnored, StockLine
 # Готовка Ср/Сб; якорь Чт 05.11 — день 0 Ср 04.11 (совпал с днём готовки).
 SETTINGS = Settings(date(2026, 11, 5), 2, 3, 6, "same")
 ID = {i.name: i.id for i in SEED_CATALOG.ingredients.values()}
+
+
+def batch_of(state: Cooking) -> CookingBatch:
+    assert state.batch is not None
+    return state.batch
+
+
+def breakfast_of(state: Cooking) -> BreakfastToday:
+    assert state.breakfast is not None
+    return state.breakfast
 
 
 @pytest.mark.parametrize(
@@ -74,7 +87,7 @@ def test_batch_is_what_the_trip_cooks(timing):
     for c in trip.cook_items:
         for recipe in (c.lunch, c.dinner):
             expected[recipe.id] = expected.get(recipe.id, 0) + c.portions
-    batch = cooking(SEED_CATALOG, s, date(2026, 11, 11), set()).batch
+    batch = batch_of(cooking(SEED_CATALOG, s, date(2026, 11, 11), set()))
     assert batch.cook_date == date(2026, 11, 11)
     assert {d.recipe.id: d.portions for d in batch.dishes} == expected
 
@@ -85,10 +98,11 @@ def test_recipe_in_two_slots_is_one_dish():
     versions[1] = SlotVersion(2, 0, versions[0].lunch_ids, versions[1].dinner_ids)
     catalog = replace(SEED_CATALOG, slot_versions=tuple(versions))
     # Партия Сб 07.11 ест Вс–Ср: позиции 5, 2, 4, 1.
-    batch = cooking(catalog, SETTINGS, date(2026, 11, 9), set()).batch
+    batch = batch_of(cooking(catalog, SETTINGS, date(2026, 11, 9), set()))
     expected: dict[str, int] = {}
     for d in build_schedule(catalog, SETTINGS, date(2026, 11, 8), date(2026, 11, 11)):
         for recipe in (d.lunch, d.dinner):
+            assert recipe is not None
             expected[recipe.id] = expected.get(recipe.id, 0) + 1
     assert expected[versions[0].lunch_ids[0]] == 2
     ids = [d.recipe.id for d in batch.dishes]
@@ -99,13 +113,13 @@ def test_recipe_in_two_slots_is_one_dish():
 def test_breakfast_today_and_cooked_flags():
     today = date(2026, 11, 9)
     state = cooking(SEED_CATALOG, SETTINGS, today, set())
-    breakfast = state.breakfast.recipe.id
-    lunch = state.batch.dishes[0].recipe.id
+    breakfast = breakfast_of(state).recipe.id
+    lunch = batch_of(state).dishes[0].recipe.id
     cooked = {(today, breakfast), (date(2026, 11, 7), lunch)}
     state = cooking(SEED_CATALOG, SETTINGS, today, cooked)
-    assert state.breakfast.cooked
-    assert state.batch.dishes[0].cooked
-    assert not any(d.cooked for d in state.batch.dishes[1:])
+    assert breakfast_of(state).cooked
+    assert batch_of(state).dishes[0].cooked
+    assert not any(d.cooked for d in batch_of(state).dishes[1:])
     # В день 0 завтрака нет — блюда с завтра.
     assert cooking(SEED_CATALOG, SETTINGS, date(2026, 11, 4), set()).breakfast is None
 
@@ -113,8 +127,8 @@ def test_breakfast_today_and_cooked_flags():
 def test_cooked_change_rules():
     today = date(2026, 11, 9)
     state = cooking(SEED_CATALOG, SETTINGS, today, set())
-    breakfast = state.breakfast.recipe.id
-    dish = state.batch.dishes[0]
+    breakfast = breakfast_of(state).recipe.id
+    dish = batch_of(state).dishes[0]
 
     change = cooked_change(SEED_CATALOG, SETTINGS, today, set(), breakfast, True)
     assert (change.day, change.portions) == (today, 1)
@@ -132,7 +146,7 @@ def test_cooked_change_rules():
         (cooked, dish.recipe.id, True, "Блюдо уже отмечено как приготовленное"),
         (set(), dish.recipe.id, False, "Блюдо не отмечено как приготовленное"),
     ]
-    assert "l3" not in {d.recipe.id for d in state.batch.dishes}
+    assert "l3" not in {d.recipe.id for d in batch_of(state).dishes}
     for marks, recipe_id, mark, message in cases:
         with pytest.raises(ActionError) as e:
             cooked_change(SEED_CATALOG, SETTINGS, today, marks, recipe_id, mark)
@@ -271,17 +285,17 @@ def test_not_enough_stock_refuses_the_mark():
 def test_chosen_portions_replace_planned_only_for_write_off():
     today = date(2026, 11, 9)
     state = cooking(SEED_CATALOG, SETTINGS, today, set())
-    dish = state.batch.dishes[0]
-    breakfast = state.breakfast.recipe.id
+    dish = batch_of(state).dishes[0]
+    breakfast = breakfast_of(state).recipe.id
     batch_day = date(2026, 11, 7)
     portions = {(batch_day, dish.recipe.id): 3, (today, breakfast): 2}
 
     state = cooking(SEED_CATALOG, SETTINGS, today, set(), portions)
-    first = state.batch.dishes[0]
+    first = batch_of(state).dishes[0]
     assert (first.portions, first.planned_portions) == (3, dish.portions)
-    assert (state.breakfast.portions, state.breakfast.planned_portions) == (2, 1)
+    assert (breakfast_of(state).portions, breakfast_of(state).planned_portions) == (2, 1)
     # Остальные блюда — по плану.
-    assert all(d.portions == d.planned_portions for d in state.batch.dishes[1:])
+    assert all(d.portions == d.planned_portions for d in batch_of(state).dishes[1:])
 
     change = cooked_change(
         SEED_CATALOG, SETTINGS, today, set(), dish.recipe.id, True, portions
@@ -291,7 +305,7 @@ def test_chosen_portions_replace_planned_only_for_write_off():
 
 def test_set_portions_rules():
     today = date(2026, 11, 9)
-    dish = cooking(SEED_CATALOG, SETTINGS, today, set()).batch.dishes[0]
+    dish = batch_of(cooking(SEED_CATALOG, SETTINGS, today, set())).dishes[0]
     rid = dish.recipe.id
     assert set_portions(SEED_CATALOG, SETTINGS, today, set(), rid, 2) == date(
         2026, 11, 7

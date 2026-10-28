@@ -5,6 +5,7 @@
 Исключение — SummaryOut для HA: там названия и готовые строки, как в UI.
 """
 
+import datetime as dt
 from datetime import date
 from typing import Literal
 
@@ -144,6 +145,10 @@ class DayOut(BaseModel):
     # Итог минус цель (8.1): null — цели нет или в этот день нет блюд.
     kcal_delta: int | None
     protein_delta: int | None
+    # Множитель порции под цель (8.5); 1 — как в рецепте. Граммы и ккал
+    # порции — в AppStateOut.scaled_recipes.
+    lunch_scale: float
+    dinner_scale: float
 
 
 class ShoppingItemOut(BaseModel):
@@ -164,6 +169,8 @@ class CookItemOut(BaseModel):
     lunch_id: str
     dinner_id: str
     portions: int
+    lunch_scale: float  # множитель порции (8.5)
+    dinner_scale: float
 
 
 class ShoppingTripOut(BaseModel):
@@ -258,6 +265,10 @@ class NutritionOut(BaseModel):
     protein: int
 
 
+class SetPortionScalingIn(BaseModel):
+    enabled: bool  # подгонять порции обедов и ужинов под цель по ккал (8.5)
+
+
 class RecipeIdIn(BaseModel):
     id: str
 
@@ -327,10 +338,11 @@ class SummaryDaysOut(BaseModel):
 
 
 class SummaryTripOut(BaseModel):
-    date: date
-    cook_date: date
-    window_start: date
-    window_end: date
+    # Поле date (его читает пакет HA) перекрывает тип date для полей ниже.
+    date: dt.date
+    cook_date: dt.date
+    window_start: dt.date
+    window_end: dt.date
     cook: list[str]  # «обед + ужин — xN», как «Что готовить» в UI
     items: list[str]  # «название — 540 г (≈ 2 шт)», как «Что купить» в UI
 
@@ -440,6 +452,23 @@ class SkippedCookOut(BaseModel):
     can_undo: bool
 
 
+class PortionScalingOut(BaseModel):
+    enabled: bool  # порции обедов и ужинов подгоняются под цель (8.5)
+    kcal_target: int | None  # под какую цель — последняя правка
+    # С какого дня действует последняя правка; null — уже действует.
+    changes_from: date | None
+
+
+class ScaledRecipeOut(BaseModel):
+    """Обед или ужин в порции под цель (8.5): ключ — recipe_id и scale."""
+
+    recipe_id: str
+    scale: float
+    kcal: int
+    protein: int
+    ingredients: list[IngredientOut]
+
+
 class CycleOrderOut(BaseModel):
     shuffled: bool  # порядок слотов перемешан (8.4a)
     # С какого дня действует последнее изменение порядка; null — уже действует.
@@ -477,6 +506,8 @@ class AppStateOut(BaseModel):
     recipe_plan_use: dict[str, PlanUse]
     cycle_slots: list[CycleSlotOut]  # обеды и ужины каждой позиции (5.6, 8.4b)
     cycle_order: CycleOrderOut
+    portion_scaling: PortionScalingOut
+    scaled_recipes: list[ScaledRecipeOut]
 
 
 class RecipeActionOut(BaseModel):
@@ -518,7 +549,7 @@ def to_recipe_out(catalog: Catalog, r: Recipe) -> RecipeOut:
     return RecipeOut(
         id=r.id,
         name=r.name,
-        kind=r.kind.value,
+        kind=r.kind,
         kcal=r.kcal,
         protein=r.protein,
         ingredients=[to_ingredient_out(catalog, i) for i in r.ingredients],
@@ -579,6 +610,8 @@ def to_day_out(d: DayMeals) -> DayOut:
         is_skipped=d.is_skipped,
         kcal_delta=d.kcal_delta,
         protein_delta=d.protein_delta,
+        lunch_scale=d.lunch.scale if d.lunch else 1.0,
+        dinner_scale=d.dinner.scale if d.dinner else 1.0,
     )
 
 
@@ -600,7 +633,13 @@ def to_shopping_group_out(g: ShoppingGroup) -> ShoppingGroupOut:
 
 
 def to_cook_item_out(c: CookItem) -> CookItemOut:
-    return CookItemOut(lunch_id=c.lunch.id, dinner_id=c.dinner.id, portions=c.portions)
+    return CookItemOut(
+        lunch_id=c.lunch.id,
+        dinner_id=c.dinner.id,
+        portions=c.portions,
+        lunch_scale=c.lunch.scale,
+        dinner_scale=c.dinner.scale,
+    )
 
 
 def to_shopping_trip_out(t: ShoppingTrip) -> ShoppingTripOut:
@@ -641,7 +680,7 @@ def to_skipped_cook_out(c: SkippedCook | None) -> SkippedCookOut | None:
     )
 
 
-def to_app_state_out(s: AppState) -> AppStateOut:
+def to_app_state_out(s: AppState, catalog: Catalog) -> AppStateOut:
     return AppStateOut(
         today=s.today,
         settings=to_settings_out(s.settings),
@@ -664,6 +703,21 @@ def to_app_state_out(s: AppState) -> AppStateOut:
         cycle_order=CycleOrderOut(
             shuffled=s.cycle_order.shuffled, changes_from=s.cycle_order.changes_from
         ),
+        portion_scaling=PortionScalingOut(
+            enabled=s.portion_scaling.enabled,
+            kcal_target=s.portion_scaling.kcal_target,
+            changes_from=s.portion_scaling.changes_from,
+        ),
+        scaled_recipes=[
+            ScaledRecipeOut(
+                recipe_id=r.id,
+                scale=r.scale,
+                kcal=r.kcal,
+                protein=r.protein,
+                ingredients=[to_ingredient_out(catalog, i) for i in r.ingredients],
+            )
+            for r in s.scaled_recipes
+        ],
     )
 
 

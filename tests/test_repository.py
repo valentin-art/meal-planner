@@ -2,11 +2,13 @@ import sqlite3
 from contextlib import closing
 from dataclasses import replace
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
 
 from meal_planner.core.catalog import spec_of
+from meal_planner.core.cooking import CookState
 from meal_planner.core.models import (
     CatalogIngredient,
     CycleShuffle,
@@ -250,6 +252,10 @@ def test_cooked_marks(tmp_path):
     assert stored is not None and stored.version == 3  # повтор не записан
     assert repo.unmark_cooked(date(2026, 11, 11), "l3") == 4
     assert repo.get_cooked() == {(date(2026, 11, 12), "b1")}
+    # До 10.3 отметка 8.3b — в день ключа.
+    assert repo.get_cook_state().cooked == {
+        (date(2026, 11, 12), "b1"): date(2026, 11, 12)
+    }
 
 
 def test_dish_portions(tmp_path):
@@ -259,3 +265,58 @@ def test_dish_portions(tmp_path):
     assert repo.set_dish_portions(date(2026, 11, 11), "l3", 3) == 2
     assert repo.set_dish_portions(date(2026, 11, 11), "l3", 2) == 3  # заменяет
     assert repo.get_dish_portions() == {(date(2026, 11, 11), "l3"): 2}
+
+
+AVOCADO, SPINACH, PASTA = (
+    SEED_CATALOG.ingredients[name].id
+    for name in ("авокадо", "шпинат", "паста цельнозерновая")
+)
+
+
+def test_cook_usage_roundtrip(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    day = date(2026, 11, 9)
+    assert repo.get_cook_state() == CookState({}, {}, {})
+    assert repo.use_ingredient(day, "l3", AVOCADO, Decimal("35.1")) == 2
+    assert repo.use_ingredient(day, "l3", SPINACH, None) == 3
+    assert repo.get_cook_state().usage == {
+        (day, "l3"): {AVOCADO: Decimal("35.1"), SPINACH: None}
+    }
+    with pytest.raises(sqlite3.IntegrityError):
+        repo.use_ingredient(day, "l3", AVOCADO, Decimal(1))
+    assert repo.unuse_ingredient(day, "l3", AVOCADO) == 4
+    assert repo.get_cook_state().usage == {(day, "l3"): {SPINACH: None}}
+
+
+def test_record_and_clear_cook(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    batch, today = date(2026, 11, 7), date(2026, 11, 9)
+    repo.use_ingredient(batch, "l5", AVOCADO, Decimal(10))
+    repo.set_dish_portions(batch, "l5", 2)
+    repo.use_ingredient(today, "l3", PASTA, Decimal(90))
+    # Ключ партии — Сб, приготовили в Пн.
+    assert repo.record_cook(batch, "l5", today, {SPINACH: None}) == 5
+    state = repo.get_cook_state()
+    assert state.cooked == {(batch, "l5"): today}
+    assert state.usage[(batch, "l5")] == {AVOCADO: Decimal(10), SPINACH: None}
+
+    assert repo.clear_cook(batch, "l5") == 6
+    state = repo.get_cook_state()
+    assert state.cooked == {}
+    assert state.usage == {(today, "l3"): {PASTA: Decimal(90)}}  # другой ключ
+    assert state.portions == {(batch, "l5"): 2}  # порции остаются
+
+
+def test_record_cook_is_atomic(tmp_path):
+    repo = Repository(tmp_path / "db.sqlite")
+    repo.save_settings(SETTINGS)
+    day = date(2026, 11, 9)
+    repo.record_cook(day, "l3", day, {PASTA: Decimal(90)})
+    before = repo.get_cook_state()
+    with pytest.raises(sqlite3.IntegrityError):
+        repo.record_cook(day, "l3", day, {AVOCADO: Decimal(35)})  # уже отмечен
+    assert repo.get_cook_state() == before
+    stored = repo.get_settings()
+    assert stored is not None and stored.version == 2

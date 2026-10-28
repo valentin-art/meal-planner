@@ -238,6 +238,26 @@ def _portion_scales(conn: sqlite3.Connection) -> None:
     )
 
 
+def _cook_usage(conn: sqlite3.Connection) -> None:
+    # Журнал списаний (10.2): что готовка рецепта фактически списала по
+    # ингредиенту, в его единице; NULL — ингредиент только отмечен. Ключ как
+    # у cooked. cooked_on — день, когда приготовили: ключ партии может быть
+    # раньше. Старые отметки — в день ключа.
+    conn.execute(
+        """
+        CREATE TABLE cook_usage (
+            day TEXT NOT NULL,
+            recipe_id TEXT NOT NULL REFERENCES recipes (id),
+            ingredient_id INTEGER NOT NULL REFERENCES ingredients (id),
+            amount REAL,
+            PRIMARY KEY (day, recipe_id, ingredient_id)
+        )
+        """
+    )
+    conn.execute("ALTER TABLE cooked ADD COLUMN cooked_on TEXT")
+    conn.execute("UPDATE cooked SET cooked_on = day")
+
+
 MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _settings,  # 1: settings — схема до фазы 5
     _catalog,  # 2: каталог рецептов и сид (5.2)
@@ -247,6 +267,7 @@ MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _cycle_shuffles,  # 6: перемешивание цикла (8.4a)
     _slot_versions,  # 7: варианты у позиций цикла (8.4b)
     _portion_scales,  # 8: порции под цель по ккал (8.5)
+    _cook_usage,  # 9: журнал списаний и день готовки (10.2)
 )
 
 

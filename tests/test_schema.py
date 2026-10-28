@@ -37,6 +37,7 @@ ALL_TABLES = {
     "dish_portions",  # 8.3b
     "cycle_shuffles",  # 8.4a
     "portion_scales",  # 8.5
+    "cook_usage",  # 10.2
 } | CATALOG_TABLES
 
 
@@ -99,7 +100,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 8
+        assert user_version(conn) == len(MIGRATIONS) == 9
     assert tables(db) == ALL_TABLES
 
 
@@ -229,6 +230,27 @@ def test_portion_scales_migration_keeps_settings(tmp_path, monkeypatch):
     assert Repository(path).get_settings() == StoredSettings(
         replace(SETTINGS, daily_kcal_target=2700), 7
     )
+
+
+def test_cook_usage_migration_keeps_marks(tmp_path, monkeypatch):
+    # БД на v8 (до 10.2) с отметками и порциями: готовили в день ключа.
+    path = tmp_path / "v8.db"
+    monkeypatch.setattr(schema, "MIGRATIONS", MIGRATIONS[:8])
+    Repository(path).save_settings(SETTINGS)
+    monkeypatch.undo()
+    with connect(path) as conn, conn:
+        conn.executemany(
+            "INSERT INTO cooked (day, recipe_id) VALUES (?, ?)",
+            [("2026-11-07", "l5"), ("2026-11-09", "b1")],
+        )
+        conn.execute("INSERT INTO dish_portions VALUES ('2026-11-07', 'l5', 3)")
+    state = Repository(path).get_cook_state()
+    assert state.cooked == {
+        (date(2026, 11, 7), "l5"): date(2026, 11, 7),
+        (date(2026, 11, 9), "b1"): date(2026, 11, 9),
+    }
+    assert state.portions == {(date(2026, 11, 7), "l5"): 3}
+    assert state.usage == {}
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):

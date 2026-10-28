@@ -1,5 +1,5 @@
 """SQLite-хранилище: строка settings, каталог рецептов (фаза 5) и отметки
-«приготовлено» (8.3b).
+«приготовлено» (8.3b) и журнал списаний (10.2).
 
 Схема и миграции — db/schema.py. Расписание и список покупок не хранятся —
 их всегда считает planner.recompute.
@@ -7,13 +7,15 @@
 
 import os
 import sqlite3
-from collections.abc import Generator
+from collections.abc import Generator, Mapping
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from meal_planner.core.catalog import build_catalog
+from meal_planner.core.cooking import CookState
 from meal_planner.core.models import (
     Catalog,
     CatalogIngredient,
@@ -283,6 +285,22 @@ ON CONFLICT(id) DO UPDATE SET
 """
 
 
+def _write_usage(
+    conn: sqlite3.Connection,
+    day: date,
+    recipe_id: str,
+    amounts: Mapping[int, Decimal | None],
+) -> None:
+    conn.executemany(
+        "INSERT INTO cook_usage (day, recipe_id, ingredient_id, amount)"
+        " VALUES (?, ?, ?, ?)",
+        [
+            (day.isoformat(), recipe_id, i, None if a is None else float(a))
+            for i, a in amounts.items()
+        ],
+    )
+
+
 def _bump_version(conn: sqlite3.Connection) -> int:
     # Правка каталога меняет план — версия общая с настройками (5.1).
     # Строку настроек API создаёт заранее (stored_or_initial).
@@ -397,8 +415,8 @@ class Repository:
         """Повтор проверяет core/API заранее; здесь он — IntegrityError."""
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO cooked (day, recipe_id) VALUES (?, ?)",
-                (day.isoformat(), recipe_id),
+                "INSERT INTO cooked (day, recipe_id, cooked_on) VALUES (?, ?, ?)",
+                (day.isoformat(), recipe_id, day.isoformat()),
             )
             return _bump_version(conn)
 
@@ -408,6 +426,73 @@ class Repository:
                 "DELETE FROM cooked WHERE day = ? AND recipe_id = ?",
                 (day.isoformat(), recipe_id),
             )
+            return _bump_version(conn)
+
+    def get_cook_state(self) -> CookState:
+        """Отметки с днём готовки, журнал списаний и порции (10.2) — разом."""
+        with self._connect() as conn:
+            cooked = {
+                (date.fromisoformat(day), recipe_id): date.fromisoformat(cooked_on)
+                for day, recipe_id, cooked_on in conn.execute(
+                    "SELECT day, recipe_id, cooked_on FROM cooked"
+                )
+            }
+            usage: dict[tuple[date, str], dict[int, Decimal | None]] = {}
+            for day, recipe_id, ingredient_id, amount in conn.execute(
+                "SELECT day, recipe_id, ingredient_id, amount FROM cook_usage"
+            ):
+                usage.setdefault((date.fromisoformat(day), recipe_id), {})[
+                    ingredient_id
+                ] = None if amount is None else Decimal(str(amount))
+            portions = {
+                (date.fromisoformat(day), recipe_id): n
+                for day, recipe_id, n in conn.execute(
+                    "SELECT day, recipe_id, portions FROM dish_portions"
+                )
+            }
+        return CookState(cooked, usage, portions)
+
+    def use_ingredient(
+        self, day: date, recipe_id: str, ingredient_id: int, amount: Decimal | None
+    ) -> int:
+        """Повтор проверяет core заранее; здесь он — IntegrityError."""
+        with self._connect() as conn:
+            _write_usage(conn, day, recipe_id, {ingredient_id: amount})
+            return _bump_version(conn)
+
+    def unuse_ingredient(self, day: date, recipe_id: str, ingredient_id: int) -> int:
+        with self._connect() as conn:
+            conn.execute(
+                "DELETE FROM cook_usage"
+                " WHERE day = ? AND recipe_id = ? AND ingredient_id = ?",
+                (day.isoformat(), recipe_id, ingredient_id),
+            )
+            return _bump_version(conn)
+
+    def record_cook(
+        self,
+        day: date,
+        recipe_id: str,
+        cooked_on: date,
+        amounts: Mapping[int, Decimal | None],
+    ) -> int:
+        """Списанное по остальным ингредиентам и отметка — одной записью."""
+        with self._connect() as conn:
+            _write_usage(conn, day, recipe_id, amounts)
+            conn.execute(
+                "INSERT INTO cooked (day, recipe_id, cooked_on) VALUES (?, ?, ?)",
+                (day.isoformat(), recipe_id, cooked_on.isoformat()),
+            )
+            return _bump_version(conn)
+
+    def clear_cook(self, day: date, recipe_id: str) -> int:
+        """Отметка и весь журнал по ключу; порции остаются."""
+        with self._connect() as conn:
+            for table in ("cook_usage", "cooked"):
+                conn.execute(
+                    f"DELETE FROM {table} WHERE day = ? AND recipe_id = ?",
+                    (day.isoformat(), recipe_id),
+                )
             return _bump_version(conn)
 
     def get_dish_portions(self) -> dict[tuple[date, str], int]:

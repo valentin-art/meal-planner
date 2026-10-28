@@ -43,6 +43,7 @@ from meal_planner.api.schemas import (
     ShoppingRemainingIn,
     ShoppingRemainingOut,
     SummaryOut,
+    UpdateDraftIn,
     to_app_state_out,
     to_catalog_ingredient_out,
     to_cooked_action_out,
@@ -612,6 +613,30 @@ def create_app() -> FastAPI:
             date_from,
             date_to,
             lambda c, _: catalog_actions.propose_recipe(c, body.to_proposal()),
+            lambda p: repo.save_proposal(p.recipe, p.ingredients),
+        )
+        return RecipeActionOut(
+            state=state,
+            recipe=to_recipe_out(updated, updated.recipes[result.recipe.id]),
+        )
+
+    @app.post("/api/actions/update-draft", response_model=RecipeActionOut)
+    def update_draft(
+        body: UpdateDraftIn,
+        repo: Repo,
+        catalog: CatalogDep,
+        today: Today,
+        date_from: DateFrom = None,
+        date_to: DateTo = None,
+    ) -> RecipeActionOut:
+        # Для Assist (8.6c): правит только черновик, остаётся черновиком.
+        state, updated, result = apply_catalog_action(
+            repo,
+            catalog,
+            today,
+            date_from,
+            date_to,
+            lambda c, _: catalog_actions.propose_recipe(c, body.to_proposal(), body.id),
             lambda p: repo.save_proposal(p.recipe, p.ingredients),
         )
         return RecipeActionOut(

@@ -14,9 +14,11 @@ from meal_planner.core.models import Catalog, MealKind, Recipe, RecipeSpec
 from meal_planner.core.nutrition import grams
 
 SIMILAR_FROM = Decimal("0.6")
-# С чем сравнивать: пул и черновики; архив — то, что надоело, к похожему
-# можно вернуться.
-COMPARED_STATUSES = ("active", "draft")
+# С чем сравнивать по составу: только пул. Черновики между собой могут быть
+# похожи (варианты одной идеи, правка черновика) — их разбирает пользователь;
+# архив — то, что надоело, к похожему можно вернуться. Название сверяется и с
+# черновиками (catalog_actions).
+COMPARED_STATUSES = ("active",)
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,7 +52,7 @@ def similarity(
 
 
 def similar_recipe(catalog: Catalog, spec: RecipeSpec) -> Similar | None:
-    """Самый похожий обед или ужин из пула и черновиков, если сходство ≥ порога."""
+    """Самый похожий обед или ужин из пула, если сходство ≥ порога."""
     best: Similar | None = None
     shares = weight_shares(catalog, spec)
     for recipe in catalog.recipes.values():

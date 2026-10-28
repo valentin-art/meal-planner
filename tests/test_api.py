@@ -684,6 +684,31 @@ def test_draft_propose_confirm_discard(client, repo):
     assert r.json()["detail"][0]["loc"] == ["body", "id"]
 
 
+def test_update_draft_and_similar_drafts(client, repo):
+    # 8.6c: черновики между собой на сходство не проверяются; свой черновик
+    # правится целиком, остаётся черновиком; «В план» сверяет с пулом.
+    repo.save_settings(DEFAULT_2X)
+    first = post(client, "propose-recipe", PROPOSED).json()["recipe"]
+    second = post(
+        client, "propose-recipe", {**PROPOSED, "name": "Говядина с булгуром 2"}
+    )
+    assert second.status_code == 200  # похож на черновик — можно
+    renamed = {**PROPOSED, "id": first["id"], "name": "Говядина с цукини"}
+    edited = post(client, "update-draft", renamed).json()
+    assert (edited["recipe"]["id"], edited["recipe"]["status"]) == (
+        first["id"],
+        "draft",
+    )
+    assert edited["recipe"]["name"] == "Говядина с цукини"
+    assert post(client, "update-draft", {**renamed, "id": "d1"}).status_code == 422
+    confirmed = post(client, "confirm-draft", {"id": first["id"]})
+    assert confirmed.status_code == 200
+    # Второй черновик теперь похож на подтверждённый из пула — отказ.
+    r = post(client, "confirm-draft", {"id": second.json()["recipe"]["id"]})
+    assert r.status_code == 422
+    assert "похоже на «Говядина с цукини»" in r.json()["detail"][0]["msg"]
+
+
 def test_propose_similar_recipe_is_refused(client, repo):
     # 8.6c: похожее на существующее — 422, ничего не пишется.
     repo.save_settings(DEFAULT_2X)

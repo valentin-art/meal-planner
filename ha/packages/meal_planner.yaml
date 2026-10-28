@@ -220,6 +220,15 @@ rest_command:
       {{ {"name": name, "kind": kind, "is_fish": is_fish,
           "ingredients": ingredients, "new_ingredients": new_ingredients,
           "steps": steps, "storage": storage} | to_json }}
+  meal_planner_update_draft:
+    url: http://127.0.0.1:8001/api/actions/update-draft
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: >-
+      {{ {"id": id, "name": name, "kind": kind, "is_fish": is_fish,
+          "ingredients": ingredients, "new_ingredients": new_ingredients,
+          "steps": steps, "storage": storage} | to_json }}
 
 # Скрипты — инструменты для LLM: description и fields идут в схему tool.
 # Действия возвращают {ok: true} или {ok: false, error: "<текст из API>"};
@@ -690,8 +699,8 @@ script:
     alias: Питание — справочник ингредиентов и блюд
     description: >-
       Справочник ингредиентов приложения питания (название и единица unit) и
-      уже существующие обеды, ужины и черновики (recipes: название, тип и
-      ингредиенты). Вызывай перед тем, как придумывать рецепт для
+      уже существующие обеды, ужины и черновики (recipes: id, название, тип,
+      status — active или draft — и ингредиенты). Вызывай перед тем, как придумывать рецепт для
       meal_planner_propose_recipe: называй ингредиенты точно как здесь
       (иначе появятся дубли), а блюдо придумывай не похожее на recipes —
       с другим главным продуктом или основой. Чего нет в ingredients,
@@ -724,7 +733,8 @@ script:
                   {%- for r in recipes_resp.content.values()
                         if r['kind'] != 'breakfast' and r['status'] in ['active', 'draft'] %}
                     {%- set ns.out = ns.out + [{
-                          "name": r['name'], "kind": r['kind'],
+                          "id": r['id'], "name": r['name'], "kind": r['kind'],
+                          "status": r['status'],
                           "ingredients": r['ingredients'] | map(attribute='name') | list}] %}
                   {%- endfor %}
                   {{ ns.out }}
@@ -752,7 +762,10 @@ script:
       Блюдо должно отличаться от существующих (recipes в
       meal_planner_ingredients) другим главным продуктом или основой:
       похожее по составу или с тем же названием приложение отклонит —
-      тогда предложи пользователю другое блюдо.
+      тогда предложи пользователю другое блюдо. С черновиками (status draft)
+      сходство не проверяется: похожий черновик можно сохранить новым, а
+      чтобы поправить свой черновик, передай его id в draft_id — рецепт
+      заменится целиком, остальные черновики и рецепты не меняются.
       Количества — на одну порцию, в любой единице из списка: в единицу
       справочника переводит приложение. Ингредиент, которого нет в
       справочнике, опиши в new_ingredients (единица: г — твёрдое, мл —
@@ -764,6 +777,14 @@ script:
       повтори или перескажи ошибку.
     mode: queued
     fields:
+      draft_id:
+        name: Черновик
+        description: >-
+          id существующего черновика (recipes со status draft), если его
+          нужно переписать; пусто — сохранить новый
+        required: false
+        selector:
+          text:
       name:
         name: Название
         description: Название блюда, например «Тофу с гречкой и овощами»
@@ -932,17 +953,34 @@ script:
             pan: "{{ pan | default('') }}"
             micro: "{{ micro | default('') }}"
             after: "{{ after | default(none) }}"
-      - action: rest_command.meal_planner_propose_recipe
-        data:
-          name: "{{ name }}"
-          kind: "{{ kind }}"
-          is_fish: "{{ is_fish | default(false) | bool }}"
-          ingredients: "{{ lines }}"
-          new_ingredients: "{{ added }}"
-          steps: "{{ step_list }}"
-          storage: "{{ storage }}"
-        response_variable: resp
-        continue_on_error: true
+      # Правка черновика — другой эндпоинт с тем же телом и id.
+      - choose:
+          - conditions: "{{ draft_id | default('', true) | length > 0 }}"
+            sequence:
+              - action: rest_command.meal_planner_update_draft
+                data:
+                  id: "{{ draft_id }}"
+                  name: "{{ name }}"
+                  kind: "{{ kind }}"
+                  is_fish: "{{ is_fish | default(false) | bool }}"
+                  ingredients: "{{ lines }}"
+                  new_ingredients: "{{ added }}"
+                  steps: "{{ step_list }}"
+                  storage: "{{ storage }}"
+                response_variable: resp
+                continue_on_error: true
+        default:
+          - action: rest_command.meal_planner_propose_recipe
+            data:
+              name: "{{ name }}"
+              kind: "{{ kind }}"
+              is_fish: "{{ is_fish | default(false) | bool }}"
+              ingredients: "{{ lines }}"
+              new_ingredients: "{{ added }}"
+              steps: "{{ step_list }}"
+              storage: "{{ storage }}"
+            response_variable: resp
+            continue_on_error: true
       - if: "{{ resp is defined and resp.status == 200 }}"
         then:
           - variables:

@@ -30,7 +30,7 @@ from meal_planner.core.models import (
 from meal_planner.core.nutrition import nutrition
 from meal_planner.core.scheduling import ROTATION_BREAKFASTS
 from meal_planner.core.shopping import CATEGORY_ORDER
-from meal_planner.core.similarity import COMPARED_STATUSES, similar_recipe
+from meal_planner.core.similarity import similar_recipe
 from meal_planner.core.slot_pool import (
     FISH_MESSAGE,
     KIND_WHAT,
@@ -415,10 +415,13 @@ def _new_ingredients(
     return catalog, added, seen - {_key(i.name) for i in added}
 
 
-def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> Proposed:
-    """Новый черновик от Assist (8.6a): проверки — как у save_recipe.
+def propose_recipe(
+    catalog: Catalog, proposal: RecipeProposal, draft_id: str | None = None
+) -> Proposed:
+    """Новый черновик от Assist (8.6a) или правка своего черновика (draft_id).
 
-    Существующие рецепты так не меняются. Ингредиенты — названиями без учёта
+    Проверки — как у save_recipe. Существующие рецепты так не меняются:
+    draft_id принимает только черновик, он им и остаётся. Ингредиенты — названиями без учёта
     регистра: из справочника или из new_ingredients (8.6b). Количество
     переводится в единицу ингредиента и округляется (core/units.py).
     """
@@ -426,6 +429,8 @@ def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> Proposed:
         raise CatalogError(
             [FieldError(("kind",), "Assist предлагает только обеды и ужины")]
         )
+    if draft_id is not None:
+        _draft(catalog, draft_id)
     errors: list[FieldError] = []
     catalog, added, rejected = _new_ingredients(catalog, proposal, errors)
     by_name = {_key(name): i for name, i in catalog.ingredients.items()}
@@ -461,7 +466,7 @@ def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> Proposed:
         spec = save_recipe(
             catalog,
             RecipeInput(
-                id=None,
+                id=draft_id,
                 name=proposal.name,
                 kind=proposal.kind,
                 ingredients=tuple(lines),
@@ -484,13 +489,14 @@ def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> Proposed:
 
 
 def _repeats(catalog: Catalog, spec: RecipeSpec) -> list[FieldError]:
-    """Рецепт от Assist не повторяет пул и черновики (8.6c): ни названием, ни
-    составом. Веса новых ингредиентов — в catalog: он уже расширен."""
+    """Рецепт от Assist не повторяет пул и черновики названием, а пул — ещё и
+    составом (8.6c); черновики между собой на состав не проверяются. Веса
+    новых ингредиентов — в catalog: он уже расширен."""
     errors = []
     taken = {
         _key(r.name): r.name
         for r in catalog.recipes.values()
-        if r.status in COMPARED_STATUSES
+        if r.status in ("active", "draft") and r.id != spec.id
     }
     if (name := taken.get(_key(spec.name))) is not None:
         errors.append(
@@ -508,8 +514,24 @@ def _repeats(catalog: Catalog, spec: RecipeSpec) -> list[FieldError]:
 
 
 def confirm_draft(catalog: Catalog, recipe_id: str) -> RecipeSpec:
-    """Черновик — в пул; в позицию его ставит plan_for, как новый рецепт."""
-    return replace(_draft(catalog, recipe_id), status="active")
+    """Черновик — в пул; в позицию его ставит plan_for, как новый рецепт.
+
+    В пуле с тех пор мог появиться похожий (другой черновик подтвердили,
+    рецепт добавили вручную) — повторная проверка состава.
+    """
+    spec = _draft(catalog, recipe_id)
+    if (similar := similar_recipe(catalog, spec)) is not None:
+        raise CatalogError(
+            [
+                FieldError(
+                    ("id",),
+                    f"«{spec.name}» похоже на «{similar.recipe.name}» (общее:"
+                    f" {', '.join(similar.common)}) — измените черновик или"
+                    " отбросьте его",
+                )
+            ]
+        )
+    return replace(spec, status="active")
 
 
 def discard_draft(catalog: Catalog, recipe_id: str) -> str:

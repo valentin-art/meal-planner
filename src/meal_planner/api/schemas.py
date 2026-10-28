@@ -304,6 +304,12 @@ class ProposeRecipeIn(BaseModel):
         )
 
 
+class UpdateDraftIn(ProposeRecipeIn):
+    """Правка своего черновика (8.6c): тело то же, плюс id черновика."""
+
+    id: str
+
+
 class RecipePreviewLineIn(BaseModel):
     ingredient_id: int
     qty: float  # без gt=0: черновик бывает недописан, такие строки не считаются

@@ -378,6 +378,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/actions/update-draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update Draft */
+        post: operations["update_draft_api_actions_update_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/actions/confirm-draft": {
         parameters: {
             query?: never;
@@ -1293,6 +1310,32 @@ export interface components {
             /** Options */
             options: components["schemas"]["CyclePositionOut"][];
         };
+        /**
+         * UpdateDraftIn
+         * @description Правка своего черновика (8.6c): тело то же, плюс id черновика.
+         */
+        UpdateDraftIn: {
+            /** Name */
+            name: string;
+            kind: components["schemas"]["MealKind"];
+            /**
+             * Is Fish
+             * @default false
+             */
+            is_fish: boolean;
+            /** Ingredients */
+            ingredients: components["schemas"]["ProposedLineIn"][];
+            /** Steps */
+            steps: string[];
+            storage?: components["schemas"]["RecipeStorageIn"] | null;
+            /**
+             * New Ingredients
+             * @default []
+             */
+            new_ingredients: components["schemas"]["NewIngredientIn"][];
+            /** Id */
+            id: string;
+        };
         /** ValidationError */
         ValidationError: {
             /** Location */
@@ -1987,6 +2030,42 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["ProposeRecipeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeActionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_draft_api_actions_update_draft_post: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateDraftIn"];
             };
         };
         responses: {

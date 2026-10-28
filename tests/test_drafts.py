@@ -374,13 +374,65 @@ def test_same_name_is_refused():
     ) == [(("name",), f"«{name}» уже есть — придумай другое блюдо")]
 
 
-def test_draft_counts_archive_does_not():
-    # Тот же рецепт второй раз — отказ: черновик в счёт.
+def test_draft_counts_by_name_only_archive_not_at_all():
+    # Тот же рецепт вторым черновиком: название занято, а состав — можно.
     assert [
         loc for loc, _ in errors(lambda: ca.propose_recipe(WITH_DRAFT, proposal()))
-    ] == [
-        ("name",),
-        ("ingredients",),
-    ]
+    ] == [("name",)]
+    variant = ca.propose_recipe(WITH_DRAFT, proposal(name="Говядина с булгуром 2"))
+    assert (variant.recipe.id, variant.recipe.status) == ("d7", "draft")
     archived = with_specs(replace(DRAFT, status="archived"))
     assert ca.propose_recipe(archived, proposal()).recipe.id == "d7"
+
+
+# --- правка черновика и проверка при «В план» (8.6c) ---
+
+
+def test_update_draft_keeps_id_and_status():
+    lines = (
+        ProposedLine("говядина", 150, "г"),
+        ProposedLine("булгур", 70, "г"),
+        ProposedLine("цукини", 100, "г"),
+    )
+    new = ca.propose_recipe(
+        WITH_DRAFT, proposal(name="Говядина с цукини", ingredients=lines), "d6"
+    )
+    assert (new.recipe.id, new.recipe.status) == ("d6", "draft")
+    assert [i.name for i in new.recipe.ingredients] == ["говядина", "булгур", "цукини"]
+    # Своё название и свой состав не мешают: сверка без самого себя.
+    same = ca.propose_recipe(WITH_DRAFT, proposal(), "d6")
+    assert same.recipe.id == "d6"
+
+
+def test_update_refuses_non_draft_and_other_kind():
+    name = SEED_CATALOG.recipes["d1"].name
+    assert errors(lambda: ca.propose_recipe(WITH_DRAFT, proposal(), "d1")) == [
+        (("id",), f"«{name}» — не черновик")
+    ]
+    assert errors(lambda: ca.propose_recipe(WITH_DRAFT, proposal(), "d9")) == [
+        (("id",), "Рецепта d9 нет")
+    ]
+    assert errors(
+        lambda: ca.propose_recipe(WITH_DRAFT, proposal(kind=MealKind.LUNCH), "d6")
+    ) == [(("kind",), "Тип блюда не меняется — создайте новый рецепт")]
+
+
+def test_update_still_refuses_similar_to_pool():
+    lines = (ProposedLine("говядина", 180, "г"), ProposedLine("гречка", 80, "г"))
+    assert [
+        loc
+        for loc, _ in errors(
+            lambda: ca.propose_recipe(WITH_DRAFT, proposal(ingredients=lines), "d6")
+        )
+    ] == [("ingredients",)]
+
+
+def test_confirm_checks_similarity_to_pool_again():
+    # Пока черновик лежал, в пул попало похожее — «В план» отказывает.
+    sibling = ca.propose_recipe(WITH_DRAFT, proposal(name="Говядина с булгуром 2"))
+    both = with_specs(DRAFT, ca.confirm_draft(WITH_DRAFT, "d6"), sibling.recipe)
+    assert both.recipes["d6"].status == "active"
+    ((loc, message),) = errors(lambda: ca.confirm_draft(both, "d7"))
+    assert loc == ("id",)
+    assert message.startswith("«Говядина с булгуром 2» похоже на «Говядина с булгуром»")
+    assert message.endswith("измените черновик или отбросьте его")

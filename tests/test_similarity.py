@@ -52,11 +52,16 @@ def test_similar_recipe_takes_the_most_similar_and_skips_archive():
     assert found is not None and found.recipe.id == "d1"
 
 
-def test_draft_is_compared():
+def test_draft_is_not_compared():
+    # Черновики между собой могут быть похожи (8.6c): сверка только с пулом.
     draft = replace(spec_of(R["l2"]), id="l6", name="Черновик", status="draft")
     catalog = build_catalog(
         seed_ingredients(), [*RECIPE_SPECS.values(), draft], seed_slot_versions()
     )
-    again = replace(draft, id="l7")
+    again = replace(draft, id="l7", name="Другой")
     found = similar_recipe(catalog, again)
-    assert found is not None and round(found.score, 9) == 1
+    assert found is not None and found.recipe.id == "l2"  # пул, не черновик
+    assert (
+        similar_recipe(catalog, replace(again, ingredients=draft.ingredients[:1]))
+        is None
+    )

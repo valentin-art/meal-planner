@@ -217,7 +217,10 @@ def test_propose_recipe_fields_match_api():
     body = resolve(SCHEMAS["ProposeRecipeIn"])["properties"]
     storage = set(resolve(SCHEMAS["RecipeStorageIn"])["properties"])
     # storage — отдельными полями: модель заполняет их по одному.
-    assert set(script["fields"]) == (set(body) - {"storage"}) | storage
+    # draft_id — id для update-draft (правка своего черновика).
+    update = resolve(SCHEMAS["UpdateDraftIn"])["properties"]
+    assert set(update) == set(body) | {"id"}
+    assert set(script["fields"]) == (set(body) - {"storage"}) | storage | {"draft_id"}
     line = object_fields(script, "ingredients")
     assert set(line) == set(resolve(SCHEMAS["ProposedLineIn"])["properties"])
     new = object_fields(script, "new_ingredients")

@@ -1183,6 +1183,80 @@
         }
       }
     },
+    "/api/actions/update-draft": {
+      "post": {
+        "summary": "Update Draft",
+        "operationId": "update_draft_api_actions_update_draft_post",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "date"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateDraftIn"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeActionOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/actions/confirm-draft": {
       "post": {
         "summary": "Confirm Draft",
@@ -3914,6 +3988,68 @@
           "options"
         ],
         "title": "TodayPositionOut"
+      },
+      "UpdateDraftIn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/MealKind"
+          },
+          "is_fish": {
+            "type": "boolean",
+            "title": "Is Fish",
+            "default": false
+          },
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/ProposedLineIn"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Steps"
+          },
+          "storage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecipeStorageIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "new_ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/NewIngredientIn"
+            },
+            "type": "array",
+            "title": "New Ingredients",
+            "default": []
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "kind",
+          "ingredients",
+          "steps",
+          "id"
+        ],
+        "title": "UpdateDraftIn",
+        "description": "Правка своего черновика (8.6c): тело то же, плюс id черновика."
       },
       "ValidationError": {
         "properties": {

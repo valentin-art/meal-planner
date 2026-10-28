@@ -980,36 +980,36 @@
   },
   "d6": {
    "id": "d6",
-   "name": "Говядина с гречкой и морковью",
+   "name": "Нут с баклажаном и фетой",
    "kind": "dinner",
-   "kcal": 695,
-   "protein": 50,
+   "kcal": 520,
+   "protein": 20,
    "ingredients": [
     {
-     "ingredient_id": 13,
-     "name": "говядина",
-     "qty": 180.0,
-     "qty_display": "180",
-     "unit": "г",
-     "category": "Белок",
-     "from_assist": false
-    },
-    {
-     "ingredient_id": 14,
-     "name": "гречка",
-     "qty": 80.0,
-     "qty_display": "80",
+     "ingredient_id": 36,
+     "name": "нут консервированный",
+     "qty": 150.0,
+     "qty_display": "150",
      "unit": "г",
      "category": "Крупы",
      "from_assist": false
     },
     {
-     "ingredient_id": 16,
-     "name": "морковь",
-     "qty": 160.0,
-     "qty_display": "160",
+     "ingredient_id": 32,
+     "name": "баклажан",
+     "qty": 330.0,
+     "qty_display": "330",
      "unit": "г",
      "category": "Овощи",
+     "from_assist": false
+    },
+    {
+     "ingredient_id": 35,
+     "name": "фета",
+     "qty": 40.0,
+     "qty_display": "40",
+     "unit": "г",
+     "category": "Яйца и молочное",
      "from_assist": false
     },
     {
@@ -1032,8 +1032,8 @@
     }
    ],
    "steps": [
-    "Обжарить говядину с морковью.",
-    "Сварить гречку и смешать."
+    "Запечь баклажан с паприкой.",
+    "Смешать с нутом, сверху — фета."
    ],
    "storage": {
     "keep": "до 4 дней в холодильнике",
@@ -1264,8 +1264,7 @@
     "grams_per_unit": null,
     "store_piece": null,
     "used_in": [
-     "l2",
-     "d6"
+     "l2"
     ],
     "from_assist": false
    },
@@ -1280,8 +1279,7 @@
     "grams_per_unit": null,
     "store_piece": null,
     "used_in": [
-     "l2",
-     "d6"
+     "l2"
     ],
     "from_assist": false
    },
@@ -1311,8 +1309,7 @@
     "grams_per_unit": null,
     "store_piece": 160.0,
     "used_in": [
-     "l2",
-     "d6"
+     "l2"
     ],
     "from_assist": false
    },
@@ -1562,7 +1559,8 @@
     "grams_per_unit": null,
     "store_piece": 330.0,
     "used_in": [
-     "d3"
+     "d3",
+     "d6"
     ],
     "from_assist": false
    },
@@ -1607,7 +1605,8 @@
     "grams_per_unit": null,
     "store_piece": null,
     "used_in": [
-     "d4"
+     "d4",
+     "d6"
     ],
     "from_assist": false
    },
@@ -1622,7 +1621,8 @@
     "grams_per_unit": null,
     "store_piece": null,
     "used_in": [
-     "d5"
+     "d5",
+     "d6"
     ],
     "from_assist": false
    },

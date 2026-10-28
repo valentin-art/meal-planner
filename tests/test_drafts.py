@@ -43,13 +43,14 @@ STORAGE = RecipeStorage(
 
 def proposal(**changes) -> RecipeProposal:
     base = RecipeProposal(
-        name="Говядина с гречкой",
+        name="Говядина с булгуром",
         kind=MealKind.DINNER,
         ingredients=(
-            ProposedLine("  Говядина ", 180, "г"),
-            ProposedLine("ГРЕЧКА", 80, "г"),
+            ProposedLine("  Говядина ", 150, "г"),
+            ProposedLine("БУЛГУР", 70, "г"),
+            ProposedLine("баклажан", 150, "г"),
         ),
-        steps=("Отварите гречку.", "Потушите говядину."),
+        steps=("Отварите булгур.", "Потушите говядину с баклажаном."),
         storage=STORAGE,
     )
     return replace(base, **changes)
@@ -77,8 +78,9 @@ WITH_DRAFT = with_specs(DRAFT)
 def test_proposal_becomes_draft_with_catalog_names():
     assert (DRAFT.id, DRAFT.status) == ("d6", "draft")
     assert [(i.name, i.qty, i.unit) for i in DRAFT.ingredients] == [
-        ("говядина", 180, "г"),
-        ("гречка", 80, "г"),
+        ("говядина", 150, "г"),
+        ("булгур", 70, "г"),
+        ("баклажан", 150, "г"),
     ]
     # Ккал и белок — из справочника, модель их не передаёт.
     recipe = WITH_DRAFT.recipes["d6"]
@@ -140,10 +142,10 @@ def test_draft_cannot_go_to_slot_archive_or_restore():
     ) == [
         (
             ("dinner_ids", 1),
-            "«Говядина с гречкой» — черновик, сначала подтвердите",
+            "«Говядина с булгуром» — черновик, сначала подтвердите",
         )
     ]
-    message = "«Говядина с гречкой» — черновик: подтвердите или отбросьте его"
+    message = "«Говядина с булгуром» — черновик: подтвердите или отбросьте его"
     assert errors(lambda: ca.archive_recipe(WITH_DRAFT, "d6")) == [(("id",), message)]
     assert errors(lambda: ca.restore_recipe(WITH_DRAFT, "d6")) == [(("id",), message)]
 
@@ -153,7 +155,7 @@ def test_edit_keeps_draft():
         WITH_DRAFT,
         ca.RecipeInput(
             id="d6",
-            name="Говядина с гречкой и луком",
+            name="Говядина с булгуром и луком",
             kind=MealKind.DINNER,
             ingredients=tuple(
                 ca.RecipeLineInput(SEED_CATALOG.ingredients[n].id, q)
@@ -189,7 +191,8 @@ def test_confirmed_fish_goes_only_to_fish_slot():
             name="Лосось с рисом",
             ingredients=(
                 ProposedLine("лосось", 150, "г"),
-                ProposedLine("рис басмати", 70, "г"),
+                ProposedLine("булгур", 70, "г"),
+                ProposedLine("баклажан", 150, "г"),
             ),
             is_fish=True,
         ),
@@ -252,10 +255,10 @@ def test_new_ingredients_join_catalog_with_the_draft():
 
 
 def test_known_name_in_new_ingredients_takes_the_catalog_one():
-    known = NewIngredient("Гречка", "мл", "Крупы", 1, 1)
+    known = NewIngredient("Булгур", "мл", "Крупы", 1, 1)
     proposed = ca.propose_recipe(SEED_CATALOG, proposal(new_ingredients=(known,)))
     assert proposed.ingredients == ()
-    assert proposed.recipe.ingredients[1].name == "гречка"
+    assert proposed.recipe.ingredients[1].name == "булгур"
 
 
 def test_new_ingredient_rules():
@@ -299,7 +302,7 @@ def test_new_ingredient_rules():
     ],
 )
 def test_line_is_converted_to_catalog_unit(line, expected):
-    lines = (line, ProposedLine("гречка", 80, "г"))
+    lines = (line, ProposedLine("баклажан", 150, "г"))
     recipe = ca.propose_recipe(SEED_CATALOG, proposal(ingredients=lines)).recipe
     first = recipe.ingredients[0]
     assert (first.name, first.qty, first.unit) == expected
@@ -343,3 +346,41 @@ def test_line_of_rejected_new_ingredient_has_no_second_error():
             )
         )
     ] == [("new_ingredients", 0, "unit")]
+
+
+# --- не повторяет существующие (8.6c) ---
+
+
+def test_similar_composition_is_refused():
+    # l2 «Гречка с тушёной говядиной»: та же говядина с гречкой.
+    lines = (ProposedLine("говядина", 180, "г"), ProposedLine("гречка", 80, "г"))
+    assert errors(
+        lambda: ca.propose_recipe(SEED_CATALOG, proposal(ingredients=lines))
+    ) == [
+        (
+            ("ingredients",),
+            (
+                f"Похоже на «{SEED_CATALOG.recipes['l2'].name}» (общее: говядина, гречка)"
+                " — придумай другое блюдо"
+            ),
+        )
+    ]
+
+
+def test_same_name_is_refused():
+    name = SEED_CATALOG.recipes["d3"].name
+    assert errors(
+        lambda: ca.propose_recipe(SEED_CATALOG, proposal(name=f" {name.upper()} "))
+    ) == [(("name",), f"«{name}» уже есть — придумай другое блюдо")]
+
+
+def test_draft_counts_archive_does_not():
+    # Тот же рецепт второй раз — отказ: черновик в счёт.
+    assert [
+        loc for loc, _ in errors(lambda: ca.propose_recipe(WITH_DRAFT, proposal()))
+    ] == [
+        ("name",),
+        ("ingredients",),
+    ]
+    archived = with_specs(replace(DRAFT, status="archived"))
+    assert ca.propose_recipe(archived, proposal()).recipe.id == "d7"

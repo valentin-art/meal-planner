@@ -207,6 +207,10 @@ rest_command:
     url: http://127.0.0.1:8001/api/ingredients
     method: get
     timeout: 10
+  meal_planner_recipes:
+    url: http://127.0.0.1:8001/api/recipes
+    method: get
+    timeout: 10
   meal_planner_propose_recipe:
     url: http://127.0.0.1:8001/api/actions/propose-recipe
     method: post
@@ -679,20 +683,30 @@ script:
       - event: meal_planner_changed
 
   # Рецепт от Assist (8.6): справочник — чтобы модель не плодила дубли
-  # («куриная грудка» рядом с «куриное филе»).
+  # («куриная грудка» рядом с «куриное филе»); уже существующие блюда —
+  # чтобы не предлагала похожих (8.6c: похожее отклоняет приложение).
+  # Имя скрипта прежнее: доступ для Assist уже открыт.
   meal_planner_ingredients:
-    alias: Питание — справочник ингредиентов
+    alias: Питание — справочник ингредиентов и блюд
     description: >-
-      Справочник ингредиентов приложения питания: название и единица (unit).
-      Вызывай перед meal_planner_propose_recipe и называй ингредиенты
-      рецепта точно как здесь, иначе появятся дубли. Чего здесь нет,
+      Справочник ингредиентов приложения питания (название и единица unit) и
+      уже существующие обеды, ужины и черновики (recipes: название, тип и
+      ингредиенты). Вызывай перед тем, как придумывать рецепт для
+      meal_planner_propose_recipe: называй ингредиенты точно как здесь
+      (иначе появятся дубли), а блюдо придумывай не похожее на recipes —
+      с другим главным продуктом или основой. Чего нет в ingredients,
       описывается в new_ingredients того скрипта.
     mode: parallel
     sequence:
       - action: rest_command.meal_planner_ingredients
         response_variable: resp
         continue_on_error: true
-      - if: "{{ resp is defined and resp.status == 200 }}"
+      - action: rest_command.meal_planner_recipes
+        response_variable: recipes_resp
+        continue_on_error: true
+      - if: >-
+          {{ resp is defined and resp.status == 200
+             and recipes_resp is defined and recipes_resp.status == 200 }}
         then:
           - variables:
               result:
@@ -700,6 +714,16 @@ script:
                   {%- set ns = namespace(out=[]) %}
                   {%- for i in resp.content.ingredients %}
                     {%- set ns.out = ns.out + [{"name": i['name'], "unit": i['unit']}] %}
+                  {%- endfor %}
+                  {{ ns.out }}
+                # Без шагов и количеств: модели нужен только состав.
+                recipes: >-
+                  {%- set ns = namespace(out=[]) %}
+                  {%- for r in recipes_resp.content.values()
+                        if r['kind'] != 'breakfast' and r['status'] in ['active', 'draft'] %}
+                    {%- set ns.out = ns.out + [{
+                          "name": r['name'], "kind": r['kind'],
+                          "ingredients": r['ingredients'] | map(attribute='name') | list}] %}
                   {%- endfor %}
                   {{ ns.out }}
           - stop: Справочник получен
@@ -719,6 +743,10 @@ script:
       приложении питания. Вызывай только после того, как пользователь
       согласился сохранить предложенный рецепт («сохрани», «добавь»), — не
       для идей. Перед вызовом получи названия из meal_planner_ingredients.
+      Блюдо должно отличаться от существующих (recipes в
+      meal_planner_ingredients) другим главным продуктом или основой:
+      похожее по составу или с тем же названием приложение отклонит —
+      тогда предложи пользователю другое блюдо.
       Количества — на одну порцию, в любой единице из списка: в единицу
       справочника переводит приложение. Ингредиент, которого нет в
       справочнике, опиши в new_ingredients (единица: г — твёрдое, мл —

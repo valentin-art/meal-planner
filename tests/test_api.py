@@ -640,13 +640,14 @@ def test_archive_and_restore(client, repo):
 
 
 PROPOSED = {
-    "name": "Говядина с гречкой",
+    "name": "Говядина с булгуром и баклажаном",
     "kind": "dinner",
     "ingredients": [
-        {"name": "Говядина", "qty": 0.18, "unit": "кг"},
-        {"name": "гречка", "qty": 80, "unit": "г"},
+        {"name": "Говядина", "qty": 0.15, "unit": "кг"},
+        {"name": "булгур", "qty": 70, "unit": "г"},
+        {"name": "баклажан", "qty": 150, "unit": "г"},
     ],
-    "steps": ["Отварите гречку.", "Потушите говядину."],
+    "steps": ["Отварите булгур.", "Потушите говядину с баклажаном."],
     "storage": {"keep": "До 3 дней", "pan": "Уровень 4", "micro": "2 мин"},
 }
 
@@ -666,7 +667,14 @@ def test_draft_propose_confirm_discard(client, repo):
     assert confirmed["recipe"]["status"] == "active"
     assert any("d6" in s["dinner_ids"] for s in confirmed["state"]["cycle_slots"])
 
-    post(client, "propose-recipe", {**PROPOSED, "name": "Ещё"})
+    # Второй — другой состав: повтор подтверждённого отклонило бы сходство.
+    chickpeas = [
+        {"name": "нут консервированный", "qty": 150, "unit": "г"},
+        {"name": "фета", "qty": 40, "unit": "г"},
+    ]
+    post(
+        client, "propose-recipe", {**PROPOSED, "name": "Ещё", "ingredients": chickpeas}
+    )
     discarded = post(client, "discard-draft", {"id": "d7"})
     assert discarded.json()["id"] == "d7"
     assert discarded.json()["state"]["version"] == 5
@@ -674,6 +682,21 @@ def test_draft_propose_confirm_discard(client, repo):
     r = post(client, "discard-draft", {"id": "d6"})
     assert r.status_code == 422
     assert r.json()["detail"][0]["loc"] == ["body", "id"]
+
+
+def test_propose_similar_recipe_is_refused(client, repo):
+    # 8.6c: похожее на существующее — 422, ничего не пишется.
+    repo.save_settings(DEFAULT_2X)
+    lines = [
+        {"name": "говядина", "qty": 180, "unit": "г"},
+        {"name": "гречка", "qty": 80, "unit": "г"},
+    ]
+    r = post(client, "propose-recipe", {**PROPOSED, "ingredients": lines})
+    assert r.status_code == 422
+    (error,) = r.json()["detail"]
+    assert error["loc"] == ["body", "ingredients"]
+    assert error["msg"].startswith("Похоже на «Гречка с тушёной говядиной»")
+    assert repo.get_settings().version == 1
 
 
 def test_propose_unknown_ingredient_writes_nothing(client, repo):
@@ -684,7 +707,7 @@ def test_propose_unknown_ingredient_writes_nothing(client, repo):
     assert r.json()["detail"] == [
         {
             "type": "value_error",
-            "loc": ["body", "ingredients", 2, "name"],
+            "loc": ["body", "ingredients", 3, "name"],
             "msg": "«тофу» нет в справочнике — опишите его в new_ingredients",
         }
     ]
@@ -708,9 +731,9 @@ def test_propose_with_new_ingredient(client, repo):
         "propose-recipe",
         {**PROPOSED, "ingredients": lines, "new_ingredients": [tofu]},
     ).json()
-    line = body["recipe"]["ingredients"][2]
+    line = body["recipe"]["ingredients"][3]
     assert (line["name"], line["qty"], line["from_assist"]) == ("тофу", 100, True)
-    assert body["recipe"]["ingredients"][0]["qty"] == 180  # 0.18 кг
+    assert body["recipe"]["ingredients"][0]["qty"] == 150  # 0.15 кг
     assert body["state"]["version"] == 2  # ингредиент и рецепт — одна запись
 
     def listed() -> dict:

@@ -242,9 +242,14 @@ def test_ingredients_script_uses_catalog_fields():
     )
     used = set(re.findall(r"i\['(\w+)'\]", script))
     assert used and used <= set(resolve(SCHEMAS["CatalogIngredientOut"])["properties"])
-    assert set(re.findall(r"resp\.content\.(\w+)", script)) <= set(
+    assert set(re.findall(r"\bresp\.content\.(\w+)", script)) <= set(
         resolve(SCHEMAS["IngredientsOut"])["properties"]
     )
+    # Существующие блюда (8.6c): GET /api/recipes — словарь RecipeOut по id.
+    assert "recipes_resp.content.values()" in script
+    used = set(re.findall(r"r\['(\w+)'\]", script))
+    assert used and used <= set(resolve(SCHEMAS["RecipeOut"])["properties"])
+    assert "map(attribute='name')" in script
 
 
 def test_propose_recipe_reads_recipe_fields():

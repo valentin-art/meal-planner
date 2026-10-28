@@ -30,6 +30,7 @@ from meal_planner.core.models import (
 from meal_planner.core.nutrition import nutrition
 from meal_planner.core.scheduling import ROTATION_BREAKFASTS
 from meal_planner.core.shopping import CATEGORY_ORDER
+from meal_planner.core.similarity import COMPARED_STATUSES, similar_recipe
 from meal_planner.core.slot_pool import (
     FISH_MESSAGE,
     KIND_WHAT,
@@ -476,9 +477,34 @@ def propose_recipe(catalog: Catalog, proposal: RecipeProposal) -> Proposed:
             err for err in e.errors if not (line_errors and err.loc[0] == "ingredients")
         )
         raise CatalogError(errors) from e
+    errors.extend(_repeats(catalog, spec))
     if errors:
         raise CatalogError(errors)
     return Proposed(replace(spec, status="draft"), tuple(added))
+
+
+def _repeats(catalog: Catalog, spec: RecipeSpec) -> list[FieldError]:
+    """Рецепт от Assist не повторяет пул и черновики (8.6c): ни названием, ни
+    составом. Веса новых ингредиентов — в catalog: он уже расширен."""
+    errors = []
+    taken = {
+        _key(r.name): r.name
+        for r in catalog.recipes.values()
+        if r.status in COMPARED_STATUSES
+    }
+    if (name := taken.get(_key(spec.name))) is not None:
+        errors.append(
+            FieldError(("name",), f"«{name}» уже есть — придумай другое блюдо")
+        )
+    if (similar := similar_recipe(catalog, spec)) is not None:
+        errors.append(
+            FieldError(
+                ("ingredients",),
+                f"Похоже на «{similar.recipe.name}» (общее: {', '.join(similar.common)})"
+                " — придумай другое блюдо",
+            )
+        )
+    return errors
 
 
 def confirm_draft(catalog: Catalog, recipe_id: str) -> RecipeSpec:

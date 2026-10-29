@@ -1,7 +1,7 @@
 """10.1: готовка любого рецепта по ингредиентам и журнал списаний."""
 
 from dataclasses import replace
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 
 import pytest
@@ -10,6 +10,7 @@ from meal_planner.core.actions import ActionError
 from meal_planner.core.cookbook import cook_preview
 from meal_planner.core.cooking import (
     CookState,
+    cook_day,
     cook_key,
     cook_recipe,
     set_recipe_portions,
@@ -53,6 +54,22 @@ def use(st, recipe_id, ingredient_id, lines):
     return use_ingredient(
         SEED_CATALOG, SETTINGS, TODAY, st, recipe_id, ingredient_id, lines
     )
+
+
+# --- день готовки (10.5) ---
+
+
+@pytest.mark.parametrize(
+    ("now", "expected"),
+    [
+        (datetime(2026, 11, 10, 0, 30), date(2026, 11, 9)),  # ночь — ещё вчера
+        (datetime(2026, 11, 10, 6, 59, 59), date(2026, 11, 9)),
+        (datetime(2026, 11, 10, 7, 0), date(2026, 11, 10)),  # с 7:00 — новый день
+        (datetime(2026, 11, 10, 23, 59), date(2026, 11, 10)),
+    ],
+)
+def test_cook_day_starts_at_seven(now, expected):
+    assert cook_day(now) == expected
 
 
 # --- ключ ---

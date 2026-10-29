@@ -11,11 +11,15 @@
 готовка отклоняется, поэтому дважды не списать. Остатки — счётчики HA
 (8.2): core отдаёт их новые значения в единицах счётчиков, HA только
 выставляет.
+
+«Сегодня» готовки — день готовки (10.5): он начинается в 7:00, ночью ещё
+вчера. С ним — ключ «вне очереди», сегодняшний завтрак, текущая партия и
+«приготовлено сегодня»; план и закупки — по календарной дате.
 """
 
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 
 from meal_planner.core.actions import ActionError
@@ -51,6 +55,7 @@ Portions = Mapping[Key, int]
 NO_PORTIONS: Portions = {}
 MIN_PORTIONS, MAX_PORTIONS = 1, 20
 COUNTER_STEP = Decimal("0.01")
+COOK_DAY_START_HOUR = 7  # день готовки начинается в 7:00 (10.5)
 # Журнал списаний (10.1): ingredient_id → списанное в единице ингредиента;
 # None — ингредиент отмечен, списывать было не из чего.
 Usage = Mapping[Key, Mapping[int, Decimal | None]]
@@ -90,6 +95,12 @@ class CounterUpdate:
     values: tuple[tuple[str, float], ...]  # (entity_id, новое значение)
     ignored: tuple[StockIgnored, ...]  # счётчик есть, но единицу не перевести
     untracked: tuple[str, ...]  # ингредиенты блюда без счётчика
+
+
+def cook_day(now: datetime) -> date:
+    """День готовки: с 7:00 до 7:00 следующего дня. Ночью — ещё вчера:
+    отметки «сегодня» сбрасываются утром, а не в полночь."""
+    return (now - timedelta(hours=COOK_DAY_START_HOUR)).date()
 
 
 def current_cook_date(settings: Settings, today: date) -> date | None:

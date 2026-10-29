@@ -7,7 +7,7 @@ from fastapi.testclient import TestClient
 from golden_scheduling import SCENARIOS
 from scenario_settings import settings_of
 
-from meal_planner.api.main import create_app, get_repository, get_today
+from meal_planner.api.main import create_app, get_cook_day, get_repository, get_today
 from meal_planner.api.schemas import to_app_state_out, to_recipes_out
 from meal_planner.core.cookbook import upcoming_cook
 from meal_planner.core.cooking import CookState
@@ -26,10 +26,12 @@ def repo(tmp_path):
     return Repository(tmp_path / "db.sqlite")
 
 
-def make_client(repo, today: date = TODAY) -> TestClient:
+def make_client(repo, today: date = TODAY, cook_day: date | None = None) -> TestClient:
     app = create_app()
     app.dependency_overrides[get_repository] = lambda: repo
     app.dependency_overrides[get_today] = lambda: today
+    # День готовки (10.5) — по умолчанию тот же: до 7:00 он ещё вчерашний.
+    app.dependency_overrides[get_cook_day] = lambda: cook_day or today
     return TestClient(app)
 
 
@@ -1450,6 +1452,33 @@ def test_cookbook_has_cooking_for_every_recipe(client, repo):
     pasta = next(i for i in l3["ingredients"] if i["ingredient_id"] == PASTA)
     assert (pasta["need"], pasta["have"], pasta["short"]) == ("90", "50", True)
     assert sum(i["short"] for i in l3["ingredients"]) == 1
+
+
+def test_out_of_turn_resets_at_seven_not_midnight(repo):
+    # 10.5: Вт 10.11 в 6:30 — день готовки ещё Пн 09.11.
+    repo.save_settings(DEFAULT_2X)
+    night = make_client(repo, today=TODAY + timedelta(days=1), cook_day=TODAY)
+    out = night.post(
+        "/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": []}
+    ).json()
+    assert out["day"] == "2026-11-09"
+    book = night.get("/api/cookbook").json()["cooking"]["l3"]
+    assert (book["cooked"], book["cooked_today"]) == (True, True)
+    r = night.post("/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": []})
+    assert r.status_code == 422  # до 7:00 — ещё приготовлено
+
+    # С 7:00 — новый день: снова можно готовить вне очереди.
+    morning = make_client(repo, today=TODAY + timedelta(days=1))
+    book = morning.get("/api/cookbook").json()["cooking"]["l3"]
+    assert (book["day"], book["cooked"], book["cooked_today"]) == (
+        "2026-11-10",
+        False,
+        False,
+    )
+    out = morning.post(
+        "/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": []}
+    ).json()
+    assert out["day"] == "2026-11-10"
 
 
 def test_reshuffle_cycle_saves_seed_from_first_free_cycle(client, repo, monkeypatch):

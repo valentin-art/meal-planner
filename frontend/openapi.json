@@ -1211,7 +1211,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CookedIn"
+                "$ref": "#/components/schemas/CookIn"
               }
             }
           },
@@ -1249,7 +1249,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SetDishPortionsIn"
+                "$ref": "#/components/schemas/SetRecipePortionsIn"
               }
             }
           },
@@ -2127,6 +2127,37 @@
         "title": "CatalogIngredientOut",
         "description": "Ингредиент справочника (5.4) — GET /api/ingredients, save-ingredient."
       },
+      "CookIn": {
+        "properties": {
+          "stock": {
+            "items": {
+              "$ref": "#/components/schemas/StockLineIn"
+            },
+            "type": "array",
+            "title": "Stock"
+          },
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "extra"
+            ],
+            "title": "Scope",
+            "default": "extra"
+          }
+        },
+        "type": "object",
+        "required": [
+          "stock",
+          "recipe_id"
+        ],
+        "title": "CookIn",
+        "description": "Действие готовки на «Рецептах» (10.3) в потоке (10.6): plan — блюдо\nтекущей партии или сегодняшний завтрак (как «приготовлено» 8.3b),\nextra — любой активный рецепт вне очереди."
+      },
       "CookItemOut": {
         "properties": {
           "lunch_id": {
@@ -2172,6 +2203,15 @@
           "recipe_id": {
             "type": "string",
             "title": "Recipe Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "extra"
+            ],
+            "title": "Scope",
+            "default": "extra"
           },
           "allow_missing": {
             "type": "boolean",
@@ -2287,6 +2327,46 @@
         ],
         "title": "CookbookIngredientOut"
       },
+      "CookbookNowOut": {
+        "properties": {
+          "cook_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cook Date"
+          },
+          "dishes": {
+            "items": {
+              "$ref": "#/components/schemas/CookbookDishOut"
+            },
+            "type": "array",
+            "title": "Dishes"
+          },
+          "breakfast": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CookbookDishOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "required": [
+          "cook_date",
+          "dishes",
+          "breakfast"
+        ],
+        "title": "CookbookNowOut"
+      },
       "CookbookOut": {
         "properties": {
           "today": {
@@ -2318,12 +2398,22 @@
             "type": "array",
             "title": "Breakfast"
           },
+          "now": {
+            "$ref": "#/components/schemas/CookbookNowOut"
+          },
           "cooking": {
             "additionalProperties": {
               "$ref": "#/components/schemas/RecipeCookingOut"
             },
             "type": "object",
             "title": "Cooking"
+          },
+          "cooking_now": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/RecipeCookingOut"
+            },
+            "type": "object",
+            "title": "Cooking Now"
           }
         },
         "type": "object",
@@ -2333,7 +2423,9 @@
           "lunch",
           "dinner",
           "breakfast",
-          "cooking"
+          "now",
+          "cooking",
+          "cooking_now"
         ],
         "title": "CookbookOut",
         "description": "Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.\n\nШаги и хранение — только в группах: плитка ближайшей готовки берёт их\nпо recipe_id. Ингредиенты — без id и категории, сенсор и так большой."
@@ -3183,10 +3275,6 @@
             "type": "boolean",
             "title": "Cooked"
           },
-          "cooked_today": {
-            "type": "boolean",
-            "title": "Cooked Today"
-          },
           "missing": {
             "items": {
               "type": "string"
@@ -3209,7 +3297,6 @@
           "planned_portions",
           "locked",
           "cooked",
-          "cooked_today",
           "missing",
           "ingredients"
         ],
@@ -3777,6 +3864,36 @@
           "enabled"
         ],
         "title": "SetPortionScalingIn"
+      },
+      "SetRecipePortionsIn": {
+        "properties": {
+          "recipe_id": {
+            "type": "string",
+            "title": "Recipe Id"
+          },
+          "portions": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 1.0,
+            "title": "Portions"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "extra"
+            ],
+            "title": "Scope",
+            "default": "extra"
+          }
+        },
+        "type": "object",
+        "required": [
+          "recipe_id",
+          "portions"
+        ],
+        "title": "SetRecipePortionsIn",
+        "description": "Порции рецепта в потоке (10.6), см. CookIn."
       },
       "SetShoppingTimingIn": {
         "properties": {
@@ -4645,6 +4762,15 @@
           "recipe_id": {
             "type": "string",
             "title": "Recipe Id"
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "plan",
+              "extra"
+            ],
+            "title": "Scope",
+            "default": "extra"
           },
           "ingredient_id": {
             "type": "integer",

@@ -261,7 +261,7 @@ def test_write_off_uses_scaled_portion():
     cook_date = date(2026, 11, 14)
     dishes = {r.id: r for r, _ in batch_dishes(SEED_CATALOG, SCALED, cook_date)}
     assert all(r.scale != 1 for r in dishes.values())
-    target = cook_key(SEED_CATALOG, SCALED, cook_date, "l1")
+    target = cook_key(SEED_CATALOG, SCALED, cook_date, "l1", "plan")
     assert target.recipe == dishes["l1"]
     chicken = next(i for i in target.recipe.ingredients if i.name == "куриное филе")
     plain = next(
@@ -269,11 +269,11 @@ def test_write_off_uses_scaled_portion():
     )
     assert chicken.qty == plain.qty * 1.45
     eid = SEED_CATALOG.ingredients["куриное филе"].id
-    state = CookState({}, {}, {(cook_date, "l1"): 2})
+    state = CookState({}, {}, {(cook_date, "l1", "plan"): 2})
 
     def cook(line):
         return cook_recipe(
-            SEED_CATALOG, SCALED, cook_date, state, "l1", [line], batch_only=True
+            SEED_CATALOG, SCALED, cook_date, state, "l1", [line], scope="plan"
         )
 
     update = cook(StockLine(eid, 5000, "г", "input_number.chicken")).update

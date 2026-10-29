@@ -99,11 +99,11 @@ AppState = f(Catalog, Settings, today, window_days)
 | GET | `/api/ingredients` | Справочник ингредиентов, единицы и категории для формы |
 | POST | `/api/recipes/preview` | Ккал и белок черновика рецепта — только чтение |
 | GET | `/api/summary` | Сегодня, завтра и ближайшая закупка — компактно, для HA |
-| GET | `/api/cookbook` | Ближайшая готовка и активные рецепты по видам — для вкладки «Рецепты» HA (9.1), только чтение; с 10.3 и `cooking` — готовка каждого рецепта (порции, списано, приготовлено сегодня) |
+| GET | `/api/cookbook` | Ближайшая готовка и активные рецепты по видам — для вкладки «Рецепты» HA (9.1), только чтение; с 10.3 и `cooking` — готовка каждого рецепта вне очереди; с 10.6 `now` и `cooking_now` — текущая партия и завтрак (поток партии) |
 | POST | `/api/cookbook` | То же по остаткам из счётчиков HA (тело как у `/api/shopping/remaining`): у ингредиентов `have`/`short`, строки нехватки для подтверждения (10.3); только чтение |
 | POST | `/api/shopping/remaining` | Ближайшая закупка за вычетом остатков из HA (8.2) — только чтение, остатки не хранятся |
 | GET | `/api/health` | Живость для `HEALTHCHECK` (только чтение БД) |
-| POST | `/api/actions/{action_name}` | Атомарное действие (не generic PATCH — см. ниже); с фазы 5 и каталог: `save-recipe`, `archive-recipe`, `restore-recipe`, `set-cycle-slot`, `save-ingredient`; с 8.3b — `mark-cooked`, `unmark-cooked`, `set-dish-portions` (отметка «приготовлено» и новые значения счётчиков HA); с 10.3 — `use-ingredient`, `unuse-ingredient`, `cook-recipe` (`allow_missing`), `uncook-recipe`, `set-recipe-portions` — готовка любого рецепта по журналу списаний, отмена возвращает списанное |
+| POST | `/api/actions/{action_name}` | Атомарное действие (не generic PATCH — см. ниже); с фазы 5 и каталог: `save-recipe`, `archive-recipe`, `restore-recipe`, `set-cycle-slot`, `save-ingredient`; с 8.3b — `mark-cooked`, `unmark-cooked`, `set-dish-portions` (отметка «приготовлено» и новые значения счётчиков HA); с 10.3 — `use-ingredient`, `unuse-ingredient`, `cook-recipe` (`allow_missing`), `uncook-recipe`, `set-recipe-portions` — готовка любого рецепта по журналу списаний, отмена возвращает списанное; поле `scope` (10.6): `plan` — партия и завтрак, `extra` — вне очереди |
 
 ### Почему action-эндпоинты, а не `PATCH /api/settings`
 

@@ -1112,7 +1112,9 @@ def test_mark_and_unmark_cooked(client, repo):
         {"entity_id": "input_number.x", "value": 10000 - first.qty * dish["portions"]}
     ]
     assert len(out["untracked"]) == len(recipe.ingredients) - 1
-    assert repo.get_cook_state().cooked == {(date(2026, 11, 7), recipe.id): TODAY}
+    assert repo.get_cook_state().cooked == {
+        (date(2026, 11, 7), recipe.id, "plan"): TODAY
+    }
     assert client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
 
     # Повтор — 422, ничего не записано: дважды не списать.
@@ -1258,7 +1260,7 @@ def test_use_and_unuse_ingredient(client, repo):
     assert (out["day"], out["recipe_id"], out["version"]) == ("2026-11-09", "l3", 2)
     # Нужно 90 г, есть 50 — без подтверждения, до 0.
     assert out["counters"] == [{"entity_id": "input_number.x", "value": 0.0}]
-    assert repo.get_cook_state().usage == {(TODAY, "l3"): {PASTA: Decimal(50)}}
+    assert repo.get_cook_state().usage == {(TODAY, "l3", "extra"): {PASTA: Decimal(50)}}
 
     r = client.post("/api/actions/use-ingredient", json=body)
     assert r.status_code == 422
@@ -1302,13 +1304,9 @@ def test_cook_recipe_shortage_matches_the_cookbook(client, repo):
         {"entity_id": "input_number.pasta", "value": 0.0},
         {"entity_id": "input_number.avocado", "value": 965.0},
     ]
-    assert repo.get_cook_state().cooked == {(TODAY, "l3"): TODAY}
+    assert repo.get_cook_state().cooked == {(TODAY, "l3", "extra"): TODAY}
     cooked = client.post("/api/cookbook", json={"stock": stock}).json()["cooking"]["l3"]
-    assert (cooked["cooked"], cooked["cooked_today"], cooked["locked"]) == (
-        True,
-        True,
-        True,
-    )
+    assert (cooked["cooked"], cooked["locked"]) == (True, True)
     assert cooked["missing"] == []
 
 
@@ -1365,42 +1363,89 @@ def test_portions_until_the_first_write_off(client, repo):
     )
     assert (r.status_code, r.json()["detail"][0]["msg"]) == (422, locked)
 
-    # «Готовка» (8.3b): теперь блокирует и первое списание, а не только отметка.
+    # «Приготовлено» (8.3b): блокирует и первое списание в потоке партии,
+    # а не только отметка; списание вне очереди — нет (10.6).
     dish = first_dish(client)
     first = dish.ingredients[0]
-    client.post(
-        "/api/actions/use-ingredient",
-        json={
-            "recipe_id": dish.id,
-            "ingredient_id": SEED_CATALOG.ingredients[first.name].id,
-            "stock": [],
-        },
+    use = {
+        "recipe_id": dish.id,
+        "ingredient_id": SEED_CATALOG.ingredients[first.name].id,
+        "stock": [],
+    }
+    client.post("/api/actions/use-ingredient", json=use)
+    r = client.post(
+        "/api/actions/set-dish-portions", json={"recipe_id": dish.id, "portions": 3}
     )
+    assert r.status_code == 200
+    client.post("/api/actions/use-ingredient", json={**use, "scope": "plan"})
     r = client.post(
         "/api/actions/set-dish-portions", json={"recipe_id": dish.id, "portions": 3}
     )
     assert (r.status_code, r.json()["detail"][0]["msg"]) == (422, locked)
 
 
-def test_marks_are_shared_with_the_cooking_tab(client, repo):
+def test_batch_and_out_of_turn_are_independent(repo):
+    # 10.6, пример пользователя: готовка Ср/Сб (DEFAULT_2X).
+    repo.save_settings(DEFAULT_2X)
+    wed, thu, sat = date(2026, 11, 11), date(2026, 11, 12), date(2026, 11, 14)
+    c_wed = make_client(repo, today=wed)
+    now = c_wed.get("/api/cookbook").json()["now"]
+    assert now["cook_date"] == "2026-11-11"
+    dish = now["dishes"][0]["recipe_id"]
+    breakfast = now["breakfast"]["recipe_id"]
+
+    def cook(client, recipe_id, scope):
+        body = {"recipe_id": recipe_id, "stock": [], "scope": scope}
+        return client.post("/api/actions/cook-recipe", json=body)
+
+    # Ср: партия и завтрак — в ряду «Сейчас» (plan).
+    assert cook(c_wed, dish, "plan").json()["day"] == "2026-11-11"
+    assert cook(c_wed, breakfast, "plan").json()["day"] == "2026-11-11"
+    book = c_wed.get("/api/cookbook").json()
+    assert book["cooking_now"][dish]["cooked"]
+    assert not book["cooking"][dish]["cooked"]  # в группе — активен
+    assert c_wed.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
+    # Тот же рецепт вне очереди — отдельно; отмена партию не трогает.
+    assert cook(c_wed, dish, "extra").status_code == 200
+    assert c_wed.get("/api/cookbook").json()["cooking"][dish]["cooked"]
+    body = {"recipe_id": dish, "stock": [], "scope": "extra"}
+    assert c_wed.post("/api/actions/uncook-recipe", json=body).status_code == 200
+    book = c_wed.get("/api/cookbook").json()
+    assert (book["cooking_now"][dish]["cooked"], book["cooking"][dish]["cooked"]) == (
+        True,
+        False,
+    )
+
+    # Чт: партия ещё приготовлена, завтрак — уже другой день.
+    book = make_client(repo, today=thu).get("/api/cookbook").json()
+    assert book["now"]["cook_date"] == "2026-11-11"
+    assert book["cooking_now"][dish]["cooked"]
+    thu_breakfast = book["now"]["breakfast"]["recipe_id"]
+    assert not book["cooking_now"][thu_breakfast]["cooked"]
+
+    # Сб 6:59 — ещё партия среды; с 7:00 — новая партия, не отмечена.
+    night = make_client(repo, today=sat, cook_day=sat - timedelta(days=1))
+    book = night.get("/api/cookbook").json()
+    assert (book["now"]["cook_date"], book["cooking_now"][dish]["cooked"]) == (
+        "2026-11-11",
+        True,
+    )
+    book = make_client(repo, today=sat).get("/api/cookbook").json()
+    assert book["now"]["cook_date"] == "2026-11-14"
+    assert not any(c["cooked"] for c in book["cooking_now"].values())
+
+
+def test_mark_cooked_is_the_batch_stream(client, repo):
     repo.save_settings(DEFAULT_2X)
     dish = first_dish(client)
-    out = client.post(
-        "/api/actions/cook-recipe", json={"recipe_id": dish.id, "stock": []}
-    ).json()
-    assert out["day"] == "2026-11-07"  # ключ партии
-    assert client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
-    # Ключ — Сб, приготовили сегодня: на «Рецептах» серый.
-    assert client.get("/api/cookbook").json()["cooking"][dish.id]["cooked_today"]
-    r = client.post(
-        "/api/actions/unmark-cooked", json={"recipe_id": dish.id, "stock": []}
-    )
-    assert r.status_code == 200
-    assert not client.get("/api/summary").json()["cooking"]["dishes"][0]["cooked"]
-
-    breakfast = client.get("/api/summary").json()["cooking"]["breakfast"]["recipe_id"]
-    client.post("/api/actions/mark-cooked", json={"recipe_id": breakfast, "stock": []})
-    assert client.get("/api/cookbook").json()["cooking"][breakfast]["cooked_today"]
+    client.post("/api/actions/mark-cooked", json={"recipe_id": dish.id, "stock": []})
+    book = client.get("/api/cookbook").json()
+    assert book["cooking_now"][dish.id]["cooked"]
+    assert not book["cooking"][dish.id]["cooked"]
+    # Вне очереди отмену партии не делает.
+    body = {"recipe_id": dish.id, "stock": [], "scope": "extra"}
+    r = client.post("/api/actions/uncook-recipe", json=body)
+    assert r.json()["detail"][0]["msg"] == "Блюдо не отмечено как приготовленное"
 
 
 def test_unmark_returns_what_was_written_off(client, repo):
@@ -1462,19 +1507,14 @@ def test_out_of_turn_resets_at_seven_not_midnight(repo):
         "/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": []}
     ).json()
     assert out["day"] == "2026-11-09"
-    book = night.get("/api/cookbook").json()["cooking"]["l3"]
-    assert (book["cooked"], book["cooked_today"]) == (True, True)
+    assert night.get("/api/cookbook").json()["cooking"]["l3"]["cooked"]
     r = night.post("/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": []})
     assert r.status_code == 422  # до 7:00 — ещё приготовлено
 
     # С 7:00 — новый день: снова можно готовить вне очереди.
     morning = make_client(repo, today=TODAY + timedelta(days=1))
     book = morning.get("/api/cookbook").json()["cooking"]["l3"]
-    assert (book["day"], book["cooked"], book["cooked_today"]) == (
-        "2026-11-10",
-        False,
-        False,
-    )
+    assert (book["day"], book["cooked"]) == ("2026-11-10", False)
     out = morning.post(
         "/api/actions/cook-recipe", json={"recipe_id": "l3", "stock": []}
     ).json()

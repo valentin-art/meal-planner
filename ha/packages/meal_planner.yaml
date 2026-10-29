@@ -36,8 +36,9 @@
 #
 # Готовка по ингредиентам (10.4): любой активный рецепт готовят целиком
 # или по продуктам (meal_planner_use_ingredient / _unuse_, _cook_recipe /
-# _uncook_recipe, _set_recipe_portions). Отметки общие с партией; отмена
-# возвращает ровно списанное (журнал в приложении).
+# _uncook_recipe, _set_recipe_portions); отмена возвращает ровно списанное
+# (журнал в приложении). Поток scope (10.6): plan — блюда текущей партии и
+# завтрак (как mark_cooked), extra — вне очереди; потоки независимы.
 #
 # Книга рецептов (9.1): sensor.meal_planner_cookbook для вкладки «Рецепты»
 # дашборда «Кухня» — ближайшая готовка и активные рецепты с шагами. Атрибуты
@@ -202,6 +203,10 @@ template:
           lunch: "{{ book.lunch if book else [] }}"
           dinner: "{{ book.dinner if book else [] }}"
           breakfast: "{{ book.breakfast if book else [] }}"
+          # Ряд «Сейчас» (10.6): текущая партия и завтрак, их готовка (plan);
+          # cooking — вне очереди (extra), остальные плитки.
+          now: "{{ book.now if book else none }}"
+          cooking_now: "{{ book.cooking_now if book else {} }}"
           cooking: "{{ book.cooking if book else {} }}"
           # Отказ действия готовки ({recipe_id, error}) — как у партии.
           last_error: >-
@@ -260,7 +265,7 @@ rest_command:
     timeout: 10
     payload: >-
       {{ {"recipe_id": recipe_id, "ingredient_id": ingredient_id | int,
-          "stock": stock} | to_json }}
+          "stock": stock, "scope": scope | default('extra')} | to_json }}
   meal_planner_unuse_ingredient:
     url: http://127.0.0.1:8001/api/actions/unuse-ingredient
     method: post
@@ -268,7 +273,7 @@ rest_command:
     timeout: 10
     payload: >-
       {{ {"recipe_id": recipe_id, "ingredient_id": ingredient_id | int,
-          "stock": stock} | to_json }}
+          "stock": stock, "scope": scope | default('extra')} | to_json }}
   meal_planner_cook_recipe:
     url: http://127.0.0.1:8001/api/actions/cook-recipe
     method: post
@@ -276,19 +281,24 @@ rest_command:
     timeout: 10
     payload: >-
       {{ {"recipe_id": recipe_id, "stock": stock,
-          "allow_missing": allow_missing | default(false) | bool} | to_json }}
+          "allow_missing": allow_missing | default(false) | bool,
+          "scope": scope | default('extra')} | to_json }}
   meal_planner_uncook_recipe:
     url: http://127.0.0.1:8001/api/actions/uncook-recipe
     method: post
     content_type: application/json
     timeout: 10
-    payload: '{{ {"recipe_id": recipe_id, "stock": stock} | to_json }}'
+    payload: >-
+      {{ {"recipe_id": recipe_id, "stock": stock,
+          "scope": scope | default('extra')} | to_json }}
   meal_planner_set_recipe_portions:
     url: http://127.0.0.1:8001/api/actions/set-recipe-portions
     method: post
     content_type: application/json
     timeout: 10
-    payload: '{{ {"recipe_id": recipe_id, "portions": portions | int} | to_json }}'
+    payload: >-
+      {{ {"recipe_id": recipe_id, "portions": portions | int,
+          "scope": scope | default('extra')} | to_json }}
   meal_planner_set_cycle_position:
     url: http://127.0.0.1:8001/api/actions/set-cycle-position
     method: post
@@ -790,6 +800,17 @@ script:
         required: true
         selector:
           text:
+      scope: &scope_field
+        name: Поток
+        description: >-
+          plan — блюдо текущей партии или сегодняшний завтрак (как отметка
+          «приготовлено»); extra — вне очереди, любой активный рецепт
+          (по умолчанию). Потоки независимы.
+        required: false
+        default: extra
+        selector:
+          select:
+            options: [extra, plan]
       ingredient_id:
         name: Ингредиент
         description: id ингредиента справочника (ingredient_id в cooking книги рецептов)
@@ -803,6 +824,7 @@ script:
       - action: rest_command.meal_planner_use_ingredient
         data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           ingredient_id: "{{ ingredient_id }}"
           stock: "{{ stock }}"
         response_variable: resp
@@ -824,10 +846,11 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка
-      # (last_error сенсоров партии и книги) — 3 секунды.
+      # своего потока (last_error сенсоров партии и книги) — 3 секунды.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           error: "{{ result.error }}"
       - action: script.turn_on
         target:
@@ -848,6 +871,7 @@ script:
         required: true
         selector:
           text:
+      scope: *scope_field
       ingredient_id:
         name: Ингредиент
         description: id ингредиента справочника (ingredient_id в cooking книги рецептов)
@@ -861,6 +885,7 @@ script:
       - action: rest_command.meal_planner_unuse_ingredient
         data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           ingredient_id: "{{ ingredient_id }}"
           stock: "{{ stock }}"
         response_variable: resp
@@ -882,10 +907,11 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка
-      # (last_error сенсоров партии и книги) — 3 секунды.
+      # своего потока (last_error сенсоров партии и книги) — 3 секунды.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           error: "{{ result.error }}"
       - action: script.turn_on
         target:
@@ -911,6 +937,7 @@ script:
         required: true
         selector:
           text:
+      scope: *scope_field
       allow_missing:
         name: Без недостающих
         description: true — готовить без недостающих продуктов (только после согласия)
@@ -924,6 +951,7 @@ script:
       - action: rest_command.meal_planner_cook_recipe
         data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           allow_missing: "{{ allow_missing | default(false) }}"
           stock: "{{ stock }}"
         response_variable: resp
@@ -945,10 +973,11 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка
-      # (last_error сенсоров партии и книги) — 3 секунды.
+      # своего потока (last_error сенсоров партии и книги) — 3 секунды.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           error: "{{ result.error }}"
       - action: script.turn_on
         target:
@@ -969,12 +998,14 @@ script:
         required: true
         selector:
           text:
+      scope: *scope_field
     sequence:
       - variables:
           stock: *stock
       - action: rest_command.meal_planner_uncook_recipe
         data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           stock: "{{ stock }}"
         response_variable: resp
         continue_on_error: true
@@ -995,10 +1026,11 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка
-      # (last_error сенсоров партии и книги) — 3 секунды.
+      # своего потока (last_error сенсоров партии и книги) — 3 секунды.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           error: "{{ result.error }}"
       - action: script.turn_on
         target:
@@ -1020,6 +1052,7 @@ script:
         required: true
         selector:
           text:
+      scope: *scope_field
       portions:
         name: Порции
         description: Сколько порций готовят, от 1 до 20
@@ -1033,6 +1066,7 @@ script:
       - action: rest_command.meal_planner_set_recipe_portions
         data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           portions: "{{ portions }}"
         response_variable: resp
         continue_on_error: true
@@ -1049,10 +1083,11 @@ script:
             ok: false
             error: *error
       # На дашборде ответа скрипта не видно: причину показывает плитка
-      # (last_error сенсоров партии и книги) — 3 секунды.
+      # своего потока (last_error сенсоров партии и книги) — 3 секунды.
       - event: meal_planner_changed
         event_data:
           recipe_id: "{{ recipe_id }}"
+          scope: "{{ scope | default('extra') }}"
           error: "{{ result.error }}"
       - action: script.turn_on
         target:

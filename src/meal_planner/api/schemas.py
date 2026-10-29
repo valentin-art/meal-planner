@@ -24,12 +24,19 @@ from meal_planner.core.catalog_actions import (
     from_assist,
     used_in,
 )
-from meal_planner.core.cookbook import RecipeCooking, UpcomingCook
+from meal_planner.core.cookbook import (
+    CookPreview,
+    CurrentCook,
+    RecipeCooking,
+    UpcomingCook,
+    UpcomingDish,
+)
 from meal_planner.core.cooking import (
     MAX_PORTIONS,
     MIN_PORTIONS,
     Cooking,
     CounterUpdate,
+    Scope,
 )
 from meal_planner.core.models import (
     AppState,
@@ -454,13 +461,21 @@ class CookedIn(ShoppingRemainingIn):
     recipe_id: str
 
 
-class UseIngredientIn(CookedIn):
+class CookIn(CookedIn):
+    """Действие готовки на «Рецептах» (10.3) в потоке (10.6): plan — блюдо
+    текущей партии или сегодняшний завтрак (как «приготовлено» 8.3b),
+    extra — любой активный рецепт вне очереди."""
+
+    scope: Scope = "extra"
+
+
+class UseIngredientIn(CookIn):
     """Списать один ингредиент рецепта или вернуть его (10.3)."""
 
     ingredient_id: int
 
 
-class CookRecipeIn(CookedIn):
+class CookRecipeIn(CookIn):
     """Приготовить рецепт: списать неиспользованные ингредиенты (10.3)."""
 
     # Нехватку подтвердили — списать сколько есть, до 0; иначе 422.
@@ -474,6 +489,12 @@ class SetDishPortionsIn(BaseModel):
     recipe_id: str
     # ge/le дублируют core намеренно: так пределы видны в OpenAPI.
     portions: int = Field(ge=MIN_PORTIONS, le=MAX_PORTIONS)
+
+
+class SetRecipePortionsIn(SetDishPortionsIn):
+    """Порции рецепта в потоке (10.6), см. CookIn."""
+
+    scope: Scope = "extra"
 
 
 class DishPortionsOut(BaseModel):
@@ -575,10 +596,16 @@ class RecipeCookingOut(BaseModel):
     portions: int
     planned_portions: int
     locked: bool  # порции не поменять: уже списано или приготовлено
+    # Серый: партия — до следующей готовки, завтрак и вне очереди — до 7:00.
     cooked: bool
-    cooked_today: bool  # приготовлено сегодня — серый до конца дня
     missing: list[str]  # строки нехватки для подтверждения
     ingredients: list[CookingIngredientOut]
+
+
+class CookbookNowOut(BaseModel):
+    cook_date: date | None  # текущая партия; null — до дня 0 или пропуск
+    dishes: list[CookbookDishOut]  # с порцией под цель
+    breakfast: CookbookDishOut | None  # сегодняшний; null — завтрака нет
 
 
 class CookbookOut(BaseModel):
@@ -593,8 +620,12 @@ class CookbookOut(BaseModel):
     lunch: list[CookbookRecipeOut]
     dinner: list[CookbookRecipeOut]
     breakfast: list[CookbookRecipeOut]
-    # Готовка по recipe_id (10.3) — одна на рецепт, общая у ряда и группы.
+    # Ряд «Сейчас» (10.6): текущая партия по дню готовки и завтрак.
+    now: CookbookNowOut
+    # Готовка вне очереди (extra) по recipe_id — группы и «Ближайшая готовка».
     cooking: dict[str, RecipeCookingOut]
+    # Готовка партии и завтрака (plan) по recipe_id — ряд «Сейчас».
+    cooking_now: dict[str, RecipeCookingOut]
 
 
 class SkippedCookOut(BaseModel):
@@ -976,40 +1007,51 @@ def to_cookbook_recipe_out(r: Recipe) -> CookbookRecipeOut:
     )
 
 
+def to_cookbook_dish_out(d: UpcomingDish) -> CookbookDishOut:
+    return CookbookDishOut(
+        recipe_id=d.recipe.id,
+        name=d.recipe.name,
+        kind=d.recipe.kind,
+        planned_portions=d.planned_portions,
+        scale=d.recipe.scale,
+        kcal=d.recipe.kcal,
+        protein=d.recipe.protein,
+        ingredients=[to_cookbook_ingredient_out(i) for i in d.recipe.ingredients],
+    )
+
+
 def to_cookbook_out(
     today: date,
     cook: UpcomingCook,
+    now: CurrentCook,
     book: Mapping[MealKind, tuple[Recipe, ...]],
-    cooking: Mapping[str, RecipeCooking],
+    preview: CookPreview,
 ) -> CookbookOut:
     def group(kind: MealKind) -> list[CookbookRecipeOut]:
         return [to_cookbook_recipe_out(r) for r in book[kind]]
+
+    def states(cooking: Mapping[str, RecipeCooking]) -> dict[str, RecipeCookingOut]:
+        return {rid: to_recipe_cooking_out(c) for rid, c in cooking.items()}
 
     return CookbookOut(
         today=today,
         cook=CookbookCookOut(
             date=cook.cook_date,
             is_today=cook.cook_date == today,
-            dishes=[
-                CookbookDishOut(
-                    recipe_id=d.recipe.id,
-                    name=d.recipe.name,
-                    kind=d.recipe.kind,
-                    planned_portions=d.planned_portions,
-                    scale=d.recipe.scale,
-                    kcal=d.recipe.kcal,
-                    protein=d.recipe.protein,
-                    ingredients=[
-                        to_cookbook_ingredient_out(i) for i in d.recipe.ingredients
-                    ],
-                )
-                for d in cook.dishes
-            ],
+            dishes=[to_cookbook_dish_out(d) for d in cook.dishes],
         ),
         lunch=group(MealKind.LUNCH),
         dinner=group(MealKind.DINNER),
         breakfast=group(MealKind.BREAKFAST),
-        cooking={rid: to_recipe_cooking_out(c) for rid, c in cooking.items()},
+        now=CookbookNowOut(
+            cook_date=now.cook_date,
+            dishes=[to_cookbook_dish_out(d) for d in now.dishes],
+            breakfast=None
+            if now.breakfast is None
+            else to_cookbook_dish_out(UpcomingDish(now.breakfast, 1)),
+        ),
+        cooking=states(preview.extra),
+        cooking_now=states(preview.plan),
     )
 
 
@@ -1020,7 +1062,6 @@ def to_recipe_cooking_out(c: RecipeCooking) -> RecipeCookingOut:
         planned_portions=c.planned_portions,
         locked=c.locked,
         cooked=c.cooked,
-        cooked_today=c.cooked_today,
         missing=list(c.missing),
         ingredients=[
             CookingIngredientOut(

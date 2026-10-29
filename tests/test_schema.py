@@ -5,6 +5,7 @@ import sqlite3
 from contextlib import closing
 from dataclasses import astuple, replace
 from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 import pytest
@@ -100,7 +101,7 @@ def db(tmp_path):
 
 def test_fresh_db_is_at_latest_version(db):
     with connect(db) as conn:
-        assert user_version(conn) == len(MIGRATIONS) == 9
+        assert user_version(conn) == len(MIGRATIONS) == 10
     assert tables(db) == ALL_TABLES
 
 
@@ -245,12 +246,48 @@ def test_cook_usage_migration_keeps_marks(tmp_path, monkeypatch):
         )
         conn.execute("INSERT INTO dish_portions VALUES ('2026-11-07', 'l5', 3)")
     state = Repository(path).get_cook_state()
+    # 10.6: прежние отметки и порции — поток plan.
     assert state.cooked == {
-        (date(2026, 11, 7), "l5"): date(2026, 11, 7),
-        (date(2026, 11, 9), "b1"): date(2026, 11, 9),
+        (date(2026, 11, 7), "l5", "plan"): date(2026, 11, 7),
+        (date(2026, 11, 9), "b1", "plan"): date(2026, 11, 9),
     }
-    assert state.portions == {(date(2026, 11, 7), "l5"): 3}
+    assert state.portions == {(date(2026, 11, 7), "l5", "plan"): 3}
     assert state.usage == {}
+
+
+def test_cook_scope_migration_splits_old_rows(tmp_path, monkeypatch):
+    # БД на v9 (до 10.6): обед или ужин с ключом не в день готовки — extra,
+    # остальное — plan.
+    path = tmp_path / "v9.db"
+    monkeypatch.setattr(schema, "MIGRATIONS", MIGRATIONS[:9])
+    Repository(path).save_settings(SETTINGS)
+    monkeypatch.undo()
+    with connect(path) as conn, conn:
+        conn.executemany(
+            "INSERT INTO cooked VALUES (?, ?, ?)",
+            [
+                ("2026-11-07", "l5", "2026-11-09"),  # Сб — день готовки: партия
+                ("2026-11-09", "l3", "2026-11-09"),  # обед в Пн — вне очереди
+                ("2026-11-09", "b1", "2026-11-09"),  # завтрак — партия
+            ],
+        )
+        conn.execute("INSERT INTO cook_usage VALUES ('2026-11-07', 'l5', 1, 12.5)")
+        conn.execute("INSERT INTO cook_usage VALUES ('2026-11-07', 'l5', 2, NULL)")
+        conn.execute("INSERT INTO cook_usage VALUES ('2026-11-09', 'l3', 3, 90)")
+        conn.execute("INSERT INTO dish_portions VALUES ('2026-11-07', 'l5', 2)")
+    state = Repository(path).get_cook_state()
+    key = (date(2026, 11, 7), "l5", "plan")
+    extra = (date(2026, 11, 9), "l3", "extra")
+    assert state.cooked == {
+        key: date(2026, 11, 9),
+        extra: date(2026, 11, 9),
+        (date(2026, 11, 9), "b1", "plan"): date(2026, 11, 9),
+    }
+    assert state.usage == {key: {1: Decimal("12.5"), 2: None}, extra: {3: Decimal(90)}}
+    assert state.portions == {key: 2}
+    # Поток — только plan или extra.
+    with connect(path) as conn, pytest.raises(sqlite3.IntegrityError):
+        conn.execute("INSERT INTO cooked VALUES ('2026-11-07', 'l5', NULL, 'other')")
 
 
 def test_failed_migration_rolls_back(tmp_path, monkeypatch):

@@ -15,12 +15,19 @@
 «Сегодня» готовки — день готовки (10.5): он начинается в 7:00, ночью ещё
 вчера. С ним — ключ «вне очереди», сегодняшний завтрак, текущая партия и
 «приготовлено сегодня»; план и закупки — по календарной дате.
+
+Два независимых потока (10.6): plan — блюда текущей партии (ключ — день
+партии, до следующей готовки) и сегодняшний завтрак; extra — любой активный
+рецепт вне очереди (ключ — день готовки, до 7:00 следующего). Отметки,
+порции и журнал у потоков свои: готовка вне очереди блюда партии партию не
+отмечает, и наоборот.
 """
 
 from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
+from typing import Literal
 
 from meal_planner.core.actions import ActionError
 from meal_planner.core.models import (
@@ -47,7 +54,11 @@ from meal_planner.core.stock import (
     unconvertible_reason,
 )
 
-Key = tuple[date, str]  # (день, recipe_id) — ключ отметки, порций и журнала
+Scope = Literal["plan", "extra"]  # поток: партия и завтрак или вне очереди (10.6)
+PLAN: Scope = "plan"
+EXTRA: Scope = "extra"
+# (день, recipe_id, поток) — ключ отметки, порций и журнала.
+Key = tuple[date, str, Scope]
 Cooked = Collection[Key]  # отметки: день готовки партии или сегодня
 CookedOn = Mapping[Key, date]  # отметка → день, когда приготовили (10.1)
 # Порции, выбранные вместо плановых, — по тому же ключу.
@@ -160,9 +171,9 @@ def cooking(
             dishes=tuple(
                 CookingDish(
                     recipe,
-                    portions.get((cook_date, recipe.id), n),
+                    portions.get((cook_date, recipe.id, PLAN), n),
                     n,
-                    (cook_date, recipe.id) in cooked,
+                    (cook_date, recipe.id, PLAN) in cooked,
                 )
                 for recipe, n in batch_dishes(catalog, settings, cook_date)
             ),
@@ -174,9 +185,9 @@ def cooking(
         else BreakfastToday(
             today,
             recipe,
-            portions.get((today, recipe.id), 1),
+            portions.get((today, recipe.id, PLAN), 1),
             1,
-            (today, recipe.id) in cooked,
+            (today, recipe.id, PLAN) in cooked,
         )
     )
     return Cooking(batch=batch, breakfast=breakfast)
@@ -329,7 +340,7 @@ def move_stock(
 
 @dataclass(frozen=True, slots=True)
 class CookState:
-    """Что о готовке хранит приложение — по ключу (день, recipe_id)."""
+    """Что о готовке хранит приложение — по ключу (день, recipe_id, поток)."""
 
     cooked: CookedOn
     usage: Usage
@@ -339,14 +350,15 @@ class CookState:
 @dataclass(frozen=True, slots=True)
 class CookTarget:
     """Ключ готовки рецепта: день, рецепт (с порцией под цель у партии),
-    плановые порции."""
+    плановые порции и поток."""
 
     day: date
     recipe: Recipe
     planned: int
+    scope: Scope
 
     def key(self) -> Key:
-        return self.day, self.recipe.id
+        return self.day, self.recipe.id, self.scope
 
     def portions(self, state: CookState) -> int:
         return state.portions.get(self.key(), self.planned)
@@ -356,57 +368,56 @@ class CookTarget:
 class UsageChange:
     """Что записать в журнал (или вернуть из него) и новые значения счётчиков."""
 
-    day: date
-    recipe_id: str
+    key: Key
     amounts: Mapping[int, Decimal | None]  # ingredient_id → списано/возвращено
     update: CounterUpdate
 
+    @property
+    def day(self) -> date:
+        return self.key[0]
 
-def cook_keys(
+    @property
+    def recipe_id(self) -> str:
+        return self.key[1]
+
+
+def plan_targets(
     catalog: Catalog, settings: Settings, today: date
 ) -> dict[str, CookTarget]:
-    """Рецепты, что готовят по плану: блюда текущей партии и сегодняшний
-    завтрак; settings — после settle_skip. Остальные готовят вне очереди."""
-    keys: dict[str, CookTarget] = {}
+    """Поток plan: блюда текущей партии и сегодняшний завтрак; settings —
+    после settle_skip."""
+    targets: dict[str, CookTarget] = {}
     cook_date = current_cook_date(settings, today)
     if cook_date is not None:
         for recipe, n in batch_dishes(catalog, settings, cook_date):
-            keys[recipe.id] = CookTarget(cook_date, recipe, n)
+            targets[recipe.id] = CookTarget(cook_date, recipe, n, PLAN)
     breakfast = breakfast_today(catalog, settings, today)
     if breakfast is not None:
-        keys.setdefault(breakfast.id, CookTarget(today, breakfast, 1))
-    return keys
+        targets.setdefault(breakfast.id, CookTarget(today, breakfast, 1, PLAN))
+    return targets
 
 
-def resolve_key(
-    catalog: Catalog, today: date, keys: Mapping[str, CookTarget], recipe_id: str
-) -> CookTarget:
-    """По плану — ключ из keys, иначе вне очереди: сегодня, базовый рецепт,
-    1 порция. Ближайшая партия от этого не меняется."""
-    if recipe_id in keys:
-        return keys[recipe_id]
+def extra_target(catalog: Catalog, today: date, recipe_id: str) -> CookTarget:
+    """Поток extra — любой активный рецепт вне очереди: сегодня, базовый
+    рецепт, 1 порция. Партии от этого не меняются."""
     recipe = catalog.recipes.get(recipe_id)
     if recipe is None:
         raise ActionError("recipe_id", "Нет такого рецепта")
     if recipe.status != "active":
         raise ActionError("recipe_id", "Рецепт не активен — его не готовят")
-    return CookTarget(today, recipe, 1)
+    return CookTarget(today, recipe, 1, EXTRA)
 
 
 def cook_key(
-    catalog: Catalog, settings: Settings, today: date, recipe_id: str
+    catalog: Catalog, settings: Settings, today: date, recipe_id: str, scope: Scope
 ) -> CookTarget:
-    """Ключ готовки любого рецепта; settings — после settle_skip."""
-    return resolve_key(catalog, today, cook_keys(catalog, settings, today), recipe_id)
-
-
-def _target(
-    catalog: Catalog, settings: Settings, today: date, recipe_id: str, batch_only: bool
-) -> CookTarget:
+    """Ключ готовки рецепта в потоке. plan — только блюдо текущей партии или
+    сегодняшний завтрак, иначе ActionError."""
+    if scope == EXTRA:
+        return extra_target(catalog, today, recipe_id)
     settings = settle_skip(settings, today)
-    if batch_only:  # «Готовка» (8.3b): только блюда партии и завтрак
-        return CookTarget(*locate_dish(catalog, settings, today, recipe_id))
-    return cook_key(catalog, settings, today, recipe_id)
+    day, recipe, planned = locate_dish(catalog, settings, today, recipe_id)
+    return CookTarget(day, recipe, planned, PLAN)
 
 
 def _usage_change(
@@ -416,7 +427,7 @@ def _usage_change(
     sign: int,
 ) -> UsageChange:
     update, moved = move_stock(items, list(lines), sign)
-    return UsageChange(target.day, target.recipe.id, moved, update)
+    return UsageChange(target.key(), moved, update)
 
 
 def _not_cooked(state: CookState, target: CookTarget) -> None:
@@ -432,13 +443,13 @@ def use_ingredient(
     recipe_id: str,
     ingredient_id: int,
     lines: Iterable[StockLine],
-    batch_only: bool = False,
+    scope: Scope = EXTRA,
 ) -> UsageChange:
     """Списать один ингредиент на порции рецепта — сколько есть, до 0.
 
     Без подтверждения: нехватку видно на плитке заранее.
     """
-    target = _target(catalog, settings, today, recipe_id, batch_only)
+    target = cook_key(catalog, settings, today, recipe_id, scope)
     _not_cooked(state, target)
     if ingredient_id in state.usage.get(target.key(), {}):
         raise ActionError("ingredient_id", "Ингредиент уже использован")
@@ -457,10 +468,10 @@ def unuse_ingredient(
     recipe_id: str,
     ingredient_id: int,
     lines: Iterable[StockLine],
-    batch_only: bool = False,
+    scope: Scope = EXTRA,
 ) -> UsageChange:
     """Вернуть ровно списанное по ингредиенту."""
-    target = _target(catalog, settings, today, recipe_id, batch_only)
+    target = cook_key(catalog, settings, today, recipe_id, scope)
     if target.key() in state.cooked:
         raise ActionError("recipe_id", "Блюдо приготовлено — сначала снимите отметку")
     used = state.usage.get(target.key(), {})
@@ -478,7 +489,7 @@ def cook_recipe(
     recipe_id: str,
     lines: Iterable[StockLine],
     allow_missing: bool = False,
-    batch_only: bool = False,
+    scope: Scope = EXTRA,
 ) -> UsageChange:
     """Списать неиспользованные ингредиенты; отметку (cooked_on = today)
     ставит вызывающий.
@@ -486,7 +497,7 @@ def cook_recipe(
     Не хватает — ActionError со списком, если нехватку не подтвердили
     (allow_missing); с подтверждением списывается сколько есть, до 0.
     """
-    target = _target(catalog, settings, today, recipe_id, batch_only)
+    target = cook_key(catalog, settings, today, recipe_id, scope)
     _not_cooked(state, target)
     used = state.usage.get(target.key(), {})
     rest = [
@@ -509,11 +520,11 @@ def uncook_recipe(
     state: CookState,
     recipe_id: str,
     lines: Iterable[StockLine],
-    batch_only: bool = False,
+    scope: Scope = EXTRA,
 ) -> UsageChange:
     """Вернуть всё, что записано в журнал по рецепту; отметку снимает
     вызывающий. Отметка 8.3b без журнала — возврат всего по рецепту."""
-    target = _target(catalog, settings, today, recipe_id, batch_only)
+    target = cook_key(catalog, settings, today, recipe_id, scope)
     if target.key() not in state.cooked:
         raise ActionError("recipe_id", "Блюдо не отмечено как приготовленное")
     used = state.usage.get(target.key())
@@ -546,13 +557,13 @@ def set_recipe_portions(
     state: CookState,
     recipe_id: str,
     portions: int,
-    batch_only: bool = False,
-) -> date:
-    """Порции рецепта — сколько списывать; день ключа. План (расписание,
-    закупка) не меняется."""
-    target = _target(catalog, settings, today, recipe_id, batch_only)
+    scope: Scope = EXTRA,
+) -> Key:
+    """Порции рецепта — сколько списывать; ключ. План (расписание, закупка)
+    не меняется."""
+    target = cook_key(catalog, settings, today, recipe_id, scope)
     check_portions(state, target.key(), portions)
-    return target.day
+    return target.key()
 
 
 def _by_id(catalog: Catalog) -> dict[int, CatalogIngredient]:

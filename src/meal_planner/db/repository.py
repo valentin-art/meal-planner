@@ -15,7 +15,7 @@ from decimal import Decimal
 from pathlib import Path
 
 from meal_planner.core.catalog import build_catalog
-from meal_planner.core.cooking import CookState
+from meal_planner.core.cooking import CookState, Key
 from meal_planner.core.models import (
     Catalog,
     CatalogIngredient,
@@ -285,19 +285,25 @@ ON CONFLICT(id) DO UPDATE SET
 """
 
 
+def _key(key: Key) -> tuple[str, str, str]:
+    day, recipe_id, scope = key
+    return day.isoformat(), recipe_id, scope
+
+
+def _read_key(day: str, recipe_id: str, scope: str) -> Key:
+    return date.fromisoformat(day), recipe_id, scope  # type: ignore[return-value]
+
+
+_WHERE_KEY = "day = ? AND recipe_id = ? AND scope = ?"
+
+
 def _write_usage(
-    conn: sqlite3.Connection,
-    day: date,
-    recipe_id: str,
-    amounts: Mapping[int, Decimal | None],
+    conn: sqlite3.Connection, key: Key, amounts: Mapping[int, Decimal | None]
 ) -> None:
     conn.executemany(
-        "INSERT INTO cook_usage (day, recipe_id, ingredient_id, amount)"
-        " VALUES (?, ?, ?, ?)",
-        [
-            (day.isoformat(), recipe_id, i, None if a is None else float(a))
-            for i, a in amounts.items()
-        ],
+        "INSERT INTO cook_usage (day, recipe_id, scope, ingredient_id, amount)"
+        " VALUES (?, ?, ?, ?, ?)",
+        [(*_key(key), i, None if a is None else float(a)) for i, a in amounts.items()],
     )
 
 
@@ -404,88 +410,79 @@ class Repository:
             return _bump_version(conn)
 
     def get_cook_state(self) -> CookState:
-        """Отметки с днём готовки, журнал списаний и порции (10.2) — разом."""
+        """Отметки с днём готовки, журнал списаний и порции (10.2) — разом.
+
+        Ключ — (день, recipe_id, поток): plan или extra (10.6).
+        """
         with self._connect() as conn:
             cooked = {
-                (date.fromisoformat(day), recipe_id): date.fromisoformat(cooked_on)
-                for day, recipe_id, cooked_on in conn.execute(
-                    "SELECT day, recipe_id, cooked_on FROM cooked"
+                _read_key(day, recipe_id, scope): date.fromisoformat(cooked_on)
+                for day, recipe_id, scope, cooked_on in conn.execute(
+                    "SELECT day, recipe_id, scope, cooked_on FROM cooked"
                 )
             }
-            usage: dict[tuple[date, str], dict[int, Decimal | None]] = {}
-            for day, recipe_id, ingredient_id, amount in conn.execute(
-                "SELECT day, recipe_id, ingredient_id, amount FROM cook_usage"
+            usage: dict[Key, dict[int, Decimal | None]] = {}
+            for day, recipe_id, scope, ingredient_id, amount in conn.execute(
+                "SELECT day, recipe_id, scope, ingredient_id, amount FROM cook_usage"
             ):
-                usage.setdefault((date.fromisoformat(day), recipe_id), {})[
+                usage.setdefault(_read_key(day, recipe_id, scope), {})[
                     ingredient_id
                 ] = None if amount is None else Decimal(str(amount))
             portions = {
-                (date.fromisoformat(day), recipe_id): n
-                for day, recipe_id, n in conn.execute(
-                    "SELECT day, recipe_id, portions FROM dish_portions"
+                _read_key(day, recipe_id, scope): n
+                for day, recipe_id, scope, n in conn.execute(
+                    "SELECT day, recipe_id, scope, portions FROM dish_portions"
                 )
             }
         return CookState(cooked, usage, portions)
 
     def use_ingredient(
-        self, day: date, recipe_id: str, ingredient_id: int, amount: Decimal | None
+        self, key: Key, ingredient_id: int, amount: Decimal | None
     ) -> int:
         """Повтор проверяет core заранее; здесь он — IntegrityError."""
         with self._connect() as conn:
-            _write_usage(conn, day, recipe_id, {ingredient_id: amount})
+            _write_usage(conn, key, {ingredient_id: amount})
             return _bump_version(conn)
 
-    def unuse_ingredient(self, day: date, recipe_id: str, ingredient_id: int) -> int:
+    def unuse_ingredient(self, key: Key, ingredient_id: int) -> int:
         with self._connect() as conn:
             conn.execute(
-                "DELETE FROM cook_usage"
-                " WHERE day = ? AND recipe_id = ? AND ingredient_id = ?",
-                (day.isoformat(), recipe_id, ingredient_id),
+                f"DELETE FROM cook_usage WHERE {_WHERE_KEY} AND ingredient_id = ?",
+                (*_key(key), ingredient_id),
             )
             return _bump_version(conn)
 
     def record_cook(
-        self,
-        day: date,
-        recipe_id: str,
-        cooked_on: date,
-        amounts: Mapping[int, Decimal | None],
+        self, key: Key, cooked_on: date, amounts: Mapping[int, Decimal | None]
     ) -> int:
         """Списанное по остальным ингредиентам и отметка — одной записью."""
         with self._connect() as conn:
-            _write_usage(conn, day, recipe_id, amounts)
+            _write_usage(conn, key, amounts)
             conn.execute(
-                "INSERT INTO cooked (day, recipe_id, cooked_on) VALUES (?, ?, ?)",
-                (day.isoformat(), recipe_id, cooked_on.isoformat()),
+                "INSERT INTO cooked (day, recipe_id, scope, cooked_on)"
+                " VALUES (?, ?, ?, ?)",
+                (*_key(key), cooked_on.isoformat()),
             )
             return _bump_version(conn)
 
-    def clear_cook(self, day: date, recipe_id: str) -> int:
+    def clear_cook(self, key: Key) -> int:
         """Отметка и весь журнал по ключу; порции остаются."""
         with self._connect() as conn:
             for table in ("cook_usage", "cooked"):
-                conn.execute(
-                    f"DELETE FROM {table} WHERE day = ? AND recipe_id = ?",
-                    (day.isoformat(), recipe_id),
-                )
+                conn.execute(f"DELETE FROM {table} WHERE {_WHERE_KEY}", _key(key))
             return _bump_version(conn)
 
-    def get_dish_portions(self) -> dict[tuple[date, str], int]:
-        """Порции, выбранные вместо плановых (8.3b): (день, recipe_id) → N."""
-        with self._connect() as conn:
-            return {
-                (date.fromisoformat(day), recipe_id): portions
-                for day, recipe_id, portions in conn.execute(
-                    "SELECT day, recipe_id, portions FROM dish_portions"
-                )
-            }
+    def get_dish_portions(self) -> dict[Key, int]:
+        """Порции, выбранные вместо плановых (8.3b): ключ → N."""
+        return dict(self.get_cook_state().portions)
 
-    def set_dish_portions(self, day: date, recipe_id: str, portions: int) -> int:
+    def set_dish_portions(self, key: Key, portions: int) -> int:
         with self._connect() as conn:
             conn.execute(
-                "INSERT INTO dish_portions (day, recipe_id, portions) VALUES (?, ?, ?)"
-                " ON CONFLICT (day, recipe_id) DO UPDATE SET portions = excluded.portions",
-                (day.isoformat(), recipe_id, portions),
+                "INSERT INTO dish_portions (day, recipe_id, scope, portions)"
+                " VALUES (?, ?, ?, ?) ON CONFLICT (day, recipe_id, scope)"
+                " DO UPDATE SET portions = excluded.portions",
+                (*_key(key), portions),
             )
             return _bump_version(conn)
 

@@ -20,6 +20,7 @@ from meal_planner.api.schemas import (
     CookbookOut,
     CookedActionOut,
     CookedIn,
+    CookIn,
     CookRecipeIn,
     DiscardDraftOut,
     DishPortionsOut,
@@ -41,6 +42,7 @@ from meal_planner.api.schemas import (
     SetDishPortionsIn,
     SetNutritionTargetIn,
     SetPortionScalingIn,
+    SetRecipePortionsIn,
     SetShoppingTimingIn,
     ShoppingRemainingIn,
     ShoppingRemainingOut,
@@ -305,25 +307,25 @@ def portions_action(
     today: date,
     cook_day: date,
     body: SetDishPortionsIn,
-    batch_only: bool,
+    scope: cooking.Scope,
 ) -> DishPortionsOut:
     # Только списание: план и закупка от порций не зависят.
     settings, _ = stored_or_initial(repo, today)
     try:
-        day = cooking.set_recipe_portions(
+        key = cooking.set_recipe_portions(
             catalog,
             settings,
             cook_day,
             repo.get_cook_state(),
             body.recipe_id,
             body.portions,
-            batch_only,
+            scope,
         )
     except actions.ActionError as e:
         raise unprocessable((["body", e.field], e.message)) from e
-    version = repo.set_dish_portions(day, body.recipe_id, body.portions)
+    version = repo.set_dish_portions(key, body.portions)
     return DishPortionsOut(
-        version=version, day=day, recipe_id=body.recipe_id, portions=body.portions
+        version=version, day=key[0], recipe_id=body.recipe_id, portions=body.portions
     )
 
 
@@ -340,6 +342,7 @@ def cookbook_out(
     return to_cookbook_out(
         today,
         cookbook.upcoming_cook(catalog, settings, today),
+        cookbook.current_cook(catalog, settings, cook_day),
         cookbook.cookbook_recipes(catalog),
         cookbook.cook_preview(
             catalog, settings, cook_day, repo.get_cook_state(), lines
@@ -615,16 +618,17 @@ def create_app() -> FastAPI:
     def mark_cooked(
         body: CookedIn, repo: Repo, catalog: CatalogDep, today: Today, day: CookDay
     ) -> CookedActionOut:
-        # «Готовка» (8.3b): только партия и завтрак, нехватка — отказ.
+        # «Приготовлено» (8.3b, Assist) — поток plan: партия и завтрак,
+        # нехватка — отказ.
         return cook_action(
             repo,
             catalog,
             today,
             body,
             lambda s, st, lines: cooking.cook_recipe(
-                catalog, s, day, st, body.recipe_id, lines, batch_only=True
+                catalog, s, day, st, body.recipe_id, lines, scope=cooking.PLAN
             ),
-            lambda c: repo.record_cook(c.day, c.recipe_id, day, c.amounts),
+            lambda c: repo.record_cook(c.key, day, c.amounts),
         )
 
     @app.post("/api/actions/unmark-cooked", response_model=CookedActionOut)
@@ -637,9 +641,9 @@ def create_app() -> FastAPI:
             today,
             body,
             lambda s, st, lines: cooking.uncook_recipe(
-                catalog, s, day, st, body.recipe_id, lines, batch_only=True
+                catalog, s, day, st, body.recipe_id, lines, scope=cooking.PLAN
             ),
-            lambda c: repo.clear_cook(c.day, c.recipe_id),
+            lambda c: repo.clear_cook(c.key),
         )
 
     @app.post("/api/actions/set-dish-portions", response_model=DishPortionsOut)
@@ -650,7 +654,7 @@ def create_app() -> FastAPI:
         today: Today,
         day: CookDay,
     ) -> DishPortionsOut:
-        return portions_action(repo, catalog, today, day, body, batch_only=True)
+        return portions_action(repo, catalog, today, day, body, cooking.PLAN)
 
     @app.post("/api/actions/use-ingredient", response_model=CookedActionOut)
     def use_ingredient(
@@ -660,10 +664,10 @@ def create_app() -> FastAPI:
         today: Today,
         day: CookDay,
     ) -> CookedActionOut:
-        # «Рецепты» (10.3): любой активный рецепт, списание до 0.
+        # «Рецепты» (10.3): списание до 0; поток — из тела (10.6).
         def write(c: cooking.UsageChange) -> int:
             (amount,) = c.amounts.values()
-            return repo.use_ingredient(c.day, c.recipe_id, body.ingredient_id, amount)
+            return repo.use_ingredient(c.key, body.ingredient_id, amount)
 
         return cook_action(
             repo,
@@ -671,7 +675,14 @@ def create_app() -> FastAPI:
             today,
             body,
             lambda s, st, lines: cooking.use_ingredient(
-                catalog, s, day, st, body.recipe_id, body.ingredient_id, lines
+                catalog,
+                s,
+                day,
+                st,
+                body.recipe_id,
+                body.ingredient_id,
+                lines,
+                scope=body.scope,
             ),
             write,
         )
@@ -690,9 +701,16 @@ def create_app() -> FastAPI:
             today,
             body,
             lambda s, st, lines: cooking.unuse_ingredient(
-                catalog, s, day, st, body.recipe_id, body.ingredient_id, lines
+                catalog,
+                s,
+                day,
+                st,
+                body.recipe_id,
+                body.ingredient_id,
+                lines,
+                scope=body.scope,
             ),
-            lambda c: repo.unuse_ingredient(c.day, c.recipe_id, body.ingredient_id),
+            lambda c: repo.unuse_ingredient(c.key, body.ingredient_id),
         )
 
     @app.post("/api/actions/cook-recipe", response_model=CookedActionOut)
@@ -705,14 +723,21 @@ def create_app() -> FastAPI:
             today,
             body,
             lambda s, st, lines: cooking.cook_recipe(
-                catalog, s, day, st, body.recipe_id, lines, body.allow_missing
+                catalog,
+                s,
+                day,
+                st,
+                body.recipe_id,
+                lines,
+                body.allow_missing,
+                scope=body.scope,
             ),
-            lambda c: repo.record_cook(c.day, c.recipe_id, day, c.amounts),
+            lambda c: repo.record_cook(c.key, day, c.amounts),
         )
 
     @app.post("/api/actions/uncook-recipe", response_model=CookedActionOut)
     def uncook_recipe(
-        body: CookedIn, repo: Repo, catalog: CatalogDep, today: Today, day: CookDay
+        body: CookIn, repo: Repo, catalog: CatalogDep, today: Today, day: CookDay
     ) -> CookedActionOut:
         return cook_action(
             repo,
@@ -720,20 +745,20 @@ def create_app() -> FastAPI:
             today,
             body,
             lambda s, st, lines: cooking.uncook_recipe(
-                catalog, s, day, st, body.recipe_id, lines
+                catalog, s, day, st, body.recipe_id, lines, scope=body.scope
             ),
-            lambda c: repo.clear_cook(c.day, c.recipe_id),
+            lambda c: repo.clear_cook(c.key),
         )
 
     @app.post("/api/actions/set-recipe-portions", response_model=DishPortionsOut)
     def set_recipe_portions(
-        body: SetDishPortionsIn,
+        body: SetRecipePortionsIn,
         repo: Repo,
         catalog: CatalogDep,
         today: Today,
         day: CookDay,
     ) -> DishPortionsOut:
-        return portions_action(repo, catalog, today, day, body, batch_only=False)
+        return portions_action(repo, catalog, today, day, body, body.scope)
 
     @app.post("/api/actions/save-recipe", response_model=RecipeActionOut)
     def save_recipe(

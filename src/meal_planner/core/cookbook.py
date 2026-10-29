@@ -1,6 +1,7 @@
 """Книга рецептов для дашборда «Кухня» (9.1): ближайшая готовка и активные
 рецепты по видам; готовка по ингредиентам (10.1) — что списано и чего не
-хватает.
+хватает; текущая партия и сегодняшний завтрак для ряда «Сейчас» (10.6) —
+поток plan, всё остальное — вне очереди (extra).
 
 Дашборд только раскладывает: какие блюда готовить, с какой порцией и что
 показывать в группах — решает core.
@@ -14,11 +15,14 @@ from types import MappingProxyType
 
 from meal_planner.core.cooking import (
     CookState,
+    CookTarget,
     available,
     batch_dishes,
-    cook_keys,
+    breakfast_today,
+    current_cook_date,
+    extra_target,
     needs,
-    resolve_key,
+    plan_targets,
     shortage_line,
 )
 from meal_planner.core.models import Catalog, MealKind, Recipe, Settings
@@ -96,10 +100,76 @@ class RecipeCooking:
     portions: int  # выбранные или плановые
     planned_portions: int
     locked: bool  # порции не поменять: уже списано или приготовлено
-    cooked: bool
-    cooked_today: bool  # серый на «Рецептах» — до конца дня действия
+    cooked: bool  # серый: партия — до следующей готовки, прочее — до утра
     ingredients: tuple[IngredientCooking, ...]
     missing: tuple[str, ...]  # строки нехватки для подтверждения
+
+
+@dataclass(frozen=True, slots=True)
+class CookPreview:
+    plan: Mapping[str, RecipeCooking]  # ряд «Сейчас»: партия и завтрак
+    extra: Mapping[str, RecipeCooking]  # остальные плитки — вне очереди
+
+
+@dataclass(frozen=True, slots=True)
+class CurrentCook:
+    """Ряд «Сейчас» (10.6): текущая партия по дню готовки и завтрак."""
+
+    cook_date: date | None  # None — до дня 0 или готовка пропущена
+    dishes: tuple[UpcomingDish, ...]
+    breakfast: Recipe | None  # None — сегодня завтрака нет
+
+
+def current_cook(catalog: Catalog, settings: Settings, today: date) -> CurrentCook:
+    """today — день готовки (10.5): партия сменяется в 7:00 дня готовки."""
+    settings = settle_skip(settings, today)
+    cook_date = current_cook_date(settings, today)
+    dishes = (
+        ()
+        if cook_date is None
+        else tuple(
+            UpcomingDish(r, n) for r, n in batch_dishes(catalog, settings, cook_date)
+        )
+    )
+    return CurrentCook(cook_date, dishes, breakfast_today(catalog, settings, today))
+
+
+def recipe_cooking(
+    catalog: Catalog, target: CookTarget, state: CookState, lines: list[StockLine]
+) -> RecipeCooking:
+    key = target.key()
+    used = state.usage.get(key, {})
+    cooked = key in state.cooked
+    portions = target.portions(state)
+    ingredients = []
+    missing = []
+    for ingredient, need in needs(catalog, target.recipe.ingredients, portions):
+        have = available(ingredient, lines)
+        is_used = ingredient.id in used
+        short = False
+        if have is not None and have < need and not cooked and not is_used:
+            short = True
+            missing.append(shortage_line(ingredient, need, have))
+        ingredients.append(
+            IngredientCooking(
+                ingredient.id,
+                ingredient.name,
+                ingredient.unit,
+                need,
+                have,
+                is_used,
+                short,
+            )
+        )
+    return RecipeCooking(
+        target.day,
+        portions,
+        target.planned,
+        cooked or bool(used),
+        cooked,
+        tuple(ingredients),
+        tuple(missing),
+    )
 
 
 def cook_preview(
@@ -108,57 +178,22 @@ def cook_preview(
     today: date,
     state: CookState,
     lines: Iterable[StockLine],
-) -> Mapping[str, RecipeCooking]:
-    """Готовка каждого рецепта книги по recipe_id: активные и блюда
-    ближайшей партии.
+) -> CookPreview:
+    """Готовка по recipe_id в двух потоках; today — день готовки.
 
-    Одно состояние на рецепт: у плитки ряда «Ближайшая готовка» и группы
-    оно общее. Блюдо ближайшей партии вне текущей готовят вне очереди.
+    plan — блюда текущей партии и сегодняшний завтрак (ряд «Сейчас»);
+    extra — каждый активный рецепт вне очереди (группы и «Ближайшая
+    готовка»). Потоки не влияют друг на друга.
     """
     settings = settle_skip(settings, today)
-    keys = cook_keys(catalog, settings, today)
     lines = list(lines)
-    ids = [r.id for rs in cookbook_recipes(catalog).values() for r in rs]
-    ids += [d.recipe.id for d in upcoming_cook(catalog, settings, today).dishes]
-    ids += keys
-    preview: dict[str, RecipeCooking] = {}
-    for recipe_id in dict.fromkeys(ids):
-        recipe = catalog.recipes.get(recipe_id)
-        if recipe_id not in keys and (recipe is None or recipe.status != "active"):
-            continue  # не в плане и не активен — не готовится
-        target = resolve_key(catalog, today, keys, recipe_id)
-        key = target.key()
-        used = state.usage.get(key, {})
-        cooked_on = state.cooked.get(key)
-        portions = target.portions(state)
-        ingredients = []
-        missing = []
-        for ingredient, need in needs(catalog, target.recipe.ingredients, portions):
-            have = available(ingredient, lines)
-            is_used = ingredient.id in used
-            short = False
-            if have is not None and have < need and cooked_on is None and not is_used:
-                short = True
-                missing.append(shortage_line(ingredient, need, have))
-            ingredients.append(
-                IngredientCooking(
-                    ingredient.id,
-                    ingredient.name,
-                    ingredient.unit,
-                    need,
-                    have,
-                    is_used,
-                    short,
-                )
-            )
-        preview[recipe_id] = RecipeCooking(
-            target.day,
-            portions,
-            target.planned,
-            cooked_on is not None or bool(used),
-            cooked_on is not None,
-            cooked_on == today,
-            tuple(ingredients),
-            tuple(missing),
-        )
-    return MappingProxyType(preview)
+    plan = {
+        rid: recipe_cooking(catalog, t, state, lines)
+        for rid, t in plan_targets(catalog, settings, today).items()
+    }
+    extra = {
+        r.id: recipe_cooking(catalog, extra_target(catalog, today, r.id), state, lines)
+        for rs in cookbook_recipes(catalog).values()
+        for r in rs
+    }
+    return CookPreview(MappingProxyType(plan), MappingProxyType(extra))

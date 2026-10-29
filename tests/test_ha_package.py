@@ -186,6 +186,19 @@ def test_cooking_scripts_send_stock_and_set_counters():
         assert "input_number.set_value" in counters, name
 
 
+def test_cooking_scripts_pass_the_scope():
+    # Поток (10.6): поле скрипта → тело запроса, по умолчанию вне очереди.
+    for name in (*COOKING_SCRIPTS[2:], "meal_planner_set_recipe_portions"):
+        script = PACKAGE["script"][name]
+        field = script["fields"]["scope"]
+        assert field["default"] == "extra", name
+        assert field["selector"]["select"]["options"] == ["extra", "plan"], name
+        call = next(s for s in script["sequence"] if "action" in s)
+        assert call["data"]["scope"] == "{{ scope | default('extra') }}", name
+    # «Приготовлено» (8.3b) — всегда партия, поля нет.
+    assert "scope" not in PACKAGE["script"]["meal_planner_mark_cooked"]["fields"]
+
+
 def test_cookbook_sensor_uses_cookbook_fields():
     # Книга рецептов (9.1) — свой запрос, ответ целиком в атрибутах.
     block = template_block("meal_planner_cookbook")
@@ -207,6 +220,8 @@ def test_cookbook_sensor_uses_cookbook_fields():
         "lunch",
         "dinner",
         "breakfast",
+        "now",
+        "cooking_now",
         "cooking",
         "last_error",
     }

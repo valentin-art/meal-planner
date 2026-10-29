@@ -1,6 +1,6 @@
 """8.3b: партия готовки, отметки «приготовлено» и списание из счётчиков.
 
-Отметки «Готовки» — cook_recipe/uncook_recipe с batch_only (10.3).
+Отметки «Готовки» — cook_recipe/uncook_recipe в потоке plan (10.3, 10.6).
 """
 
 from dataclasses import replace
@@ -118,7 +118,7 @@ def test_breakfast_today_and_cooked_flags():
     state = cooking(SEED_CATALOG, SETTINGS, today, set())
     breakfast = breakfast_of(state).recipe.id
     lunch = batch_of(state).dishes[0].recipe.id
-    cooked = {(today, breakfast), (date(2026, 11, 7), lunch)}
+    cooked = {(today, breakfast, "plan"), (date(2026, 11, 7), lunch, "plan")}
     state = cooking(SEED_CATALOG, SETTINGS, today, cooked)
     assert breakfast_of(state).cooked
     assert batch_of(state).dishes[0].cooked
@@ -135,13 +135,13 @@ def test_cooking_tab_marks_rules():
 
     def mark(st, recipe_id, cook=True):
         fn = cook_recipe if cook else uncook_recipe
-        return fn(SEED_CATALOG, SETTINGS, today, st, recipe_id, [], batch_only=True)
+        return fn(SEED_CATALOG, SETTINGS, today, st, recipe_id, [], scope="plan")
 
     empty = CookState({}, {}, {})
     assert mark(empty, breakfast).day == today
     assert mark(empty, dish.recipe.id).day == date(2026, 11, 7)
 
-    cooked = CookState({(date(2026, 11, 7), dish.recipe.id): today}, {}, {})
+    cooked = CookState({(date(2026, 11, 7), dish.recipe.id, "plan"): today}, {}, {})
     cases = [
         (empty, "l3", True, "Это блюдо сейчас не готовится"),  # не в партии
         (empty, "нет", True, "Это блюдо сейчас не готовится"),
@@ -184,7 +184,7 @@ DAY = date(2026, 11, 9)  # тестовый рецепт — вне очеред
 def counter_update(recipe, portions, lines, sign, allow_missing=True):
     """Списать рецепт (−1) или снять отметку 8.3b без журнала (+1)."""
     catalog = replace(SEED_CATALOG, recipes={**SEED_CATALOG.recipes, recipe.id: recipe})
-    key = (DAY, recipe.id)
+    key = (DAY, recipe.id, "extra")
     if sign < 0:
         state = CookState({}, {}, {key: portions})
         return cook_recipe(
@@ -307,7 +307,10 @@ def test_chosen_portions_replace_planned_only_for_write_off():
     dish = batch_of(state).dishes[0]
     breakfast = breakfast_of(state).recipe.id
     batch_day = date(2026, 11, 7)
-    portions = {(batch_day, dish.recipe.id): 3, (today, breakfast): 2}
+    portions = {
+        (batch_day, dish.recipe.id, "plan"): 3,
+        (today, breakfast, "plan"): 2,
+    }
 
     state = cooking(SEED_CATALOG, SETTINGS, today, set(), portions)
     first = batch_of(state).dishes[0]
@@ -329,7 +332,7 @@ def test_chosen_portions_replace_planned_only_for_write_off():
         CookState({}, {}, portions),
         dish.recipe.id,
         [StockLine(eid, 10000, first_ing.unit, "input_number.x")],
-        batch_only=True,
+        scope="plan",
     )
     assert change.update.values == (("input_number.x", 10000 - first_ing.qty * 3),)
 
@@ -342,21 +345,21 @@ def test_set_portions_rules():
 
     def set_portions(st, recipe_id, n):
         return set_recipe_portions(
-            SEED_CATALOG, SETTINGS, today, st, recipe_id, n, batch_only=True
+            SEED_CATALOG, SETTINGS, today, st, recipe_id, n, scope="plan"
         )
 
-    assert set_portions(empty, rid, 2) == date(2026, 11, 7)
+    assert set_portions(empty, rid, 2) == (date(2026, 11, 7), rid, "plan")
     cases = [
         (empty, "l3", 2, "recipe_id", "Это блюдо сейчас не готовится"),
         (
-            CookState({(date(2026, 11, 7), rid): today}, {}, {}),
+            CookState({(date(2026, 11, 7), rid, "plan"): today}, {}, {}),
             rid,
             2,
             "recipe_id",
             "Блюдо уже отмечено — порции меняются до отметки",
         ),
         (
-            CookState({}, {(date(2026, 11, 7), rid): {1: None}}, {}),
+            CookState({}, {(date(2026, 11, 7), rid, "plan"): {1: None}}, {}),
             rid,
             2,
             "recipe_id",

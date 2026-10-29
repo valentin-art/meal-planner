@@ -660,6 +660,24 @@ export interface components {
             /** From Assist */
             from_assist: boolean;
         };
+        /**
+         * CookIn
+         * @description Действие готовки на «Рецептах» (10.3) в потоке (10.6): plan — блюдо
+         *     текущей партии или сегодняшний завтрак (как «приготовлено» 8.3b),
+         *     extra — любой активный рецепт вне очереди.
+         */
+        CookIn: {
+            /** Stock */
+            stock: components["schemas"]["StockLineIn"][];
+            /** Recipe Id */
+            recipe_id: string;
+            /**
+             * Scope
+             * @default extra
+             * @enum {string}
+             */
+            scope: "plan" | "extra";
+        };
         /** CookItemOut */
         CookItemOut: {
             /** Lunch Id */
@@ -682,6 +700,12 @@ export interface components {
             stock: components["schemas"]["StockLineIn"][];
             /** Recipe Id */
             recipe_id: string;
+            /**
+             * Scope
+             * @default extra
+             * @enum {string}
+             */
+            scope: "plan" | "extra";
             /**
              * Allow Missing
              * @default false
@@ -727,6 +751,14 @@ export interface components {
             /** Unit */
             unit: string;
         };
+        /** CookbookNowOut */
+        CookbookNowOut: {
+            /** Cook Date */
+            cook_date: string | null;
+            /** Dishes */
+            dishes: components["schemas"]["CookbookDishOut"][];
+            breakfast: components["schemas"]["CookbookDishOut"] | null;
+        };
         /**
          * CookbookOut
          * @description Книга рецептов для вкладки «Рецепты» HA (9.1): атрибуты сенсора.
@@ -747,8 +779,13 @@ export interface components {
             dinner: components["schemas"]["CookbookRecipeOut"][];
             /** Breakfast */
             breakfast: components["schemas"]["CookbookRecipeOut"][];
+            now: components["schemas"]["CookbookNowOut"];
             /** Cooking */
             cooking: {
+                [key: string]: components["schemas"]["RecipeCookingOut"];
+            };
+            /** Cooking Now */
+            cooking_now: {
                 [key: string]: components["schemas"]["RecipeCookingOut"];
             };
         };
@@ -1057,8 +1094,6 @@ export interface components {
             locked: boolean;
             /** Cooked */
             cooked: boolean;
-            /** Cooked Today */
-            cooked_today: boolean;
             /** Missing */
             missing: string[];
             /** Ingredients */
@@ -1245,6 +1280,22 @@ export interface components {
         SetPortionScalingIn: {
             /** Enabled */
             enabled: boolean;
+        };
+        /**
+         * SetRecipePortionsIn
+         * @description Порции рецепта в потоке (10.6), см. CookIn.
+         */
+        SetRecipePortionsIn: {
+            /** Recipe Id */
+            recipe_id: string;
+            /** Portions */
+            portions: number;
+            /**
+             * Scope
+             * @default extra
+             * @enum {string}
+             */
+            scope: "plan" | "extra";
         };
         /** SetShoppingTimingIn */
         SetShoppingTimingIn: {
@@ -1585,6 +1636,12 @@ export interface components {
             stock: components["schemas"]["StockLineIn"][];
             /** Recipe Id */
             recipe_id: string;
+            /**
+             * Scope
+             * @default extra
+             * @enum {string}
+             */
+            scope: "plan" | "extra";
             /** Ingredient Id */
             ingredient_id: number;
         };
@@ -2394,7 +2451,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CookedIn"];
+                "application/json": components["schemas"]["CookIn"];
             };
         };
         responses: {
@@ -2427,7 +2484,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SetDishPortionsIn"];
+                "application/json": components["schemas"]["SetRecipePortionsIn"];
             };
         };
         responses: {

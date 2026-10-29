@@ -258,6 +258,59 @@ def _cook_usage(conn: sqlite3.Connection) -> None:
     conn.execute("UPDATE cooked SET cooked_on = day")
 
 
+def _cook_scope(conn: sqlite3.Connection) -> None:
+    # Поток готовки (10.6): plan — блюда текущей партии и сегодняшний
+    # завтрак, extra — вне очереди. В день готовки и у завтрака ключи
+    # потоков иначе совпали бы. SQLite не меняет первичный ключ — таблицы
+    # пересоздаются.
+    # Прежние строки: ключ обеда или ужина партии — всегда день готовки (или
+    # день 0, накануне якоря); обед или ужин с другим днём ключа готовили вне
+    # очереди (10.3). Остальное — plan: завтрак и день готовки не различить,
+    # «Готовка» 8.3b отмечала только партию.
+    iso_weekday = "((CAST(strftime('%w', t.day) AS INTEGER) + 6) % 7 + 1)"
+    scope = f"""
+        CASE WHEN r.kind IN ('lunch', 'dinner') AND s.id IS NOT NULL
+          AND {iso_weekday} != s.cook_weekday1
+          AND NOT (s.cook_count = 2 AND {iso_weekday} = s.cook_weekday2)
+          AND t.day != date(s.meal_anchor_date, '-1 day')
+        THEN 'extra' ELSE 'plan' END"""
+    recipe = "day TEXT NOT NULL, recipe_id TEXT NOT NULL REFERENCES recipes (id)"
+    ingredient = "ingredient_id INTEGER NOT NULL REFERENCES ingredients (id)"
+    # Таблица: (колонки кроме scope, переносимые колонки, первичный ключ).
+    tables = {
+        "cooked": (
+            f"{recipe}, cooked_on TEXT",
+            "day, recipe_id, cooked_on",
+            "day, recipe_id, scope",
+        ),
+        "cook_usage": (
+            f"{recipe}, {ingredient}, amount REAL",
+            "day, recipe_id, ingredient_id, amount",
+            "day, recipe_id, scope, ingredient_id",
+        ),
+        "dish_portions": (
+            f"{recipe}, portions INTEGER NOT NULL",
+            "day, recipe_id, portions",
+            "day, recipe_id, scope",
+        ),
+    }
+    for table, (columns, names, key) in tables.items():
+        conn.execute(
+            f"CREATE TABLE {table}_new ({columns},"
+            " scope TEXT NOT NULL CHECK (scope IN ('plan', 'extra')),"
+            f" PRIMARY KEY ({key}))"
+        )
+        selected = ", ".join(f"t.{n.strip()}" for n in names.split(","))
+        conn.execute(
+            f"INSERT INTO {table}_new ({names}, scope)"
+            f" SELECT {selected}, {scope} FROM {table} t"
+            " JOIN recipes r ON r.id = t.recipe_id"
+            " LEFT JOIN settings s ON s.id = 1"
+        )
+        conn.execute(f"DROP TABLE {table}")
+        conn.execute(f"ALTER TABLE {table}_new RENAME TO {table}")
+
+
 MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _settings,  # 1: settings — схема до фазы 5
     _catalog,  # 2: каталог рецептов и сид (5.2)
@@ -268,6 +321,7 @@ MIGRATIONS: tuple[Callable[[sqlite3.Connection], None], ...] = (
     _slot_versions,  # 7: варианты у позиций цикла (8.4b)
     _portion_scales,  # 8: порции под цель по ккал (8.5)
     _cook_usage,  # 9: журнал списаний и день готовки (10.2)
+    _cook_scope,  # 10: поток готовки — партия или вне очереди (10.6)
 )
 
 

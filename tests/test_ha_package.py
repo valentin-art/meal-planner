@@ -184,13 +184,12 @@ def test_cooking_scripts_send_stock_and_set_counters():
         counters = json.dumps(sequence[2]["then"][0], ensure_ascii=False)
         assert "resp.content.counters" in counters, name
         assert "number.set_value" in counters, name
-        assert "input_number" not in counters, name
 
 
 def test_stock_template_reads_kitchen_stock_numbers():
-    stock = stock_template()
-    assert "states.number" in stock
-    assert "input_number" not in stock
+    assert "states.number" in stock_template()
+    # Остатки — счётчики kitchen_stock; input_number нет нигде в пакете.
+    assert "input_number" not in TEXT
 
 
 def test_cooking_scripts_pass_the_scope():
@@ -292,10 +291,7 @@ def test_selectors_have_no_supported_features():
 
 def test_stock_template_passes_entity_id():
     # Списание (8.3b) отдаёт новые значения по entity_id счётчика.
-    plan = PACKAGE["script"]["meal_planner_plan"]["sequence"]
-    stock = next(
-        s["variables"]["stock"] for s in plan if "stock" in s.get("variables", {})
-    )
+    stock = stock_template()
     assert '"entity_id": s.entity_id' in stock
     stock_line = resolve(SCHEMAS["StockLineIn"])["properties"]
     assert set(re.findall(r'"(\w+)":', stock)) == set(stock_line)

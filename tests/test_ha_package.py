@@ -363,6 +363,29 @@ def test_ingredients_script_uses_catalog_fields():
     assert "map(attribute='name')" in script
 
 
+def test_ingredient_options_script():
+    # D-28: варианты для формы запасов — по контракту smarthome.
+    script = PACKAGE["script"]["meal_planner_ingredient_options"]
+    assert "fields" not in script
+    assert script["mode"] == "parallel"
+    assert "не для Assist" in script["description"]
+    call = script["sequence"][0]
+    assert call["action"] == "rest_command.meal_planner_ingredients"
+    assert call["continue_on_error"] is True
+    text = json.dumps(script, ensure_ascii=False)
+    catalog = set(resolve(SCHEMAS["CatalogIngredientOut"])["properties"])
+    assert {"id", "name", "unit", "category"} <= set(re.findall(r"i\['(\w+)'\]", text))
+    assert set(re.findall(r"i\['(\w+)'\]", text)) <= catalog
+    out = set(resolve(SCHEMAS["IngredientsOut"])["properties"])
+    used = set(re.findall(r"\bresp\.content\.(\w+)", text))
+    assert {"ingredients", "categories"} <= used <= out
+    # Успех — {ok: true, ...}, ошибка — ровно {ok: false}.
+    ok = script["sequence"][1]["then"][0]["variables"]["result"]
+    assert ok["ok"] is True and {"ingredients", "categories"} <= set(ok)
+    assert script["sequence"][2]["variables"]["result"] == {"ok": False}
+    assert script["sequence"][3]["response_variable"] == "result"
+
+
 def test_propose_recipe_reads_recipe_fields():
     script = json.dumps(
         PACKAGE["script"]["meal_planner_propose_recipe"], ensure_ascii=False

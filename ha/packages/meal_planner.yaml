@@ -1173,6 +1173,37 @@ script:
       - stop: Ошибка
         response_variable: result
 
+  # Варианты для формы запасов (D-28): ответ читает интерфейс, не Assist.
+  meal_planner_ingredient_options:
+    alias: Питание — варианты ингредиентов для формы запасов
+    description: >-
+      Варианты ингредиентов для формы запасов (id, название, единица,
+      категория и список категорий), не для Assist.
+    mode: parallel
+    sequence:
+      - action: rest_command.meal_planner_ingredients
+        response_variable: resp
+        continue_on_error: true
+      - if: "{{ resp is defined and resp.status == 200 }}"
+        then:
+          - variables:
+              result:
+                ok: true
+                ingredients: >-
+                  {%- set ns = namespace(out=[]) %}
+                  {%- for i in resp.content.ingredients %}
+                    {%- set ns.out = ns.out + [{"id": i['id'], "name": i['name'], "unit": i['unit'], "category": i['category']}] %}
+                  {%- endfor %}
+                  {{ ns.out }}
+                categories: "{{ resp.content.categories }}"
+          - stop: Варианты получены
+            response_variable: result
+      - variables:
+          result:
+            ok: false
+      - stop: Ошибка
+        response_variable: result
+
   # Черновик — только после согласия пользователя; ошибки — с путём поля
   # (ingredients.2.unit: …), чтобы модель исправила нужную строку.
   meal_planner_propose_recipe:

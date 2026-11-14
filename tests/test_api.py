@@ -1005,6 +1005,43 @@ def test_shopping_remaining_bad_body_is_422(client, body):
     assert client.post("/api/shopping/remaining", json=body).status_code == 422
 
 
+def test_unstocked_ingredients_lists_units_read_only(client, repo):
+    repo.save_settings(DEFAULT_2X)
+    before = client.get("/api/state").json()
+    everything = client.post("/api/ingredients/unstocked", json={"stock": []})
+    assert everything.status_code == 200
+    items = everything.json()["ingredients"]
+    assert set(items[0]) == {"id", "name", "unit", "category", "units", "fixes"}
+    first = items[0]["id"]
+    r = client.post(
+        "/api/ingredients/unstocked",
+        json={"stock": [{"ingredient_id": first, "qty": 0, "unit": "стакан"}]},
+    )
+    assert [i["id"] for i in r.json()["ingredients"]] == [i["id"] for i in items[1:]]
+    grams = next(i for i in items if i["unit"] == "г")
+    assert grams["units"][:2] == ["г", "кг"]
+    for i in items:
+        for fix in i["fixes"]:
+            assert fix["field"] in ("store_piece", "grams_per_unit")
+            assert fix["units"]
+    assert client.get("/api/state").json() == before
+    assert repo.get_settings() == StoredSettings(DEFAULT_2X, 1)
+
+
+def test_unstocked_ingredients_all_stocked_is_empty(client):
+    items = client.post("/api/ingredients/unstocked", json={"stock": []}).json()
+    stock = [
+        {"ingredient_id": i["id"], "qty": 1, "unit": i["unit"]}
+        for i in items["ingredients"]
+    ]
+    r = client.post("/api/ingredients/unstocked", json={"stock": stock})
+    assert r.json() == {"ingredients": []}
+
+
+def test_unstocked_ingredients_without_body_is_422(client):
+    assert client.post("/api/ingredients/unstocked", json={}).status_code == 422
+
+
 def test_summary_lists_cooking(client, repo):
     repo.save_settings(DEFAULT_2X)  # сегодня Пн 09.11, партия Сб 07.11
     cooking = client.get("/api/summary").json()["cooking"]

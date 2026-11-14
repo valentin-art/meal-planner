@@ -197,6 +197,44 @@
         }
       }
     },
+    "/api/ingredients/unstocked": {
+      "post": {
+        "summary": "Unstocked Ingredients",
+        "operationId": "unstocked_ingredients_api_ingredients_unstocked_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShoppingRemainingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnstockedIngredientsOut"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/recipes": {
       "get": {
         "summary": "Get Recipes",
@@ -4687,6 +4725,92 @@
           "options"
         ],
         "title": "TodayPositionOut"
+      },
+      "UnitFixOut": {
+        "properties": {
+          "field": {
+            "type": "string",
+            "enum": [
+              "store_piece",
+              "grams_per_unit"
+            ],
+            "title": "Field"
+          },
+          "units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Units"
+          }
+        },
+        "type": "object",
+        "required": [
+          "field",
+          "units"
+        ],
+        "title": "UnitFixOut"
+      },
+      "UnstockedIngredientOut": {
+        "properties": {
+          "id": {
+            "type": "integer",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "unit": {
+            "type": "string",
+            "title": "Unit"
+          },
+          "category": {
+            "type": "string",
+            "title": "Category"
+          },
+          "units": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Units"
+          },
+          "fixes": {
+            "items": {
+              "$ref": "#/components/schemas/UnitFixOut"
+            },
+            "type": "array",
+            "title": "Fixes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "unit",
+          "category",
+          "units",
+          "fixes"
+        ],
+        "title": "UnstockedIngredientOut"
+      },
+      "UnstockedIngredientsOut": {
+        "properties": {
+          "ingredients": {
+            "items": {
+              "$ref": "#/components/schemas/UnstockedIngredientOut"
+            },
+            "type": "array",
+            "title": "Ingredients"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ingredients"
+        ],
+        "title": "UnstockedIngredientsOut",
+        "description": "Ингредиенты действующих рецептов без позиции остатков."
       },
       "UpdateDraftIn": {
         "properties": {

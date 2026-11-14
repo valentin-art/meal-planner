@@ -90,6 +90,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/ingredients/unstocked": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unstocked Ingredients */
+        post: operations["unstocked_ingredients_api_ingredients_unstocked_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/recipes": {
         parameters: {
             query?: never;
@@ -1601,6 +1618,39 @@ export interface components {
             /** Options */
             options: components["schemas"]["CyclePositionOut"][];
         };
+        /** UnitFixOut */
+        UnitFixOut: {
+            /**
+             * Field
+             * @enum {string}
+             */
+            field: "store_piece" | "grams_per_unit";
+            /** Units */
+            units: string[];
+        };
+        /** UnstockedIngredientOut */
+        UnstockedIngredientOut: {
+            /** Id */
+            id: number;
+            /** Name */
+            name: string;
+            /** Unit */
+            unit: string;
+            /** Category */
+            category: string;
+            /** Units */
+            units: string[];
+            /** Fixes */
+            fixes: components["schemas"]["UnitFixOut"][];
+        };
+        /**
+         * UnstockedIngredientsOut
+         * @description Ингредиенты действующих рецептов без позиции остатков.
+         */
+        UnstockedIngredientsOut: {
+            /** Ingredients */
+            ingredients: components["schemas"]["UnstockedIngredientOut"][];
+        };
         /**
          * UpdateDraftIn
          * @description Правка своего черновика (8.6c): тело то же, плюс id черновика.
@@ -1812,6 +1862,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ShoppingRemainingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unstocked_ingredients_api_ingredients_unstocked_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ShoppingRemainingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UnstockedIngredientsOut"];
                 };
             };
             /** @description Validation Error */

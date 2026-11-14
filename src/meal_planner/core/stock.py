@@ -7,12 +7,13 @@
 """
 
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from decimal import Decimal
 
-from meal_planner.core.catalog_actions import WEIGHT_UNITS
+from meal_planner.core.catalog_actions import UNITS, WEIGHT_UNITS
 from meal_planner.core.models import Catalog, CatalogIngredient, ShoppingTrip
-from meal_planner.core.shopping import format_qty
+from meal_planner.core.shopping import CATEGORY_ORDER, format_qty
+from meal_planner.core.units import LINE_UNITS
 
 # Крупные единицы счётчиков → единицы справочника.
 SCALE = {"кг": ("г", Decimal(1000)), "л": ("мл", Decimal(1000))}
@@ -68,6 +69,57 @@ def unconvertible_reason(ingredient: CatalogIngredient, unit: str) -> str:
     if unit == "шт":
         return f"{reason}: у ингредиента нет веса штуки в магазине"
     return reason
+
+
+def unstocked_ingredients(
+    catalog: Catalog, lines: Iterable[StockLine]
+) -> tuple[CatalogIngredient, ...]:
+    """Ингредиенты действующих рецептов, у которых нет позиции остатков.
+
+    «С позицией» — id есть среди строк при любом количестве и единице.
+    """
+    stocked = {line.ingredient_id for line in lines}
+    used = {
+        i.name
+        for recipe in catalog.recipes.values()
+        if recipe.status == "active"
+        for i in recipe.ingredients
+    }
+    found = [
+        ingredient
+        for name, ingredient in catalog.ingredients.items()
+        if name in used and ingredient.id not in stocked
+    ]
+
+    def order(i: CatalogIngredient) -> tuple[int, str]:
+        known = i.category in CATEGORY_ORDER
+        return (
+            CATEGORY_ORDER.index(i.category) if known else len(CATEGORY_ORDER),
+            i.name,
+        )
+
+    return tuple(sorted(found, key=order))
+
+
+def convertible_units(ingredient: CatalogIngredient) -> tuple[str, ...]:
+    """Единицы счётчика, которые convert переводит в единицу ингредиента."""
+    units = dict.fromkeys((*LINE_UNITS, *UNITS))
+    return tuple(u for u in units if convert(ingredient, Decimal(1), u) is not None)
+
+
+def unit_fixes(
+    ingredient: CatalogIngredient,
+) -> tuple[tuple[str, tuple[str, ...]], ...]:
+    """Что откроет заполнение пустого поля: (поле, новые единицы счётчика)."""
+    have = set(convertible_units(ingredient))
+    fixes = []
+    for field in ("store_piece", "grams_per_unit"):
+        if getattr(ingredient, field) is None:
+            filled = replace(ingredient, **{field: 1.0})
+            new = tuple(u for u in convertible_units(filled) if u not in have)
+            if new:
+                fixes.append((field, new))
+    return tuple(fixes)
 
 
 def stock_in_catalog_units(

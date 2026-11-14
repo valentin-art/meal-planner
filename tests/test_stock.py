@@ -1,12 +1,22 @@
 """8.2: остатки из HA — перевод единиц и покупки за вычетом остатков."""
 
+from dataclasses import replace
 from datetime import date
 from decimal import Decimal
 
-from meal_planner.core.models import Settings
+import pytest
+
+from meal_planner.core.models import CatalogIngredient, Ingredient, Recipe, Settings
 from meal_planner.core.planner import recompute, shopping_with_stock
 from meal_planner.core.seed import SEED_CATALOG
-from meal_planner.core.stock import StockIgnored, StockLine, stock_in_catalog_units
+from meal_planner.core.stock import (
+    StockIgnored,
+    StockLine,
+    convertible_units,
+    stock_in_catalog_units,
+    unit_fixes,
+    unstocked_ingredients,
+)
 
 # Сегодня Пн 09.11: закупка Ср 11.11, окно Чт–Сб (как default_2x).
 SETTINGS = Settings(date(2026, 11, 5), 2, 3, 6, "same")
@@ -130,3 +140,101 @@ def test_same_trip_as_recompute_with_skipped_cook():
     stocked = shopping_with_stock(SEED_CATALOG, skipped, TODAY, [])
     assert stocked.trip == recompute(SEED_CATALOG, skipped, TODAY).next_shopping_trip
     assert stocked.trip.shopping_date == date(2026, 11, 14)
+
+
+# --- ингредиенты без позиции (4.4) ---
+
+
+def ingredient(unit, store_piece=None, grams_per_unit=None, **kw):
+    return CatalogIngredient(
+        kw.get("id", 1),
+        kw.get("name", "x"),
+        unit,
+        kw.get("category", "Прочее"),
+        0,
+        0,
+        None,
+        grams_per_unit,
+        store_piece,
+    )
+
+
+def catalog_with(recipes, ingredients):
+    return replace(
+        SEED_CATALOG,
+        recipes={r.id: r for r in recipes},
+        ingredients={i.name: i for i in ingredients},
+    )
+
+
+def recipe(rid, status, *names, kind="lunch"):
+    return Recipe(
+        rid,
+        rid,
+        kind,
+        0,
+        0,
+        tuple(Ingredient(n, 1, "г", "Прочее") for n in names),
+        (),
+        status=status,
+    )
+
+
+def test_unstocked_picks_active_recipes_ingredients_without_a_line():
+    a = ingredient("г", id=1, name="а", category="Овощи")
+    b = ingredient("г", id=2, name="б", category="Белок")
+    c = ingredient("г", id=3, name="в", category="Белок")
+    d = ingredient("г", id=4, name="г", category="Странная")
+    e = ingredient("г", id=5, name="д", category="Белок")  # только в черновике
+    f = ingredient("г", id=6, name="е")  # только в архиве
+    g = ingredient("г", id=7, name="ж")  # с позицией qty 0
+    h = ingredient("г", id=8, name="з")  # с позицией в чужой единице
+    k = ingredient("г", id=9, name="и", category="Белок")  # только в завтраке
+    catalog = catalog_with(
+        [
+            recipe("l1", "active", "а", "б", "в", "г", "ж", "з"),
+            recipe("d1", "active", "б"),  # дубль между рецептами
+            recipe("l2", "draft", "д"),
+            recipe("l3", "archived", "е"),
+            recipe("b1", "active", "и", kind="breakfast"),
+        ],
+        [a, b, c, d, e, f, g, h, k],
+    )
+    lines = [
+        StockLine(7, 0, "г"),
+        StockLine(8, -1, "стакан"),
+        StockLine(999, 1, "г"),  # неизвестный id
+    ]
+    got = unstocked_ingredients(catalog, lines)
+    # Белок (по имени), потом Овощи, чужая категория в конце.
+    assert [i.name for i in got] == ["б", "в", "и", "а", "г"]
+    assert unstocked_ingredients(catalog, [StockLine(2, 1, "г")]) != got
+    assert [i.id for i in unstocked_ingredients(catalog, [])] == [2, 3, 9, 1, 7, 8, 4]
+
+
+@pytest.mark.parametrize(
+    ("unit", "piece", "grams", "expected"),
+    [
+        ("г", None, None, ("г", "кг")),
+        ("г", 50, None, ("г", "кг", "шт")),
+        ("мл", None, None, ("мл", "л")),
+        ("мл", 200, None, ("мл", "л", "шт")),
+        ("шт", None, None, ("шт",)),
+        ("шт", None, 50, ("г", "кг", "шт")),
+        ("ч.л.", None, None, ("ч.л.",)),
+        ("ч.л.", 10, 5, ("г", "кг", "ч.л.", "шт")),
+        ("ст.л.", None, None, ("мл", "л", "ст.л.")),
+        ("ст.л.", 10, 15, ("г", "кг", "мл", "л", "ст.л.", "шт")),
+        ("зубчик", None, None, ("зубчик",)),
+        ("зубчик", 8, 4, ("г", "кг", "шт", "зубчик")),
+    ],
+)
+def test_convertible_units(unit, piece, grams, expected):
+    assert convertible_units(ingredient(unit, piece, grams)) == expected
+
+
+def test_unit_fixes_suggest_only_empty_fields():
+    assert unit_fixes(ingredient("г")) == (("store_piece", ("шт",)),)
+    assert unit_fixes(ingredient("шт")) == (("grams_per_unit", ("г", "кг")),)
+    assert unit_fixes(ingredient("шт", grams_per_unit=50)) == ()
+    assert unit_fixes(ingredient("г", store_piece=50)) == ()

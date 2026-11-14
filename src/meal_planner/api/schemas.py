@@ -59,7 +59,13 @@ from meal_planner.core.models import (
     TodayPosition,
 )
 from meal_planner.core.shopping import CATEGORY_ORDER, format_qty
-from meal_planner.core.stock import StockedTrip, StockIgnored, StockLine
+from meal_planner.core.stock import (
+    StockedTrip,
+    StockIgnored,
+    StockLine,
+    convertible_units,
+    unit_fixes,
+)
 from meal_planner.core.validation import (
     KCAL_TARGET_MAX,
     KCAL_TARGET_MIN,
@@ -450,6 +456,26 @@ class ShoppingRemainingOut(SummaryTripOut):
     """Ближайшая закупка за вычетом остатков (8.2), строки — как в summary."""
 
     ignored: list[StockIgnoredOut]  # строки остатков, которые не учтены
+
+
+class UnitFixOut(BaseModel):
+    field: Literal["store_piece", "grams_per_unit"]  # какое поле заполнить
+    units: list[str]  # какие единицы счётчика оно откроет
+
+
+class UnstockedIngredientOut(BaseModel):
+    id: int
+    name: str
+    unit: str
+    category: str
+    units: list[str]  # единицы счётчика, которые переводятся сейчас
+    fixes: list[UnitFixOut]
+
+
+class UnstockedIngredientsOut(BaseModel):
+    """Ингредиенты действующих рецептов без позиции остатков."""
+
+    ingredients: list[UnstockedIngredientOut]
 
 
 class CookedIn(ShoppingRemainingIn):
@@ -984,6 +1010,24 @@ def to_shopping_remaining_out(s: StockedTrip) -> ShoppingRemainingOut:
     return ShoppingRemainingOut(
         **to_summary_trip_out(s.trip).model_dump(),
         ignored=[to_stock_ignored_out(i) for i in s.ignored],
+    )
+
+
+def to_unstocked_out(
+    ingredients: tuple[CatalogIngredient, ...],
+) -> UnstockedIngredientsOut:
+    return UnstockedIngredientsOut(
+        ingredients=[
+            UnstockedIngredientOut(
+                id=i.id,
+                name=i.name,
+                unit=i.unit,
+                category=i.category,
+                units=list(convertible_units(i)),
+                fixes=[UnitFixOut(field=f, units=list(u)) for f, u in unit_fixes(i)],
+            )
+            for i in ingredients
+        ]
     )
 
 

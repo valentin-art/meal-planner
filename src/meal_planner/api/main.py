@@ -47,6 +47,7 @@ from meal_planner.api.schemas import (
     ShoppingRemainingIn,
     ShoppingRemainingOut,
     SummaryOut,
+    UnstockedIngredientsOut,
     UpdateDraftIn,
     UseIngredientIn,
     to_app_state_out,
@@ -58,8 +59,9 @@ from meal_planner.api.schemas import (
     to_recipes_out,
     to_shopping_remaining_out,
     to_summary_out,
+    to_unstocked_out,
 )
-from meal_planner.core import actions, catalog_actions, cookbook, cooking
+from meal_planner.core import actions, catalog_actions, cookbook, cooking, stock
 from meal_planner.core.catalog_actions import CatalogError
 from meal_planner.core.models import (
     Catalog,
@@ -416,6 +418,14 @@ def create_app() -> FastAPI:
         return to_shopping_remaining_out(
             shopping_with_stock(catalog, settings, today, body.to_lines())
         )
+
+    @app.post("/api/ingredients/unstocked", response_model=UnstockedIngredientsOut)
+    def unstocked_ingredients(
+        body: ShoppingRemainingIn, catalog: CatalogDep
+    ) -> UnstockedIngredientsOut:
+        # Для HA: ингредиенты без позиции остатков и единицы, в которых их
+        # можно завести. Только чтение, POST из-за тела (как remaining).
+        return to_unstocked_out(stock.unstocked_ingredients(catalog, body.to_lines()))
 
     @app.get("/api/recipes", response_model=dict[str, RecipeOut])
     def get_recipes(catalog: CatalogDep) -> dict[str, RecipeOut]:

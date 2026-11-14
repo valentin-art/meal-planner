@@ -45,6 +45,12 @@
 # дашборда «Кухня» — ближайшая готовка и активные рецепты с шагами. Атрибуты
 # ~50 КБ, поэтому сенсор вне recorder. Обновляется по тем же событиям, что
 # партия, и скриптом meal_planner_refresh (после правки рецептов в приложении).
+#
+# Без плитки (D-40): sensor.meal_planner_unstocked — ингредиенты действующих
+# рецептов, у которых нет позиции в «Запасах» (POST /api/ingredients/unstocked
+# с остатками из счётчиков). Состояние — их число, список — атрибут
+# ingredients. Обновляется теми же триггерами плюс kitchen_stock_items_changed
+# (привязка и создание позиции); без эндпоинта — unavailable, HA стартует.
 
 homeassistant:
   customize:
@@ -60,6 +66,8 @@ homeassistant:
       friendly_name: Готовка
     sensor.meal_planner_cookbook:
       friendly_name: Рецепты
+    sensor.meal_planner_unstocked:
+      friendly_name: Без плитки
 
 rest:
   - resource: http://127.0.0.1:8001/api/summary
@@ -131,6 +139,8 @@ template:
         minutes: /15
       - trigger: event
         event_type: meal_planner_changed
+      - trigger: event
+        event_type: kitchen_stock_items_changed
     actions:
       - action: rest_command.meal_planner_summary
         response_variable: resp
@@ -165,9 +175,11 @@ template:
   # готовка каждого рецепта (10.4). ~60 КБ — вне recorder (см. recorder ниже).
   # Запрос — с остатками из счётчиков: нехватку и текст подтверждения видно
   # заранее. Скрипты готовки выставляют счётчики до события, поэтому после
-  # действия книга уже с новыми остатками. Ручная правка «Запасов» сенсор не
-  # обновляет — до 15 минут остатки в книге могут устареть; действие
-  # проверяет заново, отказ показывает плитка (last_error).
+  # действия книга уже с новыми остатками. Привязка и создание позиции в
+  # «Запасах» шлют kitchen_stock_items_changed — книга обновляется сразу;
+  # ручная правка значений события не шлёт — до 15 минут остатки в книге
+  # могут устареть; действие проверяет заново, отказ показывает плитка
+  # (last_error).
   - triggers: *refresh_triggers
     actions:
       # Шаблон остатков (8.2) — здесь его первое место в пакете, дальше *stock.
@@ -217,12 +229,41 @@ template:
                   and trigger.event.data.error is defined
                else none }}
 
+  # Ингредиенты действующих рецептов без плитки в «Запасах» (D-40) — для
+  # раздела «Без плитки» дашборда. Те же триггеры; остатки — тем же *stock.
+  # Состояние — сколько их; список с единицами и исправлениями — в атрибуте
+  # как ответил API, шаблон ничего не считает. Без эндпоинта — unavailable.
+  # Скрипт trigger-шаблона — режим single (HA 2026.10, template/coordinator.py):
+  # срабатывание во время запроса отбрасывается с WARNING «Already running»,
+  # его поправит следующий триггер; принято пользователем.
+  - triggers: *refresh_triggers
+    actions:
+      - variables:
+          stock: *stock
+      - action: rest_command.meal_planner_unstocked_ingredients
+        response_variable: resp
+        continue_on_error: true
+      - variables:
+          unstocked: >-
+            {{ resp.content.ingredients
+               if resp is defined and resp.status == 200 else none }}
+    sensor:
+      - name: Meal planner unstocked
+        unique_id: meal_planner_unstocked
+        icon: mdi:food-off
+        availability: "{{ unstocked is not none }}"
+        state: "{{ unstocked | length if unstocked is not none else none }}"
+        attributes:
+          ingredients: "{{ unstocked if unstocked is not none else [] }}"
+
 # Атрибуты книги рецептов ~50 КБ: recorder не пишет атрибуты больше 16 КБ и
-# предупреждает при каждом изменении. История этому сенсору не нужна.
+# предупреждает при каждом изменении. История этому сенсору не нужна. Список
+# без плитки (атрибут ingredients) тоже не история.
 recorder:
   exclude:
     entities:
       - sensor.meal_planner_cookbook
+      - sensor.meal_planner_unstocked
 
 rest_command:
   meal_planner_summary:
@@ -231,6 +272,12 @@ rest_command:
     timeout: 10
   meal_planner_cookbook:
     url: http://127.0.0.1:8001/api/cookbook
+    method: post
+    content_type: application/json
+    timeout: 10
+    payload: '{{ {"stock": stock} | to_json }}'
+  meal_planner_unstocked_ingredients:
+    url: http://127.0.0.1:8001/api/ingredients/unstocked
     method: post
     content_type: application/json
     timeout: 10

@@ -243,6 +243,40 @@ def test_cookbook_sensor_is_not_recorded():
     assert "sensor.meal_planner_cookbook" in PACKAGE["recorder"]["exclude"]["entities"]
 
 
+def test_unstocked_sensor_uses_unstocked_fields():
+    # «Без плитки» (D-40): запрос с остатками, список — атрибутом как есть.
+    block = template_block("meal_planner_unstocked")
+    events = {t.get("event_type") for t in block["triggers"]}
+    assert {"meal_planner_changed", "kitchen_stock_items_changed"} <= events
+    (stock, call, variables) = block["actions"]
+    assert stock["variables"]["stock"] == stock_template()
+    assert call["action"] == "rest_command.meal_planner_unstocked_ingredients"
+    assert call["response_variable"] == "resp"
+    assert call["continue_on_error"] is True
+    assert "resp.status == 200" in variables["variables"]["unstocked"]
+    fields = re.findall(r"resp\.content\.(\w+)", variables["variables"]["unstocked"])
+    assert fields == ["ingredients"]
+    assert set(fields) <= set(
+        schema_at([], root="UnstockedIngredientsOut")["properties"]
+    )
+    (sensor,) = block["sensor"]
+    assert sensor["availability"] == "{{ unstocked is not none }}"
+    assert "unstocked | length" in sensor["state"]
+    assert set(sensor["attributes"]) == {"ingredients"}
+    assert "length" not in sensor["attributes"]["ingredients"]  # шаблон не считает
+
+
+def test_unstocked_sensor_is_not_recorded():
+    assert "sensor.meal_planner_unstocked" in PACKAGE["recorder"]["exclude"]["entities"]
+
+
+def test_stock_events_refresh_the_book_and_unstocked():
+    # Привязка и создание позиции — сразу, а не через 15 минут.
+    for unique_id in ("meal_planner_cookbook", "meal_planner_unstocked"):
+        events = {t.get("event_type") for t in template_block(unique_id)["triggers"]}
+        assert "kitchen_stock_items_changed" in events, unique_id
+
+
 def test_refresh_script_only_fires_the_event():
     # Касание заголовка «рецепты» на дашборде: перечитать книгу сразу.
     script = PACKAGE["script"]["meal_planner_refresh"]

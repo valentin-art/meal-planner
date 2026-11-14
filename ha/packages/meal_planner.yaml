@@ -13,9 +13,10 @@
 # состояние и белый список атрибутов HA), поэтому полные данные модель
 # получает из ответа скрипта meal_planner_plan.
 #
-# Остатки (8.2) — счётчики input_number конфига HA (stock.yaml). Счётчик
-# учитывается, если у него есть атрибут meal_planner_ingredient — id
-# ингредиента справочника (customize в конфиге HA). Вычитает и переводит
+# Остатки (8.2) — счётчики number.stock_<ключ> интеграции kitchen_stock.
+# Счётчик учитывается, если у него есть атрибут meal_planner_ingredient — id
+# ингредиента справочника (его задаёт привязка позиции в kitchen_stock);
+# значения ставятся через number.set_value. Вычитает и переводит
 # единицы приложение (POST /api/shopping/remaining), остатки оно не хранит:
 # вкладка «Закупки» и сенсоры — полный список по плану, уменьшенный — только
 # в to-do и в ответе meal_planner_plan.
@@ -173,7 +174,7 @@ template:
       - variables:
           stock: &stock >-
             {%- set ns = namespace(lines=[]) %}
-            {%- for s in states.input_number
+            {%- for s in states.number
                   if s.attributes.meal_planner_ingredient is defined
                   and s.state not in ['unknown', 'unavailable'] %}
               {%- set ns.lines = ns.lines + [{
@@ -642,7 +643,7 @@ script:
             repeat:
               for_each: "{{ resp.content.counters }}"
               sequence:
-                - action: input_number.set_value
+                - action: number.set_value
                   target:
                     entity_id: "{{ repeat.item.entity_id }}"
                   data:

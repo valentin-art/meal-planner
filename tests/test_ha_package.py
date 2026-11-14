@@ -183,7 +183,14 @@ def test_cooking_scripts_send_stock_and_set_counters():
         assert call["data"]["stock"] == "{{ stock }}", name
         counters = json.dumps(sequence[2]["then"][0], ensure_ascii=False)
         assert "resp.content.counters" in counters, name
-        assert "input_number.set_value" in counters, name
+        assert "number.set_value" in counters, name
+        assert "input_number" not in counters, name
+
+
+def test_stock_template_reads_kitchen_stock_numbers():
+    stock = stock_template()
+    assert "states.number" in stock
+    assert "input_number" not in stock
 
 
 def test_cooking_scripts_pass_the_scope():

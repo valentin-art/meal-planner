@@ -241,6 +241,8 @@ template:
       - variables:
           stock: *stock
       - action: rest_command.meal_planner_unstocked_ingredients
+        data:
+          stock: "{{ stock }}"
         response_variable: resp
         continue_on_error: true
       - variables:

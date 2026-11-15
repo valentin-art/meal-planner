@@ -60,6 +60,7 @@ from meal_planner.core.models import (
 )
 from meal_planner.core.shopping import CATEGORY_ORDER, format_qty
 from meal_planner.core.stock import (
+    FixField,
     StockedTrip,
     StockIgnored,
     StockLine,
@@ -459,7 +460,7 @@ class ShoppingRemainingOut(SummaryTripOut):
 
 
 class UnitFixOut(BaseModel):
-    field: Literal["store_piece", "grams_per_unit"]  # какое поле заполнить
+    field: FixField  # какое поле заполнить
     units: list[str]  # какие единицы счётчика оно откроет
 
 

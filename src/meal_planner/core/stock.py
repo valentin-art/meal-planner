@@ -9,6 +9,7 @@
 from collections.abc import Iterable
 from dataclasses import dataclass, replace
 from decimal import Decimal
+from typing import Literal
 
 from meal_planner.core.catalog_actions import UNITS, WEIGHT_UNITS
 from meal_planner.core.models import Catalog, CatalogIngredient, ShoppingTrip
@@ -18,6 +19,10 @@ from meal_planner.core.units import LINE_UNITS
 # Крупные единицы счётчиков → единицы справочника.
 SCALE = {"кг": ("г", Decimal(1000)), "л": ("мл", Decimal(1000))}
 SPOON_ML = Decimal(15)  # столовая ложка — 15 мл по определению
+
+# Поля справочника, заполнение которых открывает новые единицы счётчика.
+FixField = Literal["store_piece", "grams_per_unit"]
+FIX_FIELDS: tuple[FixField, ...] = ("store_piece", "grams_per_unit")
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,14 +96,8 @@ def unstocked_ingredients(
         if name in used and ingredient.id not in stocked
     ]
 
-    def order(i: CatalogIngredient) -> tuple[int, str]:
-        known = i.category in CATEGORY_ORDER
-        return (
-            CATEGORY_ORDER.index(i.category) if known else len(CATEGORY_ORDER),
-            i.name,
-        )
-
-    return tuple(sorted(found, key=order))
+    rank = {c: n for n, c in enumerate(CATEGORY_ORDER)}
+    return tuple(sorted(found, key=lambda i: (rank.get(i.category, len(rank)), i.name)))
 
 
 def convertible_units(ingredient: CatalogIngredient) -> tuple[str, ...]:
@@ -109,11 +108,11 @@ def convertible_units(ingredient: CatalogIngredient) -> tuple[str, ...]:
 
 def unit_fixes(
     ingredient: CatalogIngredient,
-) -> tuple[tuple[str, tuple[str, ...]], ...]:
+) -> tuple[tuple[FixField, tuple[str, ...]], ...]:
     """Что откроет заполнение пустого поля: (поле, новые единицы счётчика)."""
     have = set(convertible_units(ingredient))
     fixes = []
-    for field in ("store_piece", "grams_per_unit"):
+    for field in FIX_FIELDS:
         if getattr(ingredient, field) is None:
             filled = replace(ingredient, **{field: 1.0})
             new = tuple(u for u in convertible_units(filled) if u not in have)

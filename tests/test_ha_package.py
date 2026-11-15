@@ -251,6 +251,7 @@ def test_unstocked_sensor_uses_unstocked_fields():
     (stock, call, variables) = block["actions"]
     assert stock["variables"]["stock"] == stock_template()
     assert call["action"] == "rest_command.meal_planner_unstocked_ingredients"
+    assert call["data"] == {"stock": "{{ stock }}"}
     assert call["response_variable"] == "resp"
     assert call["continue_on_error"] is True
     assert "resp.status == 200" in variables["variables"]["unstocked"]
@@ -264,6 +265,32 @@ def test_unstocked_sensor_uses_unstocked_fields():
     assert "unstocked | length" in sensor["state"]
     assert set(sensor["attributes"]) == {"ingredients"}
     assert "length" not in sensor["attributes"]["ingredients"]  # шаблон не считает
+
+
+def rest_calls(node):
+    """Все вызовы rest_command в пакете, на любой глубине."""
+    if isinstance(node, dict):
+        if str(node.get("action", "")).startswith("rest_command."):
+            yield node
+        for value in node.values():
+            yield from rest_calls(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from rest_calls(item)
+
+
+def test_rest_command_payload_variables_are_passed_in_data():
+    # Payload rest_command HA рендерит только по service.data: переменная
+    # скрипта или шаблона до него не доходит.
+    calls = list(rest_calls(PACKAGE))
+    assert calls
+    for call in calls:
+        name = call["action"].removeprefix("rest_command.")
+        payload = PACKAGE["rest_command"][name].get("payload", "")
+        code = re.sub(r"'[^']*'|\"[^\"]*\"", "", payload)  # строки и ключи
+        code = re.sub(r"\|\s*\w+(\([^)]*\))?", "", code)  # фильтры
+        needed = set(re.findall(r"[A-Za-z_]\w*", code)) - {"if", "else", "none"}
+        assert needed <= set(call.get("data", {})), name
 
 
 def test_unstocked_sensor_is_not_recorded():

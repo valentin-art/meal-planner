@@ -208,7 +208,8 @@ def test_unstocked_picks_active_recipes_ingredients_without_a_line():
     got = unstocked_ingredients(catalog, lines)
     # Белок (по имени), потом Овощи, чужая категория в конце.
     assert [i.name for i in got] == ["б", "в", "и", "а", "г"]
-    assert unstocked_ingredients(catalog, [StockLine(2, 1, "г")]) != got
+    got = unstocked_ingredients(catalog, [StockLine(2, 1, "г")])
+    assert [i.id for i in got] == [3, 9, 1, 7, 8, 4]
     assert [i.id for i in unstocked_ingredients(catalog, [])] == [2, 3, 9, 1, 7, 8, 4]
 
 

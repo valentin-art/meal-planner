@@ -1020,6 +1020,7 @@ def test_unstocked_ingredients_lists_units_read_only(client, repo):
     assert [i["id"] for i in r.json()["ingredients"]] == [i["id"] for i in items[1:]]
     grams = next(i for i in items if i["unit"] == "г")
     assert grams["units"][:2] == ["г", "кг"]
+    assert any(i["fixes"] for i in items)
     for i in items:
         for fix in i["fixes"]:
             assert fix["field"] in ("store_piece", "grams_per_unit")
